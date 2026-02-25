@@ -1,4 +1,4 @@
-import { gearApi, type GearItem, type GearRequest } from '../../auth';
+import { type GearItem, type GearRequest } from '../../auth';
 
 export function getStatusBadge(status: string) {
     if (status === 'pending') return '<span class="px-2 py-1 bg-amber-500/20 text-amber-500 text-[10px] font-black uppercase tracking-wider rounded">Pending</span>';
