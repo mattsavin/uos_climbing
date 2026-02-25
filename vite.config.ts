@@ -20,6 +20,7 @@ export default defineConfig({
         competitions: resolve(__dirname, 'competitions.html'),
         join: resolve(__dirname, 'join.html'),
         dashboard: resolve(__dirname, 'dashboard.html'),
+        gear: resolve(__dirname, 'gear.html'),
       },
     },
   },

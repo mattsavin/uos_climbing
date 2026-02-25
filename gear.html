@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/climbing%20team%20logo.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <title>Gear Hire | USCC</title>
+</head>
+
+<body>
+    <div id="app">
+        <main class="flex-grow pt-32 pb-20 relative px-4" id="gear-content">
+            <div class="max-w-7xl mx-auto">
+                <div
+                    class="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 border-b border-white/10 pb-6 gap-6">
+                    <div>
+                        <div class="flex items-center gap-3 mb-2">
+                            <a href="/dashboard.html"
+                                class="text-slate-400 hover:text-white transition-colors p-2 bg-white/5 rounded-lg hover:bg-white/10">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                                </svg>
+                            </a>
+                            <h1 class="text-4xl font-black text-white">Gear <span class="text-emerald-500">Hire</span>
+                            </h1>
+                        </div>
+                        <p class="text-slate-400 ml-12">Browse available gear and manage your hire requests.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                    <!-- Right/Main Column -->
+                    <div class="xl:col-span-2 space-y-8">
+                        <div class="glass-card !p-0 overflow-hidden border border-emerald-500/30">
+                            <div
+                                class="p-6 border-b border-emerald-500/30 bg-emerald-500/5 flex justify-between items-center">
+                                <div>
+                                    <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                                        <svg class="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
+                                            </path>
+                                        </svg>
+                                        Available Gear
+                                    </h3>
+                                    <p class="text-sm text-slate-400 mt-1">Select an item to request it for your next
+                                        trip.</p>
+                                </div>
+                                <button id="add-gear-btn"
+                                    class="hidden btn-outline !py-1.5 !px-3 !text-xs !border-emerald-500 !text-emerald-500 hover:!bg-emerald-500 hover:!text-white flex items-center gap-1">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 4v16m8-8H4"></path>
+                                    </svg>
+                                    Add Gear
+                                </button>
+                            </div>
+
+                            <!-- Add/Edit Gear Form -->
+                            <div id="gear-form-container" class="hidden p-6 border-b border-white/10 bg-slate-800/50">
+                                <form id="gear-form" class="space-y-4">
+                                    <input type="hidden" id="gear-id">
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div class="col-span-2">
+                                            <label
+                                                class="block text-xs font-bold text-slate-400 mb-1 uppercase">Name</label>
+                                            <input type="text" id="gear-name" required
+                                                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-500">
+                                        </div>
+                                        <div class="col-span-2">
+                                            <label
+                                                class="block text-xs font-bold text-slate-400 mb-1 uppercase">Description</label>
+                                            <input type="text" id="gear-description"
+                                                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-500">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-400 mb-1 uppercase">Total
+                                                Quantity</label>
+                                            <input type="number" id="gear-total-qty" required min="1" value="1"
+                                                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-500">
+                                        </div>
+                                        <div id="available-qty-group" class="hidden">
+                                            <label
+                                                class="block text-xs font-bold text-slate-400 mb-1 uppercase">Available
+                                                Quantity</label>
+                                            <input type="number" id="gear-available-qty" min="0"
+                                                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-500">
+                                        </div>
+                                    </div>
+                                    <div class="flex justify-end gap-3 mt-4">
+                                        <button type="button" id="cancel-gear-btn"
+                                            class="text-xs font-bold text-slate-400 hover:text-white transition-colors">Cancel</button>
+                                        <button type="submit"
+                                            class="btn-primary !bg-emerald-500 hover:!bg-emerald-400 !border-emerald-500 !py-1.5 !px-4 !text-xs shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)]">Save
+                                            Gear</button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <div class="p-6">
+                                <div id="gear-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <!-- Injected via JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Left Column (User Requests) -->
+                    <div class="xl:col-span-1 space-y-8">
+                        <div class="glass-card !p-0 overflow-hidden border border-purple-500/20">
+                            <div class="p-5 border-b border-purple-500/20 bg-purple-500/5">
+                                <h3
+                                    class="text-lg font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                                    <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2">
+                                        </path>
+                                    </svg>
+                                    My Requests
+                                </h3>
+                            </div>
+                            <div id="my-requests-list"
+                                class="divide-y divide-white/5 max-h-[400px] overflow-y-auto p-4 space-y-4">
+                                <!-- Injected via JS -->
+                                <div class="text-slate-400 text-sm text-center py-4">Loading your requests...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Committee Panel for Managing Requests -->
+                <div id="committee-panel" class="hidden mt-12 pt-12 border-t border-white/10">
+                    <h2 class="text-3xl font-black text-white mb-2 flex items-center gap-3">
+                        <svg class="w-8 h-8 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
+                            </path>
+                        </svg>
+                        Kit Sec Override
+                    </h2>
+                    <p class="text-slate-400 mb-8 max-w-2xl">Manage member gear requests, track returned gear, and
+                        update inventory.</p>
+
+                    <div class="glass-card !p-0 overflow-hidden">
+                        <div class="p-5 border-b border-white/10 bg-slate-800/50">
+                            <h3 class="text-lg font-bold text-white">All Gear Requests</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm text-slate-300">
+                                <thead class="text-xs uppercase bg-slate-900/50 text-slate-400 border-b border-white/5">
+                                    <tr>
+                                        <th class="px-4 py-3 font-bold">Member</th>
+                                        <th class="px-4 py-3 font-bold">Gear</th>
+                                        <th class="px-4 py-3 font-bold">Date</th>
+                                        <th class="px-4 py-3 font-bold">Status</th>
+                                        <th class="px-4 py-3 font-bold text-right pt-3">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="all-requests-list" class="divide-y divide-white/5">
+                                    <!-- Injected via JS -->
+                                    <tr>
+                                        <td colspan="5" class="px-4 py-8 text-center text-slate-500">Loading requests...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Request Modal -->
+    <div id="request-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="request-modal-backdrop"></div>
+        <div
+            class="relative glass-card !p-0 w-full max-w-md shadow-2xl border border-emerald-500/20 animate-[fade-in-up_0.2s_ease-out] flex flex-col overflow-hidden">
+            <div class="p-6 border-b border-emerald-500/20 bg-slate-800/80">
+                <h3 class="text-xl font-bold text-white uppercase tracking-wide">Confirm Request</h3>
+            </div>
+            <div class="p-6">
+                <p class="text-slate-300 mb-6 text-sm">You are about to request: <span id="request-gear-name"
+                        class="font-bold text-emerald-400"></span>.</p>
+                <div class="flex gap-3 justify-end">
+                    <button id="cancel-request-btn"
+                        class="px-4 py-2 text-sm font-bold text-slate-400 hover:text-white transition-colors">Cancel</button>
+                    <button id="confirm-request-btn"
+                        class="btn-primary !bg-emerald-500 hover:!bg-emerald-400 !border-emerald-500 !py-2 !px-6 !text-sm shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)]">Submit
+                        Request</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast-notification"
+        class="fixed bottom-6 right-6 bg-emerald-500 text-white px-5 py-3 rounded-lg shadow-2xl border border-emerald-400 transform translate-y-10 opacity-0 transition-all duration-300 z-[100] pointer-events-none flex items-center gap-2 font-bold text-sm">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+        <span id="toast-message">Success!</span>
+    </div>
+
+    <script type="module" src="/src/gear.ts"></script>
+    <script type="module">
+        import { initApp } from '/src/main.ts';
+        initApp();
+    </script>
+</body>
+
+</html>
