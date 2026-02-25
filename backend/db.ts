@@ -8,7 +8,7 @@ const __dirname = dirname(__filename);
 
 const dbPath = process.env.NODE_ENV === 'test'
     ? ':memory:'
-    : join(__dirname, 'uscc.db');
+    : (process.env.NODE_ENV === 'production' ? '/data/uscc.db' : join(__dirname, 'uscc.db'));
 export const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('Error opening database', err.message);

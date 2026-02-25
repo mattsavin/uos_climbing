@@ -7,6 +7,13 @@ import adminRoutes from './routes/admin';
 import sessionRoutes from './routes/sessions';
 import votingRoutes from './routes/voting';
 import gearRoutes from './routes/gear';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import history from 'connect-history-api-fallback';
+
+// ESM dirname equivalent
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -29,6 +36,30 @@ app.use('/api/ical', (req, res, next) => {
     // but we can just use the sessions router directly by prefixing it.
     next();
 });
+
+// Serve static frontend in production
+if (process.env.NODE_ENV === 'production') {
+    // 1. Fallback for SPA routing - must come before express.static
+    app.use(history({
+        disableDotRule: true, // Allow files with dots (like css/js) to be served
+        rewrites: [
+            // Ensure requests to '/api' aren't intercepted by history
+            { from: /^\/api\/.*$/, to: function (context: any) { return context.parsedUrl?.pathname || '/'; } },
+
+            // Re-route Vite's HTML entrypoints
+            { from: /^\/dashboard$/, to: '/dashboard.html' },
+            { from: /^\/about$/, to: '/about.html' },
+            { from: /^\/join$/, to: '/join.html' },
+            { from: /^\/competitions$/, to: '/competitions.html' },
+            { from: /^\/gear$/, to: '/gear.html' }
+        ]
+    }));
+
+    // 2. Serve static files from the build directory
+    const distPath = path.join(__dirname, '../../dist');
+    console.log(`Serving static files from: ${distPath}`);
+    app.use(express.static(distPath));
+}
 
 export { app };
 

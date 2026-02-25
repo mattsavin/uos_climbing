@@ -15,20 +15,20 @@ const createNavbar = () => `
             </div>
           </a>
         </div>
-        <div class="hidden md:block">
-          <div class="ml-10 flex items-center space-x-8">
+        <div class="hidden md:flex items-center space-x-8">
             <a href="/" class="nav-link">Home</a>
             <a href="/about.html" class="nav-link">About</a>
             <a href="/competitions.html" class="nav-link">Competitions</a>
             <a href="/join.html" class="nav-link">Join Us</a>
-        <div class="flex items-center gap-4">
-          <div class="hidden md:flex">
-            <a href="/login.html" id="nav-auth-btn" class="text-sm font-bold text-slate-400 hover:text-brand-gold transition-colors uppercase tracking-wider px-4 py-2 border border-slate-700 hover:border-brand-gold/50 rounded-lg">
-              Sign In
-            </a>
-          </div>
+            <div class="flex items-center gap-4">
+              <a href="/login.html" id="nav-auth-btn" class="text-sm font-bold text-slate-400 hover:text-brand-gold transition-colors uppercase tracking-wider px-4 py-2 border border-slate-700 hover:border-brand-gold/50 rounded-lg">
+                Sign In
+              </a>
+            </div>
+        </div>
+        
         <!-- Mobile view: we only show the hamburger menu, hide the buttons inside -->
-        <div class="-mr-2 flex items-center gap-4 md:hidden">
+        <div class="-mr-2 flex items-center md:hidden">
           <button type="button" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-800 focus:outline-none transition-colors" id="mobile-menu-btn-fallback">
             <span class="sr-only">Open main menu</span>
             <svg class="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
