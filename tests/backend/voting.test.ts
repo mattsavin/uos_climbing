@@ -1,0 +1,151 @@
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import request from 'supertest';
+import { app } from '../../backend/server';
+import { db } from '../../backend/db';
+
+describe('Voting API', () => {
+    let userToken: string;
+    let userId: string;
+
+    beforeAll(async () => {
+        // Wait for DB initialization
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Create a regular user
+        const userRes = await request(app)
+            .post('/api/auth/register')
+            .send({
+                name: 'Voting User',
+                email: 'voter@example.com',
+                password: 'Password123!',
+                registrationNumber: 'VOTER1'
+            });
+        userToken = userRes.body.token;
+        userId = userRes.body.user.id;
+    });
+
+    afterAll(async () => {
+        db.close();
+    });
+
+    const createVoterUser = async (prefix: string) => {
+        const userRes = await request(app).post('/api/auth/register').send({
+            name: `${prefix} Voting User`, email: `${prefix}_voter@example.com`, password: 'Password123!', registrationNumber: `${prefix}VOTER`
+        });
+        return { token: userRes.body.token, id: userRes.body.user.id };
+    };
+
+    it('should fail to apply when elections are closed', async () => {
+        const { token } = await createVoterUser('apply_closed');
+        const res = await request(app)
+            .post('/api/voting/apply')
+            .set('Authorization', `Bearer ${token}`)
+            .send({
+                manifesto: 'Vote for me!',
+                role: 'President'
+            });
+
+        expect(res.status).toBe(403);
+        expect(res.body).toHaveProperty('error', 'Elections are not currently open');
+    });
+
+    it('should be able to see voting status', async () => {
+        const { token } = await createVoterUser('status_check');
+        const res = await request(app)
+            .get('/api/voting/status')
+            .set('Authorization', `Bearer ${token}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveProperty('hasVoted', false);
+        expect(res.body).toHaveProperty('isCandidate', false);
+        expect(res.body).toHaveProperty('electionsOpen', false);
+    });
+
+    it('should list candidates', async () => {
+        const { token } = await createVoterUser('list_check');
+        const res = await request(app)
+            .get('/api/voting/candidates')
+            .set('Authorization', `Bearer ${token}`);
+
+        expect(res.status).toBe(200);
+        expect(Array.isArray(res.body)).toBe(true);
+    });
+
+    it('should allow application when elections are open', async () => {
+        const { token } = await createVoterUser('apply_open');
+
+        // Admin opens elections
+        const adminRes = await request(app).post('/api/auth/login').send({ email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!' });
+        await request(app).post('/api/admin/config/elections').set('Authorization', `Bearer ${adminRes.body.token}`).send({ open: true });
+
+        const res = await request(app)
+            .post('/api/voting/apply')
+            .set('Authorization', `Bearer ${token}`)
+            .send({ manifesto: 'Vote for me!', role: 'President' });
+
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveProperty('success', true);
+    });
+
+    it('should reject double application', async () => {
+        const { token } = await createVoterUser('apply_double');
+
+        // Ensure open
+        const adminRes = await request(app).post('/api/auth/login').send({ email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!' });
+        await request(app).post('/api/admin/config/elections').set('Authorization', `Bearer ${adminRes.body.token}`).send({ open: true });
+
+        // First apply
+        await request(app).post('/api/voting/apply').set('Authorization', `Bearer ${token}`).send({ manifesto: 'Vote for me!', role: 'President' });
+
+        // Second apply
+        const res = await request(app)
+            .post('/api/voting/apply')
+            .set('Authorization', `Bearer ${token}`)
+            .send({ manifesto: 'Vote for me again!', role: 'Treasurer' });
+
+        expect(res.status).toBe(400);
+        expect(res.body).toHaveProperty('error', 'You are already a candidate');
+    });
+
+    it('should process a valid vote', async () => {
+        const voter = await createVoterUser('real_voter');
+        const candidate = await createVoterUser('real_candidate');
+
+        // Open elections
+        const adminRes = await request(app).post('/api/auth/login').send({ email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!' });
+        await request(app).post('/api/admin/config/elections').set('Authorization', `Bearer ${adminRes.body.token}`).send({ open: true });
+
+        // Apply as candidate
+        await request(app).post('/api/voting/apply').set('Authorization', `Bearer ${candidate.token}`).send({ manifesto: 'A', role: 'President' });
+
+        const res = await request(app)
+            .post('/api/voting/vote')
+            .set('Authorization', `Bearer ${voter.token}`)
+            .send({ candidateId: candidate.id });
+
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveProperty('success', true);
+    });
+
+    it('should reject double voting', async () => {
+        const voter = await createVoterUser('double_voter');
+        const candidate = await createVoterUser('double_candidate');
+
+        const adminRes = await request(app).post('/api/auth/login').send({ email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!' });
+        await request(app).post('/api/admin/config/elections').set('Authorization', `Bearer ${adminRes.body.token}`).send({ open: true });
+
+        await request(app).post('/api/voting/apply').set('Authorization', `Bearer ${candidate.token}`).send({ manifesto: 'A', role: 'President' });
+
+        // First vote
+        await request(app).post('/api/voting/vote').set('Authorization', `Bearer ${voter.token}`).send({ candidateId: candidate.id });
+
+        // Second vote
+        const res = await request(app)
+            .post('/api/voting/vote')
+            .set('Authorization', `Bearer ${voter.token}`)
+            .send({ candidateId: candidate.id });
+
+        expect(res.status).toBe(400);
+        expect(res.body).toHaveProperty('error', 'You have already voted');
+    });
+});

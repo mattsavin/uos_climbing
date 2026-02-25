@@ -6,7 +6,9 @@ import bcrypt from 'bcrypt';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const dbPath = join(__dirname, 'uscc.db');
+const dbPath = process.env.NODE_ENV === 'test'
+    ? ':memory:'
+    : join(__dirname, 'uscc.db');
 export const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('Error opening database', err.message);
