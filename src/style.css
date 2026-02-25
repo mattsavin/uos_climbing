@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-gold: #FDB913;
+  /* UoS Gold */
+  --color-brand-gold-muted: #D49A0B;
+  /* UoS Dark Gold */
+  --color-brand-dark: #171717;
+  /* Neutral Dark */
+  --color-brand-darker: #000000;
+  /* Pitch Black */
+  --color-brand-light: #fefefe;
+
+  --font-primary: 'Outfit', sans-serif;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-brand-darker text-brand-light font-primary antialiased;
+  }
+}
+
+@layer components {
+
+  /* Navigation */
+  .nav-link {
+    @apply text-slate-300 hover:text-brand-gold transition-colors duration-300 text-sm md:text-base font-medium uppercase tracking-wider relative;
+  }
+
+  .nav-link::after {
+    @apply content-[''] absolute -bottom-1 left-0 w-0 h-0.5 bg-brand-gold transition-all duration-300;
+  }
+
+  .nav-link:hover::after {
+    @apply w-full;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-8 py-4 text-base font-bold text-brand-darker bg-gradient-to-r from-brand-gold to-brand-gold-muted rounded-full transition-all duration-300 transform hover:-translate-y-1 uppercase tracking-widest border border-transparent;
+  }
+
+  .btn-primary:hover {
+    box-shadow: 0 0 20px rgba(253, 185, 19, 0.5);
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center px-8 py-4 text-base font-bold text-brand-gold border-2 border-brand-gold rounded-full hover:bg-brand-gold hover:text-brand-darker transition-all duration-300 uppercase tracking-widest;
+  }
+
+  /* Cards */
+  .glass-card {
+    @apply bg-brand-dark/50 backdrop-blur-md border border-slate-800 rounded-2xl p-8 hover:border-brand-gold/50 transition-all duration-500 hover:-translate-y-2;
+  }
+
+  .glass-card:hover {
+    box-shadow: 0 10px 30px rgba(253, 185, 19, 0.15);
+  }
+
+  /* Typography */
+  .heading-xl {
+    @apply text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter;
+  }
+
+  .heading-lg {
+    @apply text-4xl md:text-5xl font-extrabold tracking-tight;
+  }
+
+  .heading-md {
+    @apply text-2xl md:text-3xl font-bold;
+  }
+
+  /* Text gradients */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-brand-gold to-brand-gold-muted;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #020617;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #FDB913;
+}

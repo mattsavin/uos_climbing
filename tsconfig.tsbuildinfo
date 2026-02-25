@@ -1,0 +1,1 @@
+{"root":["./src/auth.ts","./src/calendar.ts","./src/dashboard.ts","./src/elections.ts","./src/join.ts","./src/login.ts","./src/main.ts","./src/components/sessionModal.ts"],"version":"5.9.3"}

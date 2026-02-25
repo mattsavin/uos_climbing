@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/climbing%20team%20logo.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <title>Join Us | USCC</title>
+</head>
+
+<body>
+    <div id="app">
+        <main>
+            <!-- Page Header -->
+            <section
+                class="pt-32 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center border-b border-white/5 relative">
+                <div
+                    class="absolute top-0 left-1/4 w-[500px] h-[300px] bg-brand-gold-muted/20 blur-[120px] pointer-events-none rounded-full">
+                </div>
+                <h1 class="heading-xl mb-6 relative z-10">Join <span class="text-brand-gold-muted">The Club.</span></h1>
+                <p class="text-xl text-slate-400 max-w-2xl mx-auto font-light relative z-10">From first-time climbers to
+                    BUCS finalists, you belong here. Come pull plastic with us.</p>
+            </section>
+
+            <!-- Weekly Meets -->
+            <section class="py-20 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
+                <div class="text-center mb-16">
+                    <h2 class="text-3xl font-black text-white mb-4">Weekly Indoor Meets</h2>
+                    <p class="text-slate-400 max-w-2xl mx-auto">Our schedule is currently being finalized as we
+                        establish the new club structure. Below is a preview of the structured sessions we will be
+                        running.</p>
+                </div>
+
+                <div class="mb-6 flex justify-between items-center text-white">
+                    <h2 class="font-bold text-xl drop-shadow-md tracking-wider flex items-center gap-2"
+                        id="calendar-month-display">
+                        Loading...
+                    </h2>
+                    <div class="flex gap-2">
+                        <button id="prev-month-btn"
+                            class="p-2 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition-colors">
+                            &larr;
+                        </button>
+                        <button id="next-month-btn"
+                            class="p-2 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition-colors">
+                            &rarr;
+                        </button>
+                    </div>
+                </div>
+
+                <div
+                    class="bg-brand-dark/30 border border-slate-800 rounded-2xl overflow-hidden backdrop-blur-sm shadow-xl relative">
+                    <!-- Days Header -->
+                    <div class="grid grid-cols-7 border-b border-slate-800 bg-slate-900/50">
+                        <div class="p-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Mon</div>
+                        <div class="p-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Tue</div>
+                        <div class="p-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Wed</div>
+                        <div class="p-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Thu</div>
+                        <div class="p-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Fri</div>
+                        <div
+                            class="p-3 text-center text-xs font-bold text-brand-gold-muted/80 uppercase tracking-wider">
+                            Sat</div>
+                        <div
+                            class="p-3 text-center text-xs font-bold text-brand-gold-muted/80 uppercase tracking-wider">
+                            Sun</div>
+                    </div>
+
+                    <!-- Calendar Grid -->
+                    <div id="calendar-grid" class="grid grid-cols-7 bg-brand-dark/50"
+                        style="grid-auto-rows: minmax(100px, auto);">
+                        <!-- Injected via calendar.ts -->
+                    </div>
+                </div>
+
+                <!-- Legend -->
+                <div
+                    class="mt-6 flex flex-wrap gap-4 items-center text-xs text-slate-400 backdrop-blur-sm bg-brand-dark/30 p-4 rounded-xl border border-white/5 inline-flex shadow-lg mx-auto w-fit">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-brand-gold"></span>
+                        Squad
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-brand-gold-muted"></span>
+                        Social
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+                        Rope
+                    </div>
+                </div>
+            </section>
+
+            <!-- Membership & Contact -->
+            <section class="py-20 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto border-t border-white/5">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                    <div>
+                        <h3 class="text-2xl font-bold text-white mb-4">Membership</h3>
+                        <p class="text-slate-400 mb-6 leading-relaxed">
+                            Membership details for the upcoming academic year are being finalized with the Students'
+                            Union.
+                            Keep an eye on our socials for the official launch and membership purchase links!
+                        </p>
+                        <div
+                            class="inline-block py-2 px-4 rounded-lg bg-slate-800/50 border border-slate-700 font-mono text-sm text-brand-gold-muted">
+                            Status: Awaiting SU Approval
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-bold text-white mb-4">Get In Touch</h3>
+                        <p class="text-slate-400 mb-6 leading-relaxed">
+                            Want to know more or register your interest early? Drop us a message on Instagram or shoot
+                            us an email.
+                        </p>
+                        <ul class="space-y-4">
+                            <li>
+                                <a href="mailto:sheffieldclimbing@gmail.com"
+                                    class="flex items-center text-brand-gold hover:text-brand-gold-muted transition-colors font-medium">
+                                    <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
+                                        </path>
+                                    </svg>
+                                    sheffieldclimbing@gmail.com
+                                </a>
+                            </li>
+                            <li>
+                                <a href="https://instagram.com/uos_climb" , target="_blank"
+                                    class="flex items-center text-brand-gold hover:text-brand-gold-muted transition-colors font-medium">
+                                    <svg class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 24 24">
+                                        <path
+                                            d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+                                    </svg>
+                                    @uos_climb
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+    <script type="module" src="/src/join.ts"></script>
+</body>
+
+</html>

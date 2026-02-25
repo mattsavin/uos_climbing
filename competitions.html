@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/climbing%20team%20logo.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <title>Competitions | USCC</title>
+</head>
+
+<body>
+    <div id="app">
+        <main>
+            <!-- Page Header -->
+            <section
+                class="pt-32 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center border-b border-white/5 relative">
+                <div
+                    class="absolute top-0 right-1/4 w-[500px] h-[300px] bg-brand-gold/10 blur-[100px] pointer-events-none rounded-full">
+                </div>
+                <h1 class="heading-xl mb-6 relative z-10"><span class="text-gradient">The Arena.</span></h1>
+                <p class="text-xl text-slate-400 max-w-2xl mx-auto font-light relative z-10">We are a group of dedicated
+                    climbers representing The University of Sheffield across the UK.</p>
+            </section>
+
+            <section class="py-20 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+
+                    <!-- BUCS -->
+                    <div class="glass-card flex flex-col h-full border-t-2 border-t-red-500">
+                        <h3 class="text-3xl font-black mb-2 text-white">BUCS</h3>
+                        <p class="text-red-500 font-bold text-sm mb-6 uppercase tracking-widest">British Universities
+                            & Colleges Sport</p>
+                        <p class="text-slate-300 font-light leading-relaxed mb-6 flex-grow">
+                            The pinnacle of university sport. We send our top athletes to compete against the best
+                            climbers from universities across the entire UK. It's highly competitive and our primary
+                            focus for the elite squad.
+                        </p>
+                    </div>
+
+                    <!-- NUBS -->
+                    <div class="glass-card flex flex-col h-full border-t-2 border-t-slate-500">
+                        <h3 class="text-3xl font-black mb-2 text-white">NUBS</h3>
+                        <p class="text-slate-400 font-bold text-sm mb-6 uppercase tracking-widest">Northern
+                            Universities Bouldering Series</p>
+                        <p class="text-slate-300 font-light leading-relaxed mb-6 flex-grow">
+                            A fantastic bouldering competition series spanning multiple rounds across Northern
+                            universities. Perfect for everyone from beginners to Team GB climbers looking for regular
+                            competition
+                            structure and a great atmosphere.
+                        </p>
+                    </div>
+
+                    <!-- NULSCC -->
+                    <div class="glass-card flex flex-col h-full border-t-2 border-t-red-500">
+                        <h3 class="text-3xl font-black mb-2 text-white">NULSCC</h3>
+                        <p class="text-red-400 font-bold text-sm mb-6 uppercase tracking-widest">National
+                            Universities Lead & Speed Climbing Competition</p>
+                        <p class="text-slate-300 font-light leading-relaxed mb-6 flex-grow">
+                            For the rope specialists! NULSCC focuses on lead climbing and speed climbing. If you prefer
+                            the endurance and technicality of roped ascents, this is our main lead competition focus.
+                        </p>
+                    </div>
+
+                    <!-- MUCC / Varsity -->
+                    <div class="glass-card flex flex-col h-full border-t-2 border-t-amber-500">
+                        <h3 class="text-3xl font-black mb-2 text-white">MUCC & Varsity</h3>
+                        <p class="text-amber-400 font-bold text-sm mb-6 uppercase tracking-widest">Midlands Series &
+                            Sheffield
+                            Derby</p>
+                        <p class="text-slate-300 font-light leading-relaxed mb-6 flex-grow">
+                            We also participate in the Midlands University Climbing Competition (MUCC), and of course,
+                            the highly anticipated Sheffield Varsity, where we face off against Sheffield Hallam
+                            University. Pride on the line!
+                        </p>
+                    </div>
+
+                </div>
+
+                <div
+                    class="mt-20 p-8 rounded-3xl bg-gradient-to-br from-[#0f172a] to-[#020617] border border-brand-gold/20 text-center relative overflow-hidden">
+                    <div class="absolute -right-10 -bottom-10 opacity-10">
+                        <svg class="w-64 h-64 text-brand-gold" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-bold text-white mb-4 relative z-10">Want to join the squad?</h2>
+                    <p class="text-slate-400 mb-8 max-w-2xl mx-auto relative z-10">Whether you are an experienced comp
+                        kid or an absolute comp beginner, we train together weekly and support everyone
+                        in pushing their limits.</p>
+                    <a href="/join.html" class="btn-primary relative z-10">View Training Sessions</a>
+                </div>
+            </section>
+
+        </main>
+    </div>
+    <script type="module">
+        import { initApp } from '/src/main.ts';
+        initApp();
+    </script>
+</body>
+
+</html>
