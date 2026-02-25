@@ -8,7 +8,7 @@ export default defineConfig({
     workers: process.env.CI ? 1 : undefined,
     reporter: 'html',
     use: {
-        baseURL: 'http://localhost:5173',
+        baseURL: 'http://localhost:5174',
         trace: 'on-first-retry',
     },
     projects: [
@@ -24,17 +24,21 @@ export default defineConfig({
     webServer: [
         {
             command: 'npm run server',
-            url: 'http://localhost:3000/api/sessions',
+            url: 'http://localhost:3001/api/sessions',
             reuseExistingServer: !process.env.CI,
             env: {
                 NODE_ENV: 'test',
-                PORT: '3000'
+                PLAYWRIGHT_TEST: 'true',
+                PORT: '3001'
             }
         },
         {
-            command: 'npm run dev',
-            url: 'http://localhost:5173',
+            command: 'npm run dev -- --port 5174',
+            url: 'http://localhost:5174',
             reuseExistingServer: !process.env.CI,
+            env: {
+                VITE_PROXY_TARGET: 'http://localhost:3001'
+            }
         }
     ],
 });

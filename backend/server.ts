@@ -63,7 +63,7 @@ if (process.env.NODE_ENV === 'production') {
 
 export { app };
 
-if (process.env.NODE_ENV !== 'test') {
+if (process.env.NODE_ENV !== 'test' || process.env.PLAYWRIGHT_TEST === 'true') {
     app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
     });

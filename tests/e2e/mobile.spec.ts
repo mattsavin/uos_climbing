@@ -17,13 +17,13 @@ test.describe('Mobile Viewport Experiences', () => {
 
         // The mobile menu dropdown should initially be hidden
         const mobileMenu = page.locator('#mobile-menu');
-        await expect(mobileMenu).toHaveClass(/hidden/);
+        await expect(mobileMenu).not.toBeVisible();
 
         // Click the hamburger menu
         await mobileMenuBtn.click();
 
         // The mobile menu dropdown should now be visible (not hidden)
-        await expect(mobileMenu).not.toHaveClass(/hidden/);
+        await expect(mobileMenu).toBeVisible();
 
         // Check if a link exists in the mobile menu and is visible
         const mobileHomeLink = mobileMenu.locator('a', { hasText: 'Home' }).first();
@@ -33,6 +33,6 @@ test.describe('Mobile Viewport Experiences', () => {
         await mobileMenuBtn.click();
 
         // The mobile menu dropdown should be hidden again
-        await expect(mobileMenu).toHaveClass(/hidden/);
+        await expect(mobileMenu).not.toBeVisible();
     });
 });
