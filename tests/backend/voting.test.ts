@@ -21,7 +21,9 @@ describe('Voting API', () => {
                 password: 'Password123!', passwordConfirm: 'Password123!',
                 registrationNumber: 'VOTER1'
             });
-        const tokenCookie1 = userRes.headers['set-cookie']?.find((c: string) => c.startsWith('uscc_token='));
+        const cookies1 = userRes.headers['set-cookie'];
+        const cookieArray1 = Array.isArray(cookies1) ? cookies1 : (cookies1 ? [cookies1] : []);
+        const tokenCookie1 = cookieArray1.find((c: string) => c.startsWith('uscc_token='));
         userToken = tokenCookie1 ? tokenCookie1.split(';')[0].split('=')[1] : '';
         userId = userRes.body.user.id;
     });
@@ -176,5 +178,97 @@ describe('Voting API', () => {
         // Verify status reflects not being a candidate
         const statusRes = await request(app).get('/api/voting/status').set('Authorization', `Bearer ${candidate.token}`);
         expect(statusRes.body).toHaveProperty('isCandidate', false);
+    });
+
+    // --- Referendum Tests ---
+
+    let referendumId: string;
+
+    it('should allow committee to create a referendum', async () => {
+        const adminRes = await request(app).post('/api/auth/login').send({ email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!' });
+
+        const res = await request(app)
+            .post('/api/voting/referendums')
+            .set('Authorization', `Bearer ${adminRes.body.token}`)
+            .send({ title: 'Increase Budget', description: 'Should we increase the social budget by 10%?' });
+
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveProperty('id');
+        expect(res.body.title).toBe('Increase Budget');
+
+        referendumId = res.body.id;
+    });
+
+    it('should allow users to fetch referendums', async () => {
+        const { token } = await createVoterUser('ref_fetch_user');
+
+        const res = await request(app)
+            .get('/api/voting/referendums')
+            .set('Authorization', `Bearer ${token}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.length).toBeGreaterThanOrEqual(1);
+        expect(res.body[0]).toHaveProperty('id', referendumId);
+        expect(res.body[0]).toHaveProperty('yesCount', 0);
+    });
+
+    it('should allow users to vote on an active referendum', async () => {
+        const { token } = await createVoterUser('ref_vote_user');
+
+        // Ensure open
+        const adminRes = await request(app).post('/api/auth/login').send({ email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!' });
+        await request(app).post('/api/admin/config/elections').set('Authorization', `Bearer ${adminRes.body.token}`).send({ open: true });
+
+        const res = await request(app)
+            .post(`/api/voting/referendums/${referendumId}/vote`)
+            .set('Authorization', `Bearer ${token}`)
+            .send({ choice: 'yes' });
+
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveProperty('success', true);
+
+        // Verify vote was counted
+        const getRes = await request(app)
+            .get('/api/voting/referendums')
+            .set('Authorization', `Bearer ${token}`);
+
+        const ref = getRes.body.find((r: any) => r.id === referendumId);
+        expect(ref.yesCount).toBe(1);
+        expect(ref.myVote).toBe('yes');
+    });
+
+    it('should reject double voting on the same referendum', async () => {
+        const { token } = await createVoterUser('ref_double_vote_user');
+
+        await request(app).post(`/api/voting/referendums/${referendumId}/vote`).set('Authorization', `Bearer ${token}`).send({ choice: 'no' });
+
+        const res = await request(app)
+            .post(`/api/voting/referendums/${referendumId}/vote`)
+            .set('Authorization', `Bearer ${token}`)
+            .send({ choice: 'yes' });
+
+        expect(res.status).toBe(400);
+        expect(res.body).toHaveProperty('error', 'You have already voted on this referendum');
+    });
+
+    it('should allow committee to reset elections', async () => {
+        const adminRes = await request(app).post('/api/auth/login').send({ email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!' });
+
+        const res = await request(app)
+            .post('/api/voting/reset')
+            .set('Authorization', `Bearer ${adminRes.body.token}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveProperty('success', true);
+
+        // Verify everything is wiped
+        const candidatesRes = await request(app).get('/api/voting/candidates').set('Authorization', `Bearer ${adminRes.body.token}`);
+        expect(candidatesRes.body.length).toBe(0);
+
+        const referendumsRes = await request(app).get('/api/voting/referendums').set('Authorization', `Bearer ${adminRes.body.token}`);
+        expect(referendumsRes.body.length).toBe(0);
+
+        const statusRes = await request(app).get('/api/voting/status').set('Authorization', `Bearer ${adminRes.body.token}`);
+        expect(statusRes.body.electionsOpen).toBe(false);
     });
 });

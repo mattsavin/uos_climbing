@@ -194,6 +194,24 @@ function initializeDatabase() {
             FOREIGN KEY (candidateId) REFERENCES users(id)
         )`);
 
+        // Referendums Table
+        db.run(`CREATE TABLE IF NOT EXISTS referendums (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            description TEXT NOT NULL,
+            createdAt INTEGER NOT NULL
+        )`);
+
+        // Referendum Votes Table
+        db.run(`CREATE TABLE IF NOT EXISTS referendum_votes (
+            userId TEXT NOT NULL,
+            referendumId TEXT NOT NULL,
+            choice TEXT NOT NULL, -- 'yes', 'no', 'abstain'
+            PRIMARY KEY (userId, referendumId),
+            FOREIGN KEY (userId) REFERENCES users(id),
+            FOREIGN KEY (referendumId) REFERENCES referendums(id)
+        )`);
+
         // Gear Table
         db.run(`CREATE TABLE IF NOT EXISTS gear (
             id TEXT PRIMARY KEY,

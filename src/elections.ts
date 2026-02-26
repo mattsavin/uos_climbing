@@ -2,6 +2,7 @@ import './style.css';
 import { authState, votingApi, adminApi } from './auth';
 import { initApp } from './main';
 import { escapeHTML, showToast, showConfirmModal } from './utils';
+import { config } from './config';
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -24,8 +25,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const candidatesList = document.getElementById('candidates-list');
 
+    // Referendum elements
+    const referendumsList = document.getElementById('referendums-list');
+    const addReferendumForm = document.getElementById('add-referendum-form') as HTMLFormElement;
+    const resetElectionsBtn = document.getElementById('reset-elections-btn');
+
     async function initElections() {
         const user = authState.getUser();
+
+        const yearSpan = document.getElementById('election-year');
+        if (yearSpan) yearSpan.textContent = config.academicYear;
+
+        if (candidateRole) {
+            candidateRole.innerHTML = '<option value="" disabled selected>Select a role...</option>' +
+                config.committeeRoles.map((r: any) => `<option value="${r.title}">${r.title}</option>`).join('');
+        }
 
         if (!user) {
             window.location.href = '/login.html';
@@ -59,6 +73,46 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     });
                 }
+
+                if (resetElectionsBtn) {
+                    resetElectionsBtn.addEventListener('click', async () => {
+                        const confirmed = await showConfirmModal('Are you sure you want to reset the election cycle? This wipes all candidates, votes, and referendums. This cannot be undone.');
+                        if (confirmed) {
+                            try {
+                                await votingApi.resetElections();
+                                showToast('Election cycle cleared successfully.', 'success');
+                                if (toggleElectionsOpen) toggleElectionsOpen.checked = false;
+                                await renderVotingPortal();
+                            } catch (err: any) {
+                                showToast(err.message || 'Error resetting elections', 'error');
+                            }
+                        }
+                    });
+                }
+
+                if (addReferendumForm) {
+                    addReferendumForm.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        const title = (document.getElementById('referendum-title') as HTMLInputElement).value;
+                        const desc = (document.getElementById('referendum-description') as HTMLTextAreaElement).value;
+                        if (!title || !desc) return;
+
+                        const submitBtn = addReferendumForm.querySelector('button[type="submit"]') as HTMLButtonElement;
+                        try {
+                            submitBtn.disabled = true;
+                            submitBtn.textContent = 'Publishing...';
+                            await votingApi.createReferendum(title, desc);
+                            addReferendumForm.reset();
+                            await renderVotingPortal();
+                            showToast('Referendum published.', 'success');
+                        } catch (err: any) {
+                            showToast(err.message || 'Failed to add referendum', 'error');
+                        } finally {
+                            submitBtn.disabled = false;
+                            submitBtn.textContent = 'Publish Referendum';
+                        }
+                    });
+                }
             } else {
                 if (adminPanel) adminPanel.classList.add('hidden');
             }
@@ -80,6 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const status = await votingApi.getStatus();
             const candidates = await votingApi.getCandidates();
+            const referendums = await votingApi.getReferendums();
 
             // Set Global status UI
             if (globalStatusSpan) {
@@ -160,11 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return acc;
                 }, {} as Record<string, typeof candidates>);
 
-                const rolesOrder = [
-                    'Chair', 'Secretary', 'Treasurer', 'Welfare & Inclusions',
-                    'Team Captain', "Women's Captain", "Men's Captain",
-                    'Social Sec', 'Publicity', 'Kit & Safety Sec'
-                ];
+                const rolesOrder = config.committeeRoles.map((r: any) => r.title);
 
                 let listHtml = '';
 
@@ -243,10 +294,133 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                     });
                 }
+
+                // Render Referendums
+                if (referendumsList) {
+                    if (referendums.length === 0) {
+                        referendumsList.innerHTML = `
+                            <div class="glass-card text-center p-8 border border-white/5">
+                                <p class="text-slate-400">No referendums are currently active.</p>
+                            </div>
+                        `;
+                    } else {
+                        const user = authState.getUser();
+                        const isAdmin = user && (user.role === 'committee' || !!user.committeeRole || (Array.isArray(user.committeeRoles) && user.committeeRoles.length > 0));
+
+                        referendumsList.innerHTML = referendums.map(ref => {
+                            const safeTitle = escapeHTML(ref.title);
+                            const safeDesc = escapeHTML(ref.description);
+
+                            // Delete button for admins
+                            const adminControls = isAdmin ? `
+                                <button class="delete-ref-btn absolute top-4 right-4 text-red-400/50 hover:text-red-400 transition-colors" data-id="${ref.id}" title="Delete Referendum">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            ` : '';
+
+                            // Voting controls or Results
+                            let interactiveSection = '';
+
+                            if (ref.myVote) {
+                                // User has voted, show results and their vote
+                                interactiveSection = `
+                                    <div class="mt-4 pt-4 border-t border-white/10">
+                                        <p class="text-xs text-brand-gold font-bold mb-3 uppercase tracking-wider">Results (You voted: ${ref.myVote.toUpperCase()})</p>
+                                        <div class="flex gap-4 text-sm font-medium">
+                                            <div class="text-emerald-400 flex-1 bg-emerald-400/10 rounded px-3 py-2 text-center border border-emerald-400/20">For: ${ref.yesCount}</div>
+                                            <div class="text-red-400 flex-1 bg-red-400/10 rounded px-3 py-2 text-center border border-red-400/20">Against: ${ref.noCount}</div>
+                                            <div class="text-slate-400 flex-1 bg-slate-400/10 rounded px-3 py-2 text-center border border-slate-400/20">Abstain: ${ref.abstainCount}</div>
+                                        </div>
+                                    </div>
+                                `;
+                            } else if (isAdmin) {
+                                // Admin viewing results without voting themselves (or admin who hasn't voted yet)
+                                interactiveSection = `
+                                    <div class="mt-4 pt-4 border-t border-white/10 flex flex-col sm:flex-row gap-4">
+                                        <div class="flex-1 flex gap-2">
+                                            <button class="vote-ref-btn btn-outline flex-1 !py-2 !text-xs !border-emerald-500/50 !text-emerald-400 hover:!bg-emerald-500 hover:!text-white" data-id="${ref.id}" data-choice="yes">Vote For</button>
+                                            <button class="vote-ref-btn btn-outline flex-1 !py-2 !text-xs !border-red-500/50 !text-red-400 hover:!bg-red-500 hover:!text-white" data-id="${ref.id}" data-choice="no">Vote Against</button>
+                                            <button class="vote-ref-btn btn-outline flex-1 !py-2 !text-xs !border-slate-500/50 !text-slate-400 hover:!bg-slate-500 hover:!text-white" data-id="${ref.id}" data-choice="abstain">Abstain</button>
+                                        </div>
+                                        <div class="sm:w-32 text-right">
+                                            <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Current Standings</p>
+                                            <div class="text-xs text-slate-300 font-mono">${ref.yesCount} Y / ${ref.noCount} N / ${ref.abstainCount} A</div>
+                                        </div>
+                                    </div>
+                                `;
+                            } else {
+                                // Regular user who hasn't voted yet
+                                interactiveSection = `
+                                    <div class="mt-4 pt-4 border-t border-white/10 flex gap-2">
+                                        <button class="vote-ref-btn btn-outline flex-1 !py-2 !text-xs !border-emerald-500/50 !text-emerald-400 hover:!bg-emerald-500 hover:!text-white" data-id="${ref.id}" data-choice="yes">Vote For</button>
+                                        <button class="vote-ref-btn btn-outline flex-1 !py-2 !text-xs !border-red-500/50 !text-red-400 hover:!bg-red-500 hover:!text-white" data-id="${ref.id}" data-choice="no">Vote Against</button>
+                                        <button class="vote-ref-btn btn-outline flex-1 !py-2 !text-xs !border-slate-500/50 !text-slate-400 hover:!bg-slate-500 hover:!text-white" data-id="${ref.id}" data-choice="abstain">Abstain</button>
+                                    </div>
+                                `;
+                            }
+
+                            return `
+                                <div class="glass-card !p-6 border border-white/5 relative bg-slate-800/20">
+                                    ${adminControls}
+                                    <h3 class="text-lg font-bold text-white mb-2 pr-8">${safeTitle}</h3>
+                                    <p class="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">${safeDesc}</p>
+                                    ${interactiveSection}
+                                </div>
+                            `;
+                        }).join('');
+
+                        // Attach referendum event listeners
+                        if (isAdmin) {
+                            document.querySelectorAll('.delete-ref-btn').forEach(btn => {
+                                btn.addEventListener('click', async (e) => {
+                                    const id = (e.currentTarget as HTMLElement).dataset.id;
+                                    if (id) {
+                                        const confirmed = await showConfirmModal('Delete this referendum? All associated votes will be lost.');
+                                        if (confirmed) {
+                                            try {
+                                                await votingApi.deleteReferendum(id);
+                                                await renderVotingPortal();
+                                                showToast('Referendum deleted', 'success');
+                                            } catch (err: any) {
+                                                showToast(err.message || 'Failed to delete referendum', 'error');
+                                            }
+                                        }
+                                    }
+                                });
+                            });
+                        }
+
+                        document.querySelectorAll('.vote-ref-btn').forEach(btn => {
+                            btn.addEventListener('click', async (e) => {
+                                const btnEl = e.currentTarget as HTMLButtonElement;
+                                const id = btnEl.dataset.id;
+                                const choice = btnEl.dataset.choice as 'yes' | 'no' | 'abstain';
+
+                                if (id && choice) {
+                                    const labels = { 'yes': 'FOR', 'no': 'AGAINST', 'abstain': 'to ABSTAIN on' };
+                                    const confirmed = await showConfirmModal(`Are you sure you want to vote ${labels[choice]} this referendum? You CANNOT change this later.`);
+
+                                    if (confirmed) {
+                                        try {
+                                            btnEl.disabled = true;
+                                            btnEl.textContent = 'Voting...';
+                                            await votingApi.voteReferendum(id, choice);
+                                            await renderVotingPortal();
+                                            showToast('Vote cast successfully', 'success');
+                                        } catch (err: any) {
+                                            showToast(err.message || 'Failed to cast vote', 'error');
+                                            btnEl.disabled = false;
+                                        }
+                                    }
+                                }
+                            });
+                        });
+                    }
+                }
             }
         } catch (err: any) {
             console.error("Voting portal error:", err);
-            if (candidatesList) candidatesList.innerHTML = `< p class="text-sm text-red-500 text-center py-4" > Failed to load elections data: ${err.message} </p>`;
+            if (candidatesList) candidatesList.innerHTML = `<p class="text-sm text-red-500 text-center py-4">Failed to load elections data: ${err.message}</p>`;
         }
     }
 

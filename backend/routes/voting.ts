@@ -1,6 +1,7 @@
 import express from 'express';
 import { db } from '../db';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken, requireCommittee } from '../middleware/auth';
+import crypto from 'crypto';
 
 const router = express.Router();
 
@@ -81,6 +82,93 @@ router.post('/vote', authenticateToken, (req: any, res) => {
             if (err) {
                 if (err.message.includes('UNIQUE constraint failed')) {
                     return res.status(400).json({ error: 'You have already voted' });
+                }
+                return res.status(500).json({ error: 'Database error' });
+            }
+            res.json({ success: true });
+        });
+    });
+});
+
+router.post('/reset', authenticateToken, requireCommittee, (req, res) => {
+    db.serialize(() => {
+        db.run('BEGIN TRANSACTION');
+        try {
+            db.run('DELETE FROM votes');
+            db.run('DELETE FROM candidates');
+            db.run('DELETE FROM referendum_votes');
+            db.run('DELETE FROM referendums');
+            db.run('UPDATE config SET value = ? WHERE key = ?', ['false', 'electionsOpen']);
+            db.run('COMMIT');
+            res.json({ success: true });
+        } catch (err) {
+            db.run('ROLLBACK');
+            res.status(500).json({ error: 'Database error during reset' });
+        }
+    });
+});
+
+router.get('/referendums', authenticateToken, (req: any, res) => {
+    db.all(`
+        SELECT r.id, r.title, r.description, r.createdAt,
+        (SELECT COUNT(*) FROM referendum_votes rv WHERE rv.referendumId = r.id AND rv.choice = 'yes') as yesCount,
+        (SELECT COUNT(*) FROM referendum_votes rv WHERE rv.referendumId = r.id AND rv.choice = 'no') as noCount,
+        (SELECT COUNT(*) FROM referendum_votes rv WHERE rv.referendumId = r.id AND rv.choice = 'abstain') as abstainCount,
+        (SELECT choice FROM referendum_votes rv WHERE rv.referendumId = r.id AND rv.userId = ?) as myVote
+        FROM referendums r
+        ORDER BY r.createdAt DESC
+    `, [req.user.id], (err, rows) => {
+        if (err) return res.status(500).json({ error: 'Database error' });
+        res.json(rows);
+    });
+});
+
+router.post('/referendums', authenticateToken, requireCommittee, (req, res) => {
+    const { title, description } = req.body;
+    if (!title || !description) return res.status(400).json({ error: 'Title and description are required' });
+
+    const id = crypto.randomUUID();
+    const createdAt = Date.now();
+
+    db.run('INSERT INTO referendums (id, title, description, createdAt) VALUES (?, ?, ?, ?)', [id, title, description, createdAt], function (err) {
+        if (err) return res.status(500).json({ error: 'Database error' });
+        res.json({ id, title, description, createdAt });
+    });
+});
+
+router.delete('/referendums/:id', authenticateToken, requireCommittee, (req, res) => {
+    const { id } = req.params;
+    db.serialize(() => {
+        db.run('BEGIN TRANSACTION');
+        try {
+            db.run('DELETE FROM referendum_votes WHERE referendumId = ?', [id]);
+            db.run('DELETE FROM referendums WHERE id = ?', [id]);
+            db.run('COMMIT');
+            res.json({ success: true });
+        } catch (err) {
+            db.run('ROLLBACK');
+            res.status(500).json({ error: 'Database error' });
+        }
+    });
+});
+
+router.post('/referendums/:id/vote', authenticateToken, (req: any, res) => {
+    const { id } = req.params;
+    const { choice } = req.body;
+
+    if (!['yes', 'no', 'abstain'].includes(choice)) {
+        return res.status(400).json({ error: 'Invalid choice. Must be yes, no, or abstain.' });
+    }
+
+    db.get('SELECT value FROM config WHERE key = ?', ['electionsOpen'], (err, config: any) => {
+        if (err || !config || config.value !== 'true') {
+            return res.status(403).json({ error: 'Elections are not currently open' });
+        }
+
+        db.run('INSERT INTO referendum_votes (userId, referendumId, choice) VALUES (?, ?, ?)', [req.user.id, id, choice], function (err) {
+            if (err) {
+                if (err.message.includes('UNIQUE constraint failed')) {
+                    return res.status(400).json({ error: 'You have already voted on this referendum' });
                 }
                 return res.status(500).json({ error: 'Database error' });
             }

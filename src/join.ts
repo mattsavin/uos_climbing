@@ -3,10 +3,16 @@ import { authState } from './auth';
 import { renderCalendarEvents } from './calendar';
 import { openSessionModal } from './components/sessionModal';
 import { initApp } from './main';
+import { config } from './config';
 
 export async function initJoinApp() {
     // 1. Initialize Layout (Navbar & Footer)
     initApp();
+
+    const academicYearDisplay = document.getElementById('academic-year-display');
+    if (academicYearDisplay) {
+        academicYearDisplay.textContent = config.academicYear + ' academic year';
+    }
 
     // 2. Initialize Auth State (in case user is logged in, though join page is semi-public)
     await authState.init();

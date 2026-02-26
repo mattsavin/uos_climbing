@@ -479,8 +479,45 @@ export const votingApi = {
 
     async withdrawCandidate() {
         return apiFetch('/api/voting/withdraw', { method: 'POST' });
+    },
+
+    async resetElections() {
+        return apiFetch('/api/voting/reset', { method: 'POST' });
+    },
+
+    async getReferendums(): Promise<Referendum[]> {
+        return apiFetch('/api/voting/referendums');
+    },
+
+    async createReferendum(title: string, description: string) {
+        return apiFetch('/api/voting/referendums', {
+            method: 'POST',
+            body: JSON.stringify({ title, description })
+        });
+    },
+
+    async deleteReferendum(id: string) {
+        return apiFetch(`/api/voting/referendums/${id}`, { method: 'DELETE' });
+    },
+
+    async voteReferendum(id: string, choice: 'yes' | 'no' | 'abstain') {
+        return apiFetch(`/api/voting/referendums/${id}/vote`, {
+            method: 'POST',
+            body: JSON.stringify({ choice })
+        });
     }
 };
+
+export interface Referendum {
+    id: string;
+    title: string;
+    description: string;
+    createdAt: number;
+    yesCount: number;
+    noCount: number;
+    abstainCount: number;
+    myVote?: 'yes' | 'no' | 'abstain';
+}
 
 export interface GearItem {
     id: string;

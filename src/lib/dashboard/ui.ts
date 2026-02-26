@@ -2,6 +2,7 @@ import { authState, getCurrentAcademicYear } from '../../auth';
 import { renderSessions } from './sessions';
 import { renderAdminLists } from './admin';
 import { showToast } from '../../utils';
+import { config } from '../../config';
 
 export async function updateUI() {
     const user = authState.getUser();
@@ -66,11 +67,10 @@ export async function updateUI() {
         // Render individual membership types
         const membershipsContainer = document.getElementById('memberships-container');
         const addMbTypeSelect = document.getElementById('additional-membership-type') as HTMLSelectElement;
-        const ALL_MEMBERSHIP_TYPES = [
-            { value: 'basic', label: 'Basic Membership' },
-            { value: 'bouldering', label: 'Bouldering Add-on' },
-            { value: 'comp_team', label: 'Competition Team' },
-        ];
+        const ALL_MEMBERSHIP_TYPES = config.membershipAddons.map((m: any) => ({
+            value: m.id,
+            label: m.label
+        }));
         if (membershipsContainer) {
             membershipsContainer.innerHTML = '<div class="flex justify-center"><div class="animate-spin rounded-full h-5 w-5 border-b-2 border-brand-gold"></div></div>';
             try {
@@ -107,7 +107,8 @@ export async function updateUI() {
                         if (m.status === 'active') colorClass = 'bg-brand-gold/10 text-brand-gold border-brand-gold/20';
                         else if (m.status === 'pending') colorClass = 'bg-amber-500/10 text-amber-500 border-amber-500/20';
                         else if (m.status === 'rejected') colorClass = 'bg-red-500/10 text-red-400 border-red-500/20';
-                        const typeLabel = { basic: 'Basic', bouldering: 'Bouldering', comp_team: 'Comp Team' }[m.membershipType] || m.membershipType;
+                        const foundMb = config.membershipTypes.find((mt: any) => mt.id === m.membershipType);
+                        const typeLabel = foundMb ? foundMb.label.split(' ')[0] : m.membershipType;
                         return `
                         <div class="flex items-center justify-between p-2 rounded border ${colorClass} mb-2 text-xs font-bold uppercase tracking-wide">
                             <div class="flex flex-col">

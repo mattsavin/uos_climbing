@@ -1,9 +1,10 @@
 import { adminApi, authState, type Session } from '../../auth';
 import { renderCalendarEvents } from '../../calendar';
 import { openSessionModal } from '../../components/sessionModal';
+import { config } from '../../config';
 
 let currentCalendarDate = new Date();
-let activeFilter: 'all' | 'basic' | 'bouldering' | 'comp_team' = 'all';
+let activeFilter: string = 'all';
 
 export async function renderSessions(isAdmin: boolean) {
     const calendarGrid = document.getElementById('calendar-grid');
@@ -53,6 +54,26 @@ export async function renderSessions(isAdmin: boolean) {
 }
 
 export function initSessionHandlers() {
+    const sessionTypeSelect = document.getElementById('session-type');
+    if (sessionTypeSelect) {
+        sessionTypeSelect.innerHTML = config.sessionTypes.map((t: any) => `<option value="${t.id}">${t.label}</option>`).join('');
+    }
+
+    const sessionReqMbSelect = document.getElementById('session-required-membership');
+    if (sessionReqMbSelect) {
+        sessionReqMbSelect.innerHTML = config.membershipTypes.map((m: any) => `<option value="${m.id}">${m.label}</option>`).join('');
+    }
+
+    const filtersContainer = document.getElementById('calendar-filters-container');
+    if (filtersContainer) {
+        filtersContainer.innerHTML = config.calendarFilters.map((f: any) => `
+            <button id="filter-${f.id}" data-filter="${f.id}"
+                class="session-filter-btn whitespace-nowrap px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all duration-150 ${f.id === 'all' ? 'border-brand-gold bg-brand-gold/20 text-brand-gold' : 'border-slate-700 text-slate-400'}">
+                ${f.label}
+            </button>
+        `).join('');
+    }
+
     const prevMonthBtn = document.getElementById('prev-month-btn');
     const nextMonthBtn = document.getElementById('next-month-btn');
     const addSessionToggleBtn = document.getElementById('add-session-toggle-btn');
@@ -108,30 +129,17 @@ export function initSessionHandlers() {
     // Membership filter buttons
     document.querySelectorAll<HTMLButtonElement>('.session-filter-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
-            const filter = btn.dataset.filter as typeof activeFilter;
+            const filter = btn.dataset.filter!;
             activeFilter = filter;
 
             // Update active state styling
             document.querySelectorAll<HTMLButtonElement>('.session-filter-btn').forEach(b => {
-                b.classList.remove('bg-slate-700', 'text-white', 'border-slate-600', 'bg-brand-gold', 'text-brand-darker', 'border-brand-gold',
-                    'bg-blue-500/20', 'text-blue-400', 'border-blue-400', 'bg-purple-500/20', 'text-purple-400', 'border-purple-400');
+                b.classList.remove('bg-brand-gold/20', 'text-brand-gold', 'border-brand-gold');
                 b.classList.add('border-slate-700', 'text-slate-400');
-                b.style.backgroundColor = '';
             });
 
-            if (filter === 'all') {
-                btn.classList.add('bg-slate-700', 'text-white', 'border-slate-600');
-                btn.classList.remove('border-slate-700', 'text-slate-400');
-            } else if (filter === 'basic') {
-                btn.classList.add('bg-brand-gold/15', 'text-brand-gold', 'border-brand-gold');
-                btn.classList.remove('border-slate-700', 'text-slate-400');
-            } else if (filter === 'bouldering') {
-                btn.classList.add('bg-blue-500/15', 'text-blue-400', 'border-blue-400');
-                btn.classList.remove('border-slate-700', 'text-slate-400');
-            } else if (filter === 'comp_team') {
-                btn.classList.add('bg-purple-500/15', 'text-purple-400', 'border-purple-400');
-                btn.classList.remove('border-slate-700', 'text-slate-400');
-            }
+            btn.classList.add('bg-brand-gold/20', 'text-brand-gold', 'border-brand-gold');
+            btn.classList.remove('border-slate-700', 'text-slate-400');
 
             await renderSessions(getIsCommittee());
         });
