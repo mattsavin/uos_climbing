@@ -16,9 +16,9 @@
         <main>
             <!-- Page Header -->
             <section
-                class="pt-32 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center border-b border-white/5 relative">
+                class="pt-32 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center border-b border-white/5 relative overflow-hidden">
                 <div
-                    class="absolute top-0 left-1/4 w-[500px] h-[300px] bg-brand-gold-muted/20 blur-[120px] pointer-events-none rounded-full">
+                    class="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-brand-gold-muted/20 blur-[120px] pointer-events-none rounded-full">
                 </div>
                 <h1 class="heading-xl mb-6 relative z-10">Join <span class="text-brand-gold-muted">The Club.</span></h1>
                 <p class="text-xl text-slate-400 max-w-2xl mx-auto font-light relative z-10">From first-time climbers to
@@ -51,28 +51,9 @@
                     </div>
                 </div>
 
-                <div
-                    class="bg-brand-dark/30 border border-slate-800 rounded-2xl overflow-hidden backdrop-blur-sm shadow-xl relative">
-                    <!-- Days Header -->
-                    <div class="grid grid-cols-7 border-b border-slate-800 bg-slate-900/50">
-                        <div class="p-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Mon</div>
-                        <div class="p-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Tue</div>
-                        <div class="p-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Wed</div>
-                        <div class="p-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Thu</div>
-                        <div class="p-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Fri</div>
-                        <div
-                            class="p-3 text-center text-xs font-bold text-brand-gold-muted/80 uppercase tracking-wider">
-                            Sat</div>
-                        <div
-                            class="p-3 text-center text-xs font-bold text-brand-gold-muted/80 uppercase tracking-wider">
-                            Sun</div>
-                    </div>
-
-                    <!-- Calendar Grid -->
-                    <div id="calendar-grid" class="grid grid-cols-7 bg-brand-dark/50"
-                        style="grid-auto-rows: minmax(100px, auto);">
-                        <!-- Injected via calendar.ts -->
-                    </div>
+                <div class="bg-brand-dark/30 border border-slate-800 rounded-2xl overflow-hidden backdrop-blur-sm shadow-xl relative"
+                    id="calendar-grid">
+                    <!-- Injected via JS -->
                 </div>
 
                 <!-- Legend -->

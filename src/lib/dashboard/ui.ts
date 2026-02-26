@@ -1,6 +1,7 @@
 import { authState, getCurrentAcademicYear } from '../../auth';
 import { renderSessions } from './sessions';
 import { renderAdminLists } from './admin';
+import { renderSessionTypes, initSessionTypeHandlers } from './session-types';
 import { showToast } from '../../utils';
 import { config } from '../../config';
 
@@ -14,6 +15,7 @@ export async function updateUI() {
         const userRegNo = document.getElementById('user-reg-no');
         const userRole = document.getElementById('user-role');
         const committeePanel = document.getElementById('committee-panel');
+        const manageTypesShortcut = document.getElementById('manage-types-shortcut');
         const addSessionToggleBtn = document.getElementById('add-session-toggle-btn');
         const addSessionFormContainer = document.getElementById('add-session-form-container');
         const icalLink = document.getElementById('ical-link') as HTMLAnchorElement | null;
@@ -207,10 +209,18 @@ export async function updateUI() {
         const isCommittee = user.role === 'committee' || !!user.committeeRole || (Array.isArray(user.committeeRoles) && user.committeeRoles.length > 0);
         if (isCommittee) {
             if (committeePanel) committeePanel.classList.remove('hidden');
+            if (manageTypesShortcut) {
+                manageTypesShortcut.classList.remove('hidden');
+                manageTypesShortcut.onclick = () => {
+                    document.getElementById('manage-session-types-card')?.scrollIntoView({ behavior: 'smooth' });
+                };
+            }
             if (addSessionToggleBtn) addSessionToggleBtn.classList.remove('hidden');
             await renderAdminLists();
+            await renderSessionTypes();
         } else {
             if (committeePanel) committeePanel.classList.add('hidden');
+            if (manageTypesShortcut) manageTypesShortcut.classList.add('hidden');
             if (addSessionToggleBtn) addSessionToggleBtn.classList.add('hidden');
             if (addSessionFormContainer) addSessionFormContainer.classList.add('hidden');
         }
@@ -252,4 +262,6 @@ export function initGeneralHandlers() {
             }
         });
     }
+
+    initSessionTypeHandlers();
 }

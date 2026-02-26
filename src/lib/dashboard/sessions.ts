@@ -12,15 +12,39 @@ export async function renderSessions(isAdmin: boolean) {
     if (!calendarGrid || !calendarMonthDisplay) return;
 
     const allSessions = await adminApi.getSessions();
+    const sessionTypes = await adminApi.getSessionTypes();
     let myBookings: string[] = [];
     if (authState.getUser()) {
         myBookings = await adminApi.getMyBookings();
     }
 
-    // Apply membership type filter
+    // Update filter buttons if they exist
+    const filtersContainer = document.getElementById('calendar-filters-container');
+    if (filtersContainer) {
+        const filters = [
+            { id: 'all', label: 'All' },
+            ...sessionTypes.map(t => ({ id: t.id, label: t.label }))
+        ];
+        filtersContainer.innerHTML = filters.map((f: any) => `
+            <button id="filter-${f.id}" data-filter="${f.id}"
+                class="session-filter-btn whitespace-nowrap px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all duration-150 ${f.id === activeFilter ? 'border-brand-gold bg-brand-gold/20 text-brand-gold' : 'border-slate-700 text-slate-400'}">
+                ${f.label}
+            </button>
+        `).join('');
+
+        // Re-attach filter listeners since we just replaced the HTML
+        filtersContainer.querySelectorAll('.session-filter-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                activeFilter = (btn as HTMLElement).dataset.filter!;
+                await renderSessions(isAdmin);
+            });
+        });
+    }
+
+    // Apply membership type filter (note: session.type is what we filter on)
     const sessions = activeFilter === 'all'
         ? allSessions
-        : allSessions.filter((s: Session) => (s.requiredMembership || 'basic') === activeFilter);
+        : allSessions.filter((s: Session) => s.type === activeFilter);
 
     renderCalendarEvents(
         calendarGrid,
@@ -54,9 +78,16 @@ export async function renderSessions(isAdmin: boolean) {
 }
 
 export function initSessionHandlers() {
+    window.addEventListener('resize', () => {
+        const isAdmin = !!document.getElementById('committee-tabs');
+        renderSessions(isAdmin);
+    });
+
     const sessionTypeSelect = document.getElementById('session-type');
     if (sessionTypeSelect) {
-        sessionTypeSelect.innerHTML = config.sessionTypes.map((t: any) => `<option value="${t.id}">${t.label}</option>`).join('');
+        adminApi.getSessionTypes().then(types => {
+            sessionTypeSelect.innerHTML = types.map((t: any) => `<option value="${t.id}">${t.label}</option>`).join('');
+        });
     }
 
     const sessionReqMbSelect = document.getElementById('session-required-membership');

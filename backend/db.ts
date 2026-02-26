@@ -283,6 +283,29 @@ function initializeDatabase() {
             }
         });
 
+        // Session Types Table
+        db.run(`CREATE TABLE IF NOT EXISTS session_types (
+            id TEXT PRIMARY KEY,
+            label TEXT NOT NULL
+        )`);
+
+        // Seed default session types if table is empty
+        db.get('SELECT COUNT(*) as count FROM session_types', (err, row: any) => {
+            if (row && row.count === 0) {
+                console.log("Seeding default session types...");
+                const defaultTypes = [
+                    ['Competition', 'Competition'],
+                    ['Social', 'Social'],
+                    ['Training Session (Bouldering)', 'Training Session (Bouldering)'],
+                    ['Training Session (Roped)', 'Training Session (Roped)'],
+                    ['Meeting', 'Meeting']
+                ];
+                const stmt = db.prepare('INSERT INTO session_types (id, label) VALUES (?, ?)');
+                defaultTypes.forEach(t => stmt.run(t));
+                stmt.finalize();
+            }
+        });
+
         // Seed default sessions if table is empty
         db.get('SELECT COUNT(*) as count FROM sessions', (err, row: any) => {
             if (row && row.count === 0) {

@@ -54,7 +54,7 @@ jobs:
           host: ${{ secrets.VPS_IP }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: JWT_SECRET,EMAIL_USER,EMAIL_CLIENT_ID,EMAIL_CLIENT_SECRET,EMAIL_REFRESH_TOKEN
+          envs: JWT_SECRET,EMAIL_USER,EMAIL_CLIENT_ID,EMAIL_CLIENT_SECRET,EMAIL_REFRESH_TOKEN,COOKIE_SECURE
           script: |
             cd ~/uos_climbing || git clone https://github.com/mattsavin/uos_climbing.git ~/uos_climbing
             cd ~/uos_climbing
@@ -70,6 +70,7 @@ jobs:
               -e EMAIL_CLIENT_ID="$EMAIL_CLIENT_ID" \
               -e EMAIL_CLIENT_SECRET="$EMAIL_CLIENT_SECRET" \
               -e EMAIL_REFRESH_TOKEN="$EMAIL_REFRESH_TOKEN" \
+              -e COOKIE_SECURE="$COOKIE_SECURE" \
               uos_climbing
         env:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
@@ -77,3 +78,4 @@ jobs:
           EMAIL_CLIENT_ID: ${{ secrets.EMAIL_CLIENT_ID }}
           EMAIL_CLIENT_SECRET: ${{ secrets.EMAIL_CLIENT_SECRET }}
           EMAIL_REFRESH_TOKEN: ${{ secrets.EMAIL_REFRESH_TOKEN }}
+          COOKIE_SECURE: ${{ secrets.COOKIE_SECURE }}

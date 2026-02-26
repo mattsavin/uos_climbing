@@ -75,15 +75,6 @@ export const config = {
         { id: "comp_team", label: "Competition Team" }
     ],
 
-    // Session Types
-    sessionTypes: [
-        { id: "Competition", label: "Competition" },
-        { id: "Social", label: "Social" },
-        { id: "Training Session (Bouldering)", label: "Training Session (Bouldering)" },
-        { id: "Training Session (Roped)", label: "Training Session (Roped)" },
-        { id: "Meeting", label: "Meeting" }
-    ],
-
     // Calendar Filters
     calendarFilters: [
         { id: "all", label: "All", default: true },

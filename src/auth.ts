@@ -51,6 +51,11 @@ export function getCurrentAcademicYear() {
     return `${year}/${year + 1}`;
 }
 
+export interface SessionType {
+    id: string;
+    label: string;
+}
+
 export interface Session {
     id: string;
     type: 'Competition' | 'Social' | 'Training Session (Bouldering)' | 'Training Session (Roped)' | 'Meeting';
@@ -442,6 +447,29 @@ export const adminApi = {
 
     async cancelSession(id: string) {
         return apiFetch(`/api/sessions/${id}/cancel`, { method: 'POST' });
+    },
+
+    // Session Type Management API
+    async getSessionTypes(): Promise<SessionType[]> {
+        return apiFetch('/api/session-types');
+    },
+
+    async addSessionType(label: string): Promise<SessionType> {
+        return apiFetch('/api/session-types', {
+            method: 'POST',
+            body: JSON.stringify({ label })
+        });
+    },
+
+    async updateSessionType(id: string, label: string): Promise<SessionType> {
+        return apiFetch(`/api/session-types/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ label })
+        });
+    },
+
+    async deleteSessionType(id: string): Promise<void> {
+        return apiFetch(`/api/session-types/${id}`, { method: 'DELETE' });
     }
 };
 

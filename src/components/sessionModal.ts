@@ -67,11 +67,6 @@ export function openSessionModal(options: SessionModalOptions) {
                                 <div class="space-y-1 text-left">
                                     <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Type</label>
                                     <select id="usm-edit-type" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white text-[11px] focus:outline-none focus:border-amber-500 block">
-                                        <option value="Competition">Competition</option>
-                                        <option value="Social">Social</option>
-                                        <option value="Training Session (Bouldering)">Training Session (Bouldering)</option>
-                                        <option value="Training Session (Roped)">Training Session (Roped)</option>
-                                        <option value="Meeting">Meeting</option>
                                     </select>
                                 </div>
                             </div>
@@ -295,7 +290,13 @@ export function openSessionModal(options: SessionModalOptions) {
             (document.getElementById('usm-edit-id') as HTMLInputElement).value = session.id;
             (document.getElementById('usm-edit-title') as HTMLInputElement).value = session.title;
             (document.getElementById('usm-edit-date') as HTMLInputElement).value = session.date;
-            (document.getElementById('usm-edit-type') as HTMLSelectElement).value = session.type;
+
+            const typeSelect = document.getElementById('usm-edit-type') as HTMLSelectElement;
+            adminApi.getSessionTypes().then(types => {
+                typeSelect.innerHTML = types.map(t => `<option value="${t.id}">${t.label}</option>`).join('');
+                typeSelect.value = session.type;
+            });
+
             (document.getElementById('usm-edit-capacity') as HTMLInputElement).value = session.capacity.toString();
             (document.getElementById('usm-edit-booked') as HTMLInputElement).value = session.bookedSlots.toString();
             (document.getElementById('usm-edit-required-membership') as HTMLSelectElement).value = (session as any).requiredMembership || 'basic';

@@ -6,6 +6,7 @@ import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import adminRoutes from './routes/admin';
 import sessionRoutes from './routes/sessions';
+import sessionTypeRoutes from './routes/session-types';
 import votingRoutes from './routes/voting';
 import gearRoutes from './routes/gear';
 import path from 'path';
@@ -32,6 +33,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/sessions', sessionRoutes);
+app.use('/api/session-types', sessionTypeRoutes);
 app.use('/api/voting', votingRoutes);
 app.use('/api/gear', gearRoutes);
 

@@ -74,6 +74,11 @@ export async function initJoinApp() {
 
     // Initial render
     await renderSessions();
+
+    // Responsive listener
+    window.addEventListener('resize', () => {
+        renderSessions();
+    });
 }
 
 // Call init when script loads (similar to main.ts)

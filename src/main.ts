@@ -3,18 +3,20 @@ import { authState } from './auth';
 
 // Reusable components
 const createNavbar = () => `
-  <nav class="fixed w-full z-50 bg-brand-darker/80 backdrop-blur-lg border-b border-white/5 transition-all duration-300 transform" id="main-nav">
+  <nav class="fixed w-full z-50 glass-nav transition-all duration-300" id="main-nav">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-20">
         <div class="flex-shrink-0">
           <a href="/" class="flex items-center gap-4">
-            <img src="/climbing%20team%20logo.png" alt="USCC Logo" class="h-16 w-auto drop-shadow-md" />
+            <img src="/climbing%20team%20logo.png" alt="USCC Logo" class="h-14 md:h-16 w-auto drop-shadow-md" />
             <div class="flex flex-col">
-              <span class="text-2xl font-black tracking-tighter text-white leading-none">USCC</span>
-              <span class="text-[0.6rem] font-bold tracking-widest text-brand-gold uppercase mt-1">Climbing Club</span>
+              <span class="text-xl md:text-2xl font-black tracking-tighter text-white leading-none">USCC</span>
+              <span class="text-[0.5rem] md:text-[0.6rem] font-bold tracking-widest text-brand-gold uppercase mt-1">Climbing Club</span>
             </div>
           </a>
         </div>
+        
+        <!-- Desktop Nav -->
         <div class="hidden md:flex items-center space-x-8">
             <a href="/" class="nav-link">Home</a>
             <a href="/about.html" class="nav-link">About</a>
@@ -27,25 +29,33 @@ const createNavbar = () => `
             </div>
         </div>
         
-        <!-- Mobile view: we only show the hamburger menu, hide the buttons inside -->
-        <div class="-mr-2 flex items-center md:hidden">
-          <button type="button" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-800 focus:outline-none transition-colors" id="mobile-menu-btn-fallback">
+        <!-- Mobile Menu Button -->
+        <div class="flex items-center md:hidden">
+          <button type="button" class="inline-flex items-center justify-center p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 focus:outline-none transition-all duration-300" id="mobile-menu-btn-fallback">
             <span class="sr-only">Open main menu</span>
-            <svg class="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <svg class="h-6 w-6" id="menu-icon-open" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+            <svg class="h-6 w-6 hidden" id="menu-icon-close" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
       </div>
     </div>
     
-    <!-- Mobile menu -->
-    <div class="md:hidden hidden bg-brand-darker border-b border-white/10" id="mobile-menu">
-      <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3 flex flex-col items-center">
-        <a href="/" class="block px-3 py-4 text-base font-medium text-white hover:text-brand-gold w-full text-center border-b border-white/5">Home</a>
-        <a href="/about.html" class="block px-3 py-4 text-base font-medium text-white hover:text-brand-gold w-full text-center border-b border-white/5">About</a>
-        <a href="/competitions.html" class="block px-3 py-4 text-base font-medium text-white hover:text-brand-gold w-full text-center border-b border-white/5">Competitions</a>
-        <a href="/join.html" class="block px-3 py-4 text-base font-medium text-white hover:text-brand-gold w-full text-center">Join Us</a>
+    <!-- Mobile dropdown -->
+    <div class="md:hidden hidden glass-nav border-t border-white/5 shadow-2xl overflow-hidden animate-in slide-in-from-top duration-300" id="mobile-menu">
+      <div class="flex flex-col py-2">
+        <a href="/" class="mobile-nav-link">Home</a>
+        <a href="/about.html" class="mobile-nav-link">About</a>
+        <a href="/competitions.html" class="mobile-nav-link">Competitions</a>
+        <a href="/join.html" class="mobile-nav-link">Join Us</a>
+        <div class="p-6">
+          <a href="/login.html" id="nav-auth-btn-mobile" class="btn-primary w-full py-3 text-sm">
+            Sign In
+          </a>
+        </div>
       </div>
     </div>
   </nav>
@@ -106,10 +116,22 @@ export function initApp() {
   // Mobile menu toggle
   const mobileMenuBtn = document.getElementById('mobile-menu-btn-fallback');
   const mobileMenu = document.getElementById('mobile-menu');
+  const openIcon = document.getElementById('menu-icon-open');
+  const closeIcon = document.getElementById('menu-icon-close');
 
   if (mobileMenuBtn && mobileMenu) {
     mobileMenuBtn.addEventListener('click', () => {
+      const isHidden = mobileMenu.classList.contains('hidden');
       mobileMenu.classList.toggle('hidden');
+      if (openIcon && closeIcon) {
+        if (isHidden) {
+          openIcon.classList.add('hidden');
+          closeIcon.classList.remove('hidden');
+        } else {
+          openIcon.classList.remove('hidden');
+          closeIcon.classList.add('hidden');
+        }
+      }
     });
   }
 
@@ -130,15 +152,19 @@ export function initApp() {
   // Update navbar based on auth state
   authState.init().then(() => {
     const user = authState.getUser();
-    const navAuthBtn = document.getElementById('nav-auth-btn') as HTMLAnchorElement;
-    if (navAuthBtn) {
-      if (user) {
-        navAuthBtn.innerHTML = 'Dashboard';
-        navAuthBtn.href = '/dashboard.html';
-      } else {
-        navAuthBtn.innerHTML = 'Sign In';
-        navAuthBtn.href = '/login.html';
+    const updateBtn = (btnId: string) => {
+      const btn = document.getElementById(btnId) as HTMLAnchorElement;
+      if (btn) {
+        if (user) {
+          btn.innerHTML = user.role === 'committee' ? 'Dashboard' : 'Profile';
+          btn.href = '/dashboard.html';
+        } else {
+          btn.innerHTML = 'Sign In';
+          btn.href = '/login.html';
+        }
       }
-    }
+    };
+    updateBtn('nav-auth-btn');
+    updateBtn('nav-auth-btn-mobile');
   });
 }
