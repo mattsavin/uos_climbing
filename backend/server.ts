@@ -44,30 +44,28 @@ app.use('/api/ical', (req, res, next) => {
 });
 
 // Serve static frontend in production
-if (process.env.NODE_ENV === 'production') {
-    // 1. Fallback for SPA routing - must come before express.static
-    app.use(history({
-        disableDotRule: true, // Allow files with dots (like css/js) to be served
-        rewrites: [
-            // Ensure requests to '/api' aren't intercepted by history
-            { from: /^\/api\/.*$/, to: function (context: any) { return context.parsedUrl?.pathname || '/'; } },
+// 1. Serve static files from the build directory (Assets MUST come first)
+const distPath = path.join(__dirname, '../dist');
+console.log(`Serving static files from: ${distPath}`);
+app.use(express.static(distPath));
 
-            // Re-route Vite's HTML entrypoints
-            { from: /^\/dashboard$/, to: '/dashboard.html' },
-            { from: /^\/about$/, to: '/about.html' },
-            { from: /^\/join$/, to: '/join.html' },
-            { from: /^\/competitions$/, to: '/competitions.html' },
-            { from: /^\/gear$/, to: '/gear.html' }
-        ]
-    }));
+// 2. Fallback for SPA routing - handles page refreshes on sub-routes
+app.use(history({
+    rewrites: [
+        // Ensure requests to '/api' aren't intercepted by history
+        { from: /^\/api\/.*$/, to: function (context: any) { return context.parsedUrl?.pathname || '/'; } },
 
-    // 2. Serve static files from the build directory
-    const distPath = path.join(__dirname, '../dist');
-    console.log(`Serving static files from: ${distPath}`);
-    app.use(express.static(distPath));
-}
+        // Re-route Vite's HTML entrypoints
+        { from: /^\/dashboard$/, to: '/dashboard.html' },
+        { from: /^\/about$/, to: '/about.html' },
+        { from: /^\/join$/, to: '/join.html' },
+        { from: /^\/competitions$/, to: '/competitions.html' },
+        { from: /^\/gear$/, to: '/gear.html' }
+    ]
+}));
 
 export { app };
+
 
 if (process.env.NODE_ENV !== 'test' || process.env.PLAYWRIGHT_TEST === 'true') {
     app.listen(PORT, () => {
