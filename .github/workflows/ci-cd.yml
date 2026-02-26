@@ -54,6 +54,7 @@ jobs:
           host: ${{ secrets.VPS_IP }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: JWT_SECRET,EMAIL_USER,EMAIL_CLIENT_ID,EMAIL_CLIENT_SECRET,EMAIL_REFRESH_TOKEN
           script: |
             cd ~/uos_climbing || git clone https://github.com/mattsavin/uos_climbing.git ~/uos_climbing
             cd ~/uos_climbing
@@ -61,4 +62,12 @@ jobs:
             docker build -t uos_climbing .
             docker stop uos_climbing || true
             docker rm uos_climbing || true
-            docker run -d --name uos_climbing -p 3000:3000 -v ~/data:/data uos_climbing
+            docker run -d --name uos_climbing \
+              -p 3000:3000 \
+              -v ~/data:/data \
+              -e JWT_SECRET="$JWT_SECRET" \
+              -e EMAIL_USER="$EMAIL_USER" \
+              -e EMAIL_CLIENT_ID="$EMAIL_CLIENT_ID" \
+              -e EMAIL_CLIENT_SECRET="$EMAIL_CLIENT_SECRET" \
+              -e EMAIL_REFRESH_TOKEN="$EMAIL_REFRESH_TOKEN" \
+              uos_climbing
