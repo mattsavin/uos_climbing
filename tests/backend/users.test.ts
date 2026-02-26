@@ -339,7 +339,98 @@ describe('Users API', () => {
             spy.mockRestore();
         });
 
-        // it('should handle password update DB RUN errors', async () => {
+        it('should handle profile get DB errors', async () => {
+            const { token } = await createTestUser('db_prof_get_err');
+            const originalGet = db.get.bind(db);
+            const spy = vi.spyOn(db, 'get').mockImplementation((query, params, cb) => {
+                if (typeof query === 'string' && query.includes('SELECT firstName, lastName, emergencyContactName')) {
+                    (cb as any)(new Error('DB Error'), null);
+                    return db;
+                }
+                return originalGet(query, params as any, cb as any);
+            });
+            const res = await request(app).get('/api/users/me/profile').set('Authorization', `Bearer ${token}`);
+            expect(res.status).toBe(500);
+            spy.mockRestore();
+        });
+
+        it('should return 404 for unknown user on profile get', async () => {
+            const { token } = await createTestUser('db_prof_404');
+            const originalGet = db.get.bind(db);
+            const spy = vi.spyOn(db, 'get').mockImplementation((query, params, cb) => {
+                if (typeof query === 'string' && query.includes('SELECT firstName, lastName, emergencyContactName')) {
+                    (cb as any)(null, null); // Simulate user not found
+                    return db;
+                }
+                return originalGet(query, params as any, cb as any);
+            });
+            const res = await request(app).get('/api/users/me/profile').set('Authorization', `Bearer ${token}`);
+            expect(res.status).toBe(404);
+            spy.mockRestore();
+        });
+
+        it('should handle membership upgrade DB error', async () => {
+            const { token } = await createTestUser('mem_upg_err');
+            const originalRun = db.run.bind(db);
+            const spy = vi.spyOn(db, 'run').mockImplementation((query, params, cb) => {
+                const callback = typeof params === 'function' ? params : (typeof cb === 'function' ? cb : null);
+                if (typeof query === 'string' && query.includes('UPDATE user_memberships SET status = ?')) {
+                    if (callback) (callback as Function).call({}, new Error('DB Error'));
+                    return db;
+                } else if (typeof query === 'string' && query.includes('INSERT OR IGNORE INTO user_memberships')) {
+                    // Simulate duplicate so it goes to UPDATE block
+                    if (callback) (callback as Function).call({ changes: 0 }, null);
+                    return db;
+                }
+                return originalRun(query, params as any, cb as any);
+            });
+
+            const res = await request(app).post('/api/users/me/memberships').set('Authorization', `Bearer ${token}`).send({ membershipType: 'basic', membershipYear: '2025/2026' });
+            expect(res.status).toBe(500);
+            spy.mockRestore();
+        });
+
+        it('should insert a new pending membership row for basic if it doesnt exist on request-membership', async () => {
+            const { token } = await createTestUser('req_mem_insert');
+            const originalGet = db.get.bind(db);
+            let insertCalled = false;
+
+            const spyGet = vi.spyOn(db, 'get').mockImplementation((query, params, cb) => {
+                if (typeof query === 'string' && query.includes('SELECT id FROM user_memberships WHERE userId = ?')) {
+                    const callback = typeof params === 'function' ? params : cb;
+                    if (callback) (callback as Function)(null, null);
+                    return db;
+                }
+                return originalGet(query, params as any, cb as any);
+            });
+            const originalRun = db.run.bind(db);
+            const spyRun = vi.spyOn(db, 'run').mockImplementation((query, params, cb) => {
+                const callback = typeof params === 'function' ? params : (typeof cb === 'function' ? cb : null);
+                const actualParams = Array.isArray(params) ? params : [];
+
+                if (typeof query === 'string' && query.includes('INSERT INTO user_memberships') && actualParams.includes('basic')) {
+                    insertCalled = true;
+                    if (callback) (callback as Function).call({}, null);
+                    return db;
+                }
+                return originalRun(query, params as any, cb as any);
+            });
+
+            const res = await request(app).post('/api/users/me/request-membership').set('Authorization', `Bearer ${token}`);
+            expect(res.status).toBe(200);
+
+            // Wait for background queries to execute
+            let attempts = 0;
+            while (!insertCalled && attempts < 15) {
+                await new Promise(r => setTimeout(r, 100));
+                attempts++;
+            }
+
+            expect(insertCalled).toBe(true);
+
+            spyGet.mockRestore();
+            spyRun.mockRestore();
+        });
         //     const { token } = await createTestUser('db_pwd_run');
         //     const originalRun = db.run;
         //     (db as any).run = function (query: any, params: any, cb: any) {

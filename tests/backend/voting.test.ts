@@ -271,4 +271,123 @@ describe('Voting API', () => {
         const statusRes = await request(app).get('/api/voting/status').set('Authorization', `Bearer ${adminRes.body.token}`);
         expect(statusRes.body.electionsOpen).toBe(false);
     });
+
+    it('should handle withdraw candidate DB errors', async () => {
+        const candidate = await createVoterUser('db_withdraw');
+        const adminRes = await request(app).post('/api/auth/login').send({ email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!' });
+        await request(app).post('/api/admin/config/elections').set('Authorization', `Bearer ${adminRes.body.token}`).send({ open: true });
+        await request(app).post('/api/voting/apply').set('Authorization', `Bearer ${candidate.token}`).send({ manifesto: 'A', role: 'President' });
+
+        const originalRun = db.run.bind(db);
+        const spyRun = vi.spyOn(db, 'run').mockImplementation((query, params, cb) => {
+            if (typeof query === 'string' && query.includes('DELETE FROM candidates WHERE userId = ?')) {
+                const callback = typeof params === 'function' ? params : cb;
+                if (callback) (callback as Function).call({}, new Error('DB Error'));
+                return db;
+            }
+            return originalRun(query, params as any, cb as any);
+        });
+
+        const res = await request(app).post('/api/voting/withdraw').set('Authorization', `Bearer ${candidate.token}`);
+        expect(res.status).toBe(500);
+        spyRun.mockRestore();
+    });
+
+    it('should handle invalid referendum vote choice', async () => {
+        const voter = await createVoterUser('ref_invalid_choice');
+        const adminRes = await request(app).post('/api/auth/login').send({ email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!' });
+        await request(app).post('/api/admin/config/elections').set('Authorization', `Bearer ${adminRes.body.token}`).send({ open: true });
+
+        const refRes = await request(app).post('/api/voting/referendums').set('Authorization', `Bearer ${adminRes.body.token}`).send({ title: 'T', description: 'D' });
+        const refId = refRes.body.id;
+
+        const res = await request(app)
+            .post(`/api/voting/referendums/${refId}/vote`)
+            .set('Authorization', `Bearer ${voter.token}`)
+            .send({ choice: 'maybe' });
+
+        expect(res.status).toBe(400);
+        expect(res.body).toHaveProperty('error', 'Invalid choice. Must be yes, no, or abstain.');
+    });
+
+    it('should reject referendum vote when elections are closed', async () => {
+        const voter = await createVoterUser('ref_closed_vote');
+        const adminRes = await request(app).post('/api/auth/login').send({ email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!' });
+        const refRes = await request(app).post('/api/voting/referendums').set('Authorization', `Bearer ${adminRes.body.token}`).send({ title: 'T', description: 'D' });
+        const refId = refRes.body.id;
+
+        await request(app).post('/api/admin/config/elections').set('Authorization', `Bearer ${adminRes.body.token}`).send({ open: false });
+
+        const res = await request(app)
+            .post(`/api/voting/referendums/${refId}/vote`)
+            .set('Authorization', `Bearer ${voter.token}`)
+            .send({ choice: 'yes' });
+
+        expect(res.status).toBe(403);
+        expect(res.body).toHaveProperty('error', 'Elections are not currently open');
+    });
+
+    it('should handle referendum vote DB error', async () => {
+        const voter = await createVoterUser('ref_db_err');
+        const adminRes = await request(app).post('/api/auth/login').send({ email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!' });
+        await request(app).post('/api/admin/config/elections').set('Authorization', `Bearer ${adminRes.body.token}`).send({ open: true });
+
+        const refRes = await request(app).post('/api/voting/referendums').set('Authorization', `Bearer ${adminRes.body.token}`).send({ title: 'T', description: 'D' });
+        const refId = refRes.body.id;
+
+        const originalRun = db.run.bind(db);
+        const spyRun = vi.spyOn(db, 'run').mockImplementation((query, params, cb) => {
+            if (typeof query === 'string' && query.includes('INSERT INTO referendum_votes')) {
+                const callback = typeof params === 'function' ? params : cb;
+                if (callback) (callback as Function).call({}, new Error('DB Error'));
+                return db;
+            }
+            return originalRun(query, params as any, cb as any);
+        });
+
+        const res = await request(app)
+            .post(`/api/voting/referendums/${refId}/vote`)
+            .set('Authorization', `Bearer ${voter.token}`)
+            .send({ choice: 'yes' });
+
+        expect(res.status).toBe(500);
+        spyRun.mockRestore();
+    });
+
+    it('should allow committee to delete a referendum', async () => {
+        const adminRes = await request(app).post('/api/auth/login').send({ email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!' });
+        const refRes = await request(app).post('/api/voting/referendums').set('Authorization', `Bearer ${adminRes.body.token}`).send({ title: 'Delete Me', description: 'Desc' });
+        const refId = refRes.body.id;
+
+        const res = await request(app)
+            .delete(`/api/voting/referendums/${refId}`)
+            .set('Authorization', `Bearer ${adminRes.body.token}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveProperty('success', true);
+
+        // Verify it's gone
+        const listRes = await request(app).get('/api/voting/referendums').set('Authorization', `Bearer ${adminRes.body.token}`);
+        const found = listRes.body.find((r: any) => r.id === refId);
+        expect(found).toBeUndefined();
+    });
+
+    it('should handle reset rollback correctly', async () => {
+        const adminRes = await request(app).post('/api/auth/login').send({ email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!' });
+
+        // We need to force an error in the synchronize block. 
+        // Since the code uses try/catch around db.run (which is async), we can mock db.run to throw synchronously.
+        const originalRun = db.run.bind(db);
+        const spyRun = vi.spyOn(db, 'run').mockImplementation((query, params, cb) => {
+            if (typeof query === 'string' && query.includes('DELETE FROM votes')) {
+                throw new Error('Sync Error');
+            }
+            return originalRun(query, params as any, cb as any);
+        });
+
+        const res = await request(app).post('/api/voting/reset').set('Authorization', `Bearer ${adminRes.body.token}`);
+        expect(res.status).toBe(500);
+        expect(res.body).toHaveProperty('error', 'Database error during reset');
+        spyRun.mockRestore();
+    });
 });

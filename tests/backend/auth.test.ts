@@ -27,7 +27,9 @@ describe('Authentication API', () => {
         const userRes = await request(app).post('/api/auth/register').send({
             firstName: prefix, lastName: 'Target User', email: `${prefix}_target@example.com`, password: 'Password123!', passwordConfirm: 'Password123!', registrationNumber: `${prefix}123`
         });
-        const tc = userRes.headers['set-cookie']?.find((c: string) => c.startsWith('uscc_token='));
+        const cookies = userRes.headers['set-cookie'];
+        const cookieArray = Array.isArray(cookies) ? cookies : (cookies ? [cookies] : []);
+        const tc = cookieArray.find((c: string) => c.startsWith('uscc_token='));
         return { token: tc ? tc.split(';')[0].split('=')[1] : '', id: userRes.body.user.id };
     };
 
@@ -74,7 +76,9 @@ describe('Authentication API', () => {
         const adminRes = await request(app).post('/api/auth/login').send({
             email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!'
         });
-        const tc = adminRes.headers['set-cookie']?.find((c: string) => c.startsWith('uscc_token='));
+        const cookies = adminRes.headers['set-cookie'];
+        const cookieArray = Array.isArray(cookies) ? cookies : (cookies ? [cookies] : []);
+        const tc = cookieArray.find((c: string) => c.startsWith('uscc_token='));
         const adminToken = tc ? tc.split(';')[0].split('=')[1] : '';
         await request(app).delete(`/api/users/${id}`).set('Authorization', `Bearer ${adminToken}`);
 
@@ -126,7 +130,9 @@ describe('Authentication API', () => {
     it('should get current user profile with token', async () => {
         // Setup state for this test independently
         const registerRes = await request(app).post('/api/auth/register').send({ ...testUser, email: 'profile_test@example.com' });
-        const tc = registerRes.headers['set-cookie']?.find((c: string) => c.startsWith('uscc_token='));
+        const cookies = registerRes.headers['set-cookie'];
+        const cookieArray = Array.isArray(cookies) ? cookies : (cookies ? [cookies] : []);
+        const tc = cookieArray.find((c: string) => c.startsWith('uscc_token='));
         const token = tc ? tc.split(';')[0].split('=')[1] : '';
 
         const res = await request(app)
@@ -135,6 +141,28 @@ describe('Authentication API', () => {
 
         expect(res.status).toBe(200);
         expect(res.body.user).toHaveProperty('email', 'profile_test@example.com');
+    });
+
+    it('should handle DB error when fetching committee roles for current user', async () => {
+        const { id, token } = await createAuthUser('roles_err');
+
+        const { vi } = await import('vitest');
+        const spyAll = vi.spyOn(db, 'all').mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null));
+
+        const getRes = await request(app)
+            .get('/api/auth/me')
+            .set('Authorization', `Bearer ${token}`);
+
+        expect(getRes.status).toBe(200);
+        expect(getRes.body.user.committeeRoles).toEqual([]);
+        spyAll.mockRestore();
+    });
+
+    it('should logout a user and clear cookie', async () => {
+        const res = await request(app).post('/api/auth/logout');
+
+        expect(res.status).toBe(200);
+        expect(res.headers['set-cookie']?.[0]).toContain('uscc_token=');
     });
 
     // =========================================================================

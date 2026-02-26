@@ -245,12 +245,12 @@ describe('Sessions API', () => {
         });
 
         it('should handle iCal DB errors (sessions fetch)', async () => {
-            const { vi } = await import('vitest');
-            const spyAll = vi.spyOn(db, 'all').mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null));
-
             // Get user info
             const meRes = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${userToken}`);
             const user = meRes.body.user;
+
+            const { vi } = await import('vitest');
+            const spyAll = vi.spyOn(db, 'all').mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null));
 
             const res = await request(app).get(`/api/sessions/ical/${user.calendarToken}`);
             expect(res.status).toBe(500);
@@ -303,6 +303,70 @@ describe('Sessions API', () => {
             const res = await request(app).post('/api/sessions/1/cancel').set('Authorization', `Bearer ${userToken}`);
             expect(res.status).toBe(400); // Route logic checks if booking returns falsy
             spyGet.mockRestore();
+        });
+
+        it('should handle cancel session DB errors (delete booking)', async () => {
+            const { vi } = await import('vitest');
+            const spyGet = vi.spyOn(db, 'get').mockImplementationOnce((query, params, cb) => cb(null, { id: 'booking1', userId: 'user', sessionId: '1' }));
+            const spyRun = vi.spyOn(db, 'run')
+                .mockImplementationOnce((query, params, cb) => {
+                    const callback = typeof cb === 'function' ? cb : (typeof params === 'function' ? params : null);
+                    if (callback) callback.call({}, null);
+                    return db as any;
+                })
+                .mockImplementationOnce((query, params, cb) => {
+                    const callback = typeof cb === 'function' ? cb : (typeof params === 'function' ? params : null);
+                    if (callback) callback.call({}, new Error('DB Error'));
+                    return db as any;
+                })
+                .mockImplementationOnce((query, params, cb) => {
+                    // Catch the ROLLBACK
+                    const callback = typeof cb === 'function' ? cb : (typeof params === 'function' ? params : null);
+                    if (callback) callback.call({}, null);
+                    return db as any;
+                });
+
+            const res = await request(app).post('/api/sessions/1/cancel').set('Authorization', `Bearer ${userToken}`);
+            expect(res.status).toBe(500);
+            expect(res.body).toHaveProperty('error', 'Database error on cancel');
+            // wait for background db calls to settle before restoring spy
+            await new Promise(r => setTimeout(r, 20));
+            spyGet.mockRestore();
+            spyRun.mockRestore();
+        });
+
+        it('should handle cancel session DB errors (update session)', async () => {
+            const { vi } = await import('vitest');
+            const spyGet = vi.spyOn(db, 'get').mockImplementationOnce((query, params, cb) => cb(null, { id: 'booking1', userId: 'user', sessionId: '1' }));
+            const spyRun = vi.spyOn(db, 'run')
+                .mockImplementationOnce((query, params, cb) => {
+                    const callback = typeof cb === 'function' ? cb : (typeof params === 'function' ? params : null);
+                    if (callback) callback.call({}, null);
+                    return db as any;
+                })
+                .mockImplementationOnce((query, params, cb) => {
+                    const callback = typeof cb === 'function' ? cb : (typeof params === 'function' ? params : null);
+                    if (callback) callback.call({}, null);
+                    return db as any;
+                })
+                .mockImplementationOnce((query, params, cb) => {
+                    const callback = typeof cb === 'function' ? cb : (typeof params === 'function' ? params : null);
+                    if (callback) callback.call({}, new Error('DB Error'));
+                    return db as any;
+                })
+                .mockImplementationOnce((query, params, cb) => {
+                    // Catch the ROLLBACK
+                    const callback = typeof cb === 'function' ? cb : (typeof params === 'function' ? params : null);
+                    if (callback) callback.call({}, null);
+                    return db as any;
+                });
+
+            const res = await request(app).post('/api/sessions/1/cancel').set('Authorization', `Bearer ${userToken}`);
+            expect(res.status).toBe(500);
+            expect(res.body).toHaveProperty('error', 'Database error on update');
+            await new Promise(r => setTimeout(r, 20));
+            spyGet.mockRestore();
+            spyRun.mockRestore();
         });
 
         it('should handle delete session DB errors', async () => {

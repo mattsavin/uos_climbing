@@ -263,11 +263,95 @@ describe('Admin API', () => {
         });
     });
 
-    describe('Membership Deletion', () => {
+    describe('Membership Row Management', () => {
+        it('should allow committee to approve a membership row', async () => {
+            const { id } = await createTargetUser('appr_memb');
+            await request(app).post(`/api/admin/users/${id}/approve`).set('Authorization', `Bearer ${rootToken}`);
+            await new Promise(r => setTimeout(r, 50)); // Wait for background insert
+
+            const usersRes = await request(app).get('/api/admin/users').set('Authorization', `Bearer ${rootToken}`);
+            const member = usersRes.body.find((u: any) => u.id === id);
+            const membId = member?.memberships?.[0]?.id;
+
+            // Reject first to reset it
+            await request(app).post(`/api/admin/memberships/${membId}/reject`).set('Authorization', `Bearer ${rootToken}`);
+
+            const res = await request(app)
+                .post(`/api/admin/memberships/${membId}/approve`)
+                .set('Authorization', `Bearer ${rootToken}`);
+
+            expect(res.status).toBe(200);
+            expect(res.body).toHaveProperty('success', true);
+        });
+
+        it('should allow committee to reject a membership row', async () => {
+            const { id } = await createTargetUser('rej_memb');
+            await request(app).post(`/api/admin/users/${id}/approve`).set('Authorization', `Bearer ${rootToken}`);
+            await new Promise(r => setTimeout(r, 50)); // Wait for background insert
+
+            const usersRes = await request(app).get('/api/admin/users').set('Authorization', `Bearer ${rootToken}`);
+            const member = usersRes.body.find((u: any) => u.id === id);
+            const membId = member?.memberships?.[0]?.id;
+
+            const res = await request(app)
+                .post(`/api/admin/memberships/${membId}/reject`)
+                .set('Authorization', `Bearer ${rootToken}`);
+
+            expect(res.status).toBe(200);
+            expect(res.body).toHaveProperty('success', true);
+        });
+
+        it('should return 404 for unknown membership row on approve', async () => {
+            const res = await request(app).post('/api/admin/memberships/nonexistent/approve').set('Authorization', `Bearer ${rootToken}`);
+            expect(res.status).toBe(404);
+        });
+
+        it('should return 404 for unknown membership row on reject', async () => {
+            const res = await request(app).post('/api/admin/memberships/nonexistent/reject').set('Authorization', `Bearer ${rootToken}`);
+            expect(res.status).toBe(404);
+        });
+
+        it('should handle DB errors on membership approve', async () => {
+            const { vi } = await import('vitest');
+            const spyGet = vi.spyOn(db, 'get').mockImplementationOnce((query, params, cb) => cb(null, { id: 'any', userId: 'usr', membershipType: 'basic' }));
+            const spyRun = vi.spyOn(db, 'run').mockImplementationOnce((query, params, cb) => cb.call({}, new Error('DB Error')));
+            const res = await request(app).post('/api/admin/memberships/any/approve').set('Authorization', `Bearer ${rootToken}`);
+            expect(res.status).toBe(500);
+            spyGet.mockRestore();
+            spyRun.mockRestore();
+        });
+
+        it('should handle DB errors on membership reject', async () => {
+            const { vi } = await import('vitest');
+            const spyGet = vi.spyOn(db, 'get').mockImplementationOnce((query, params, cb) => cb(null, { id: 'any', userId: 'usr', membershipType: 'basic' }));
+            const spyRun = vi.spyOn(db, 'run').mockImplementationOnce((query, params, cb) => cb.call({}, new Error('DB Error')));
+            const res = await request(app).post('/api/admin/memberships/any/reject').set('Authorization', `Bearer ${rootToken}`);
+            expect(res.status).toBe(500);
+            spyGet.mockRestore();
+            spyRun.mockRestore();
+        });
+
+        it('should handle DB GET errors on membership approve', async () => {
+            const { vi } = await import('vitest');
+            const spyGet = vi.spyOn(db, 'get').mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null));
+            const res = await request(app).post('/api/admin/memberships/any/approve').set('Authorization', `Bearer ${rootToken}`);
+            expect(res.status).toBe(500);
+            spyGet.mockRestore();
+        });
+
+        it('should handle DB GET errors on membership reject', async () => {
+            const { vi } = await import('vitest');
+            const spyGet = vi.spyOn(db, 'get').mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null));
+            const res = await request(app).post('/api/admin/memberships/any/reject').set('Authorization', `Bearer ${rootToken}`);
+            expect(res.status).toBe(500);
+            spyGet.mockRestore();
+        });
+
         it('should allow committee to delete a membership row', async () => {
             // Create a user and approve their basic membership
             const { id } = await createTargetUser('del_memb');
             await request(app).post(`/api/admin/users/${id}/approve`).set('Authorization', `Bearer ${rootToken}`);
+            await new Promise(r => setTimeout(r, 50)); // Wait for background insert
 
             // Get the membership row id
             const usersRes = await request(app).get('/api/admin/users').set('Authorization', `Bearer ${rootToken}`);
@@ -299,6 +383,42 @@ describe('Admin API', () => {
                 .set('Authorization', `Bearer ${rootToken}`);
             expect(res.status).toBe(500);
             spy.mockRestore();
+        });
+
+        it('should handle DB run errors on membership delete', async () => {
+            const { vi } = await import('vitest');
+            const spyGet = vi.spyOn(db, 'get').mockImplementationOnce((query, params, cb) => cb(null, { id: 'any_id', userId: 'user', membershipType: 'basic' }));
+            const spyRun = vi.spyOn(db, 'run').mockImplementationOnce((query, params, cb) => cb.call({}, new Error('DB Error')));
+            const res = await request(app)
+                .delete('/api/admin/memberships/any_id')
+                .set('Authorization', `Bearer ${rootToken}`);
+            expect(res.status).toBe(500);
+            spyGet.mockRestore();
+            spyRun.mockRestore();
+        });
+    });
+
+    describe('Admin Edge Cases', () => {
+        it('should prevent demoting the root admin', async () => {
+            // Get root admin ID
+            const usersRes = await request(app).get('/api/admin/users').set('Authorization', `Bearer ${rootToken}`);
+            const rootAdmin = usersRes.body.find((u: any) => u.email === 'sheffieldclimbing@gmail.com');
+            const res = await request(app).post(`/api/admin/users/${rootAdmin.id}/demote`).set('Authorization', `Bearer ${rootToken}`);
+
+            expect(res.status).toBe(403);
+            expect(res.body).toHaveProperty('error', 'Cannot demote the Root Admin');
+        });
+
+        it('should update existing membership row when re-approving a user', async () => {
+            const { id } = await createTargetUser('reapprove');
+            // First approval creates the row
+            await request(app).post(`/api/admin/users/${id}/approve`).set('Authorization', `Bearer ${rootToken}`);
+            await new Promise(r => setTimeout(r, 50)); // Wait for background insert
+            // Second approval updates the row
+            const res = await request(app).post(`/api/admin/users/${id}/approve`).set('Authorization', `Bearer ${rootToken}`);
+
+            expect(res.status).toBe(200);
+            expect(res.body).toHaveProperty('success', true);
         });
     });
 });
