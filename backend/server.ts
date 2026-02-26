@@ -43,26 +43,29 @@ app.use('/api/ical', (req, res, next) => {
     next();
 });
 
-// Serve static frontend in production
-// 1. Serve static files from the build directory (Assets MUST come first)
-const distPath = path.join(__dirname, '../dist');
-console.log(`Serving static files from: ${distPath}`);
-app.use(express.static(distPath));
+if (process.env.NODE_ENV === 'production') {
+    // 1. Serve static files from the build directory (Assets MUST come first)
+    const distPath = path.join(__dirname, '../dist');
+    console.log(`Serving static files from: ${distPath}`);
+    app.use(express.static(distPath));
 
-// 2. Fallback for SPA routing - handles page refreshes on sub-routes
-app.use(history({
-    rewrites: [
-        // Ensure requests to '/api' aren't intercepted by history
-        { from: /^\/api\/.*$/, to: function (context: any) { return context.parsedUrl?.pathname || '/'; } },
+    // 2. Fallback for SPA routing - handles page refreshes on sub-routes
+    app.use(history({
+        rewrites: [
+            // Ensure requests to '/api' aren't intercepted by history
+            { from: /^\/api\/.*$/, to: function (context: any) { return context.parsedUrl?.pathname || '/'; } },
 
-        // Re-route Vite's HTML entrypoints
-        { from: /^\/dashboard$/, to: '/dashboard.html' },
-        { from: /^\/about$/, to: '/about.html' },
-        { from: /^\/join$/, to: '/join.html' },
-        { from: /^\/competitions$/, to: '/competitions.html' },
-        { from: /^\/gear$/, to: '/gear.html' }
-    ]
-}));
+            // Re-route Vite's HTML entrypoints
+            { from: /^\/dashboard$/, to: '/dashboard.html' },
+            { from: /^\/about$/, to: '/about.html' },
+            { from: /^\/join$/, to: '/join.html' },
+            { from: /^\/competitions$/, to: '/competitions.html' },
+            { from: /^\/gear$/, to: '/gear.html' },
+            { from: /^\/login$/, to: '/login.html' },
+            { from: /^\/elections$/, to: '/elections.html' }
+        ]
+    }));
+}
 
 export { app };
 

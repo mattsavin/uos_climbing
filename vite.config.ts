@@ -21,6 +21,8 @@ export default defineConfig({
         join: resolve(__dirname, 'join.html'),
         dashboard: resolve(__dirname, 'dashboard.html'),
         gear: resolve(__dirname, 'gear.html'),
+        login: resolve(__dirname, 'login.html'),
+        elections: resolve(__dirname, 'elections.html'),
       },
     },
   },
