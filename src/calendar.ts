@@ -57,14 +57,21 @@ export function renderCalendarEvents(
             }
 
             const timeStr = new Date(session.date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+            const reqMemb = (session as any).requiredMembership || 'basic';
+            const membBadge = reqMemb === 'comp_team'
+                ? `<span class="text-[8px] font-black uppercase tracking-widest opacity-90 bg-purple-500/30 text-purple-300 px-1 rounded">Comp Team</span>`
+                : reqMemb === 'bouldering'
+                    ? `<span class="text-[8px] font-black uppercase tracking-widest opacity-90 bg-blue-500/30 text-blue-300 px-1 rounded">Bouldering</span>`
+                    : '';
 
             return `
-                <div class="session-chip mt-1 border rounded p-2 text-xs font-medium leading-snug w-full ${onSessionClick ? 'cursor-pointer hover:opacity-80 transition-opacity' : 'cursor-default'} flex flex-col gap-1.5 ${bg}" data-id="${session.id}">
+                <div class="session-chip mt-1 border rounded p-2 text-xs font-medium leading-snug w-full ${onSessionClick ? 'cursor-pointer hover:opacity-80 transition-opacity' : 'cursor-default'} flex flex-col gap-1 ${bg}" data-id="${session.id}">
                     <div class="w-full">
                         <span class="font-bold mr-1 opacity-75">${timeStr}</span>
                         <span class="font-bold break-words">${session.title}</span>
                     </div>
-                    <div class="flex items-center justify-between gap-1.5 mt-auto pt-1 border-t border-current border-opacity-20">
+                    ${membBadge ? `<div>${membBadge}</div>` : ''}
+                    <div class="flex items-center justify-between gap-1 mt-auto pt-1 border-t border-current border-opacity-20">
                         <span class="font-bold text-[10px] uppercase tracking-wider opacity-90 whitespace-nowrap">${session.bookedSlots}/${session.capacity} Slots</span>
                         ${isBooked ? '<span class="text-current font-black text-sm" title="Booked">✓</span>' : ''}
                     </div>

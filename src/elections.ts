@@ -1,6 +1,7 @@
 import './style.css';
 import { authState, votingApi, adminApi } from './auth';
 import { initApp } from './main';
+import { escapeHTML } from './utils';
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -150,16 +151,20 @@ document.addEventListener('DOMContentLoaded', () => {
                         `;
 
                         listHtml += roleCandidates.map(c => {
-                            const slideBadge = c.presentationLink ? `
-                        < a href = "${c.presentationLink}" target = "_blank" rel = "noopener noreferrer" class="absolute top-4 right-20 text-[10px] uppercase font-bold px-2 py-1 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded flex items-center gap-1 hover:bg-blue-500/40 transition-colors" >
+                            const safeName = escapeHTML(c.name);
+                            const safeManifesto = escapeHTML(c.manifesto);
+                            const safeLink = c.presentationLink ? escapeHTML(c.presentationLink) : '';
+
+                            const slideBadge = safeLink ? `
+                        < a href = "${safeLink}" target = "_blank" rel = "noopener noreferrer" class="absolute top-4 right-20 text-[10px] uppercase font-bold px-2 py-1 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded flex items-center gap-1 hover:bg-blue-500/40 transition-colors" >
                             <svg class="w-3 h-3" fill = "none" stroke = "currentColor" viewBox = "0 0 24 24" > <path stroke - linecap="round" stroke - linejoin="round" stroke - width="2" d = "M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" > </path></svg >
                                 Slides
                                 </a>
                                     ` : '';
 
                             const mainBtn = !status.hasVoted && !status.isCandidate ? `
-                                < button class="btn-outline w-full !py-2 !text-xs !border-purple-400 !text-purple-400 hover:!bg-purple-400 hover:!text-white vote-btn transition-colors mt-auto" data - id="${c.id}" data - name="${c.name}" >
-                                    Vote for ${c.name.split(' ')[0]}
+                                < button class="btn-outline w-full !py-2 !text-xs !border-purple-400 !text-purple-400 hover:!bg-purple-400 hover:!text-white vote-btn transition-colors mt-auto" data - id="${c.id}" data - name="${safeName}" >
+                                    Vote for ${safeName.split(' ')[0]}
                                         </button>
                                             ` : '';
 
@@ -169,8 +174,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                             ${c.voteCount} Votes
                                                 </div>
                                 ${slideBadge}
-<h5 class="text-white text-lg font-bold mb-3 pr-24" > ${c.name} </h5>
-    < p class="text-sm text-slate-300 mb-6 whitespace-pre-wrap leading-relaxed flex-grow" > ${c.manifesto} </p>
+<h5 class="text-white text-lg font-bold mb-3 pr-24" > ${safeName} </h5>
+    < p class="text-sm text-slate-300 mb-6 whitespace-pre-wrap leading-relaxed flex-grow" > ${safeManifesto} </p>
                                 ${mainBtn}
 </div>
     `;

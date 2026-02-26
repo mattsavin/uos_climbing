@@ -1,6 +1,7 @@
 import express from 'express';
 import { db } from '../db';
 import { authenticateToken, requireKitSec } from '../middleware/auth';
+import { sendEmail } from '../services/email';
 
 const router = express.Router();
 
@@ -93,8 +94,9 @@ router.post('/:id/request', authenticateToken, (req: any, res) => {
 
 router.post('/requests/:request_id/approve', authenticateToken, requireKitSec, (req, res) => {
     const requestId = req.params.request_id;
-    db.get('SELECT gearId, status FROM gear_requests WHERE id = ?', [requestId], (err, request: any) => {
-        if (err || !request) return res.status(404).json({ error: 'Request not found' });
+    db.get('SELECT r.gearId, r.status, u.name, u.email FROM gear_requests r LEFT JOIN users u ON r.userId = u.id WHERE r.id = ?', [requestId], (err, request: any) => {
+        if (err) return res.status(500).json({ error: 'Database error' });
+        if (!request) return res.status(404).json({ error: 'Request not found' });
         if (request.status !== 'pending') return res.status(400).json({ error: 'Request is not pending' });
 
         db.serialize(() => {
@@ -106,6 +108,16 @@ router.post('/requests/:request_id/approve', authenticateToken, requireKitSec, (
                     if (err) { db.run('ROLLBACK'); return res.status(500).json({ error: 'DB Error' }); }
 
                     db.run('COMMIT');
+
+                    if (request.email) {
+                        sendEmail(
+                            request.email,
+                            'Gear Request Approved',
+                            `Hi ${request.name || 'User'},\n\nYour gear request has been approved. Please collect it from the Kit Sec.`,
+                            `<p>Hi ${request.name || 'User'},</p><p>Your gear request has been approved. Please collect it from the Kit Sec.</p>`
+                        ).catch((e: any) => console.error("Failed to send approval email:", e));
+                    }
+
                     res.json({ success: true });
                 });
             });
@@ -115,9 +127,25 @@ router.post('/requests/:request_id/approve', authenticateToken, requireKitSec, (
 
 router.post('/requests/:request_id/reject', authenticateToken, requireKitSec, (req, res) => {
     const requestId = req.params.request_id;
-    db.run("UPDATE gear_requests SET status = 'rejected' WHERE id = ? AND status = 'pending'", [requestId], function (err) {
+    db.get('SELECT r.status, u.name, u.email FROM gear_requests r LEFT JOIN users u ON r.userId = u.id WHERE r.id = ?', [requestId], (err, request: any) => {
         if (err) return res.status(500).json({ error: 'Database error' });
-        res.json({ success: true });
+        if (!request) return res.status(404).json({ error: 'Request not found' });
+        if (request.status !== 'pending') return res.status(400).json({ error: 'Request is not pending' });
+
+        db.run("UPDATE gear_requests SET status = 'rejected' WHERE id = ?", [requestId], function (err) {
+            if (err) return res.status(500).json({ error: 'Database error' });
+
+            if (request.email) {
+                sendEmail(
+                    request.email,
+                    'Gear Request Rejected',
+                    `Hi ${request.name || 'User'},\n\nUnfortunately, your gear request has been rejected.`,
+                    `<p>Hi ${request.name || 'User'},</p><p>Unfortunately, your gear request has been rejected.</p>`
+                ).catch((e: any) => console.error("Failed to send rejection email:", e));
+            }
+
+            res.json({ success: true });
+        });
     });
 });
 

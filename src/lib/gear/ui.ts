@@ -1,4 +1,5 @@
 import { type GearItem, type GearRequest } from '../../auth';
+import { escapeHTML } from '../../utils';
 
 export function getStatusBadge(status: string) {
     if (status === 'pending') return '<span class="px-2 py-1 bg-amber-500/20 text-amber-500 text-[10px] font-black uppercase tracking-wider rounded">Pending</span>';
@@ -21,6 +22,8 @@ export function renderGearGrid(gearList: GearItem[], isKitSec: boolean, onEdit: 
 
     gearList.forEach(gear => {
         const outOfStock = gear.availableQuantity <= 0;
+        const safeName = escapeHTML(gear.name);
+        const safeDesc = escapeHTML(gear.description);
 
         let actionsHtml = '';
         if (isKitSec) {
@@ -40,13 +43,13 @@ export function renderGearGrid(gearList: GearItem[], isKitSec: boolean, onEdit: 
         card.className = "bg-slate-800/80 border border-white/5 rounded-xl p-5 hover:border-emerald-500/30 transition-colors flex flex-col";
         card.innerHTML = `
             <div class="flex justify-between items-start mb-2">
-                <h4 class="font-bold text-white text-lg">${gear.name}</h4>
+                <h4 class="font-bold text-white text-lg">${safeName}</h4>
                 <span class="text-xs font-black uppercase tracking-wider px-2 py-1 rounded ${outOfStock ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}">
                     ${gear.availableQuantity} / ${gear.totalQuantity} Left
                 </span>
             </div>
-            <p class="text-sm text-slate-400 mb-6 flex-grow">${gear.description || 'No description provided.'}</p>
-            <button class="${btnClass}" ${outOfStock ? 'disabled' : ''} data-id="${gear.id}" data-name="${gear.name}">
+            <p class="text-sm text-slate-400 mb-6 flex-grow">${safeDesc || 'No description provided.'}</p>
+            <button class="${btnClass}" ${outOfStock ? 'disabled' : ''} data-id="${gear.id}" data-name="${safeName}">
                 ${outOfStock ? 'Out of Stock' : 'Request to Hire'}
             </button>
             ${actionsHtml}
@@ -90,12 +93,13 @@ export function renderMyRequestsList(requests: GearRequest[]) {
 
     requests.forEach(req => {
         const dateStr = new Date(req.requestDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        const safeGearName = escapeHTML(req.gearName);
 
         const el = document.createElement('div');
         el.className = "py-3 flex justify-between items-center";
         el.innerHTML = `
             <div>
-                <p class="text-sm font-bold text-white">${req.gearName}</p>
+                <p class="text-sm font-bold text-white">${safeGearName}</p>
                 <p class="text-xs text-slate-500 mt-1">Requested on ${dateStr}</p>
             </div>
             <div>
@@ -119,6 +123,9 @@ export function renderAllRequestsTable(requests: GearRequest[], onAction: (reqId
 
     requests.forEach(req => {
         const dateStr = new Date(req.requestDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+        const safeUserName = escapeHTML(req.userName);
+        const safeUserEmail = escapeHTML(req.userEmail);
+        const safeGearName = escapeHTML(req.gearName);
 
         let actionBtn = '-';
         if (req.status === 'pending') {
@@ -137,10 +144,10 @@ export function renderAllRequestsTable(requests: GearRequest[], onAction: (reqId
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td class="px-4 py-3 border-b border-white/5 whitespace-nowrap">
-                <p class="text-white font-bold">${req.userName}</p>
-                <p class="text-xs text-slate-500">${req.userEmail}</p>
+                <p class="text-white font-bold">${safeUserName}</p>
+                <p class="text-xs text-slate-500">${safeUserEmail}</p>
             </td>
-            <td class="px-4 py-3 border-b border-white/5 text-slate-300">${req.gearName}</td>
+            <td class="px-4 py-3 border-b border-white/5 text-slate-300">${safeGearName}</td>
             <td class="px-4 py-3 border-b border-white/5 text-slate-300 whitespace-nowrap">${dateStr}</td>
             <td class="px-4 py-3 border-b border-white/5 whitespace-nowrap">${getStatusBadge(req.status)}</td>
             <td class="px-4 py-3 border-b border-white/5 whitespace-nowrap align-middle">

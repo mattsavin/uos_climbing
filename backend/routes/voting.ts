@@ -60,14 +60,20 @@ router.post('/vote', authenticateToken, (req: any, res) => {
     const { candidateId } = req.body;
     if (!candidateId) return res.status(400).json({ error: 'Candidate ID is required' });
 
-    db.run('INSERT INTO votes (userId, candidateId) VALUES (?, ?)', [req.user.id, candidateId], function (err) {
-        if (err) {
-            if (err.message.includes('UNIQUE constraint failed')) {
-                return res.status(400).json({ error: 'You have already voted' });
-            }
-            return res.status(500).json({ error: 'Database error' });
+    db.get('SELECT value FROM config WHERE key = ?', ['electionsOpen'], (err, config: any) => {
+        if (err || !config || config.value !== 'true') {
+            return res.status(403).json({ error: 'Elections are not currently open' });
         }
-        res.json({ success: true });
+
+        db.run('INSERT INTO votes (userId, candidateId) VALUES (?, ?)', [req.user.id, candidateId], function (err) {
+            if (err) {
+                if (err.message.includes('UNIQUE constraint failed')) {
+                    return res.status(400).json({ error: 'You have already voted' });
+                }
+                return res.status(500).json({ error: 'Database error' });
+            }
+            res.json({ success: true });
+        });
     });
 });
 

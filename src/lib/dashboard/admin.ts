@@ -1,4 +1,5 @@
 import { adminApi, authState, type User } from '../../auth';
+import { escapeHTML } from '../../utils';
 
 let confirmActionCallback: (() => Promise<void>) | null = null;
 let activeRosterPage = 1;
@@ -62,8 +63,22 @@ export async function renderAdminLists() {
 
     // Render Pending
     const allUsers = await adminApi.getAllUsers();
-    const pending = allUsers.filter(u => u.membershipStatus === 'pending');
-    pendingList.innerHTML = pending.length ? pending.map(u => createMemberRow(u, true)).join('') : '<p class="p-5 text-sm text-slate-500 text-center">No pending registrations.</p>';
+
+    // Flatten pending membership rows
+    const pendingMemberships: any[] = [];
+    allUsers.forEach(u => {
+        if (u.memberships) {
+            u.memberships.forEach(m => {
+                if (m.status === 'pending') {
+                    pendingMemberships.push({ user: u, membership: m });
+                }
+            });
+        }
+    });
+
+    pendingList.innerHTML = pendingMemberships.length
+        ? pendingMemberships.map(pm => createPendingMembershipRow(pm.user, pm.membership)).join('')
+        : '<p class="p-5 text-sm text-slate-500 text-center">No pending registrations.</p>';
 
     // Render Active
     const allActive = await adminApi.getActiveMembers();
@@ -121,6 +136,14 @@ export async function renderAdminLists() {
                     title = 'Reject Member'; message = `Are you sure you want to reject ${name}'s membership registration?`;
                     actionCallback = async () => adminApi.rejectMember(id);
                 }
+                if (action === 'approve-membership') {
+                    title = 'Approve Membership Type'; message = `Approve this specific membership type for ${name}?`;
+                    actionCallback = async () => adminApi.approveMembershipRow(id);
+                }
+                if (action === 'reject-membership') {
+                    title = 'Reject Membership Type'; message = `Reject this specific membership type for ${name}?`;
+                    actionCallback = async () => adminApi.rejectMembershipRow(id);
+                }
                 if (action === 'promote') {
                     title = 'Promote to Admin'; message = `Are you sure you want to promote ${name} to committee admin? They will have full access.`;
                     actionCallback = async () => adminApi.promoteToCommittee(id);
@@ -130,7 +153,7 @@ export async function renderAdminLists() {
                     actionCallback = async () => adminApi.demoteToMember(id);
                 }
                 if (action === 'delete') {
-                    title = 'Delete Member'; message = `Are you absolutely sure you want to permanently delete ${name}'s account? This action cannot be undone.`;
+                    title = 'Delete Member'; message = `Are you absolutely sure you want to permanently delete ${escapeHTML(name)}'s account? This action cannot be undone.`;
                     actionCallback = async () => adminApi.deleteUser(id);
                 }
 
@@ -167,21 +190,54 @@ export async function renderAdminLists() {
     });
 }
 
+function createPendingMembershipRow(user: User, membership: any) {
+    const displayName = `${(user as any).firstName || ''} ${(user as any).lastName || ''}`.trim() || user.name || user.email;
+    const safeName = escapeHTML(displayName);
+    const safeEmail = escapeHTML(user.email);
+    const safeRegNo = escapeHTML(user.registrationNumber || '');
+    const regLabel = safeRegNo ? `<span class="px-2 py-0.5 mt-1 font-mono text-[10px] bg-slate-800 text-slate-300 rounded block w-fit">REG: ${safeRegNo}</span>` : '';
+
+    // For pending memberships, we approve/reject the specific row
+    const typeLabel = { basic: 'Basic', bouldering: 'Bouldering', comp_team: 'Comp Team' }[membership.membershipType as string] || membership.membershipType;
+
+    const actions = `
+        <button class="admin-action-btn p-2 text-brand-gold-muted hover:bg-brand-gold-muted/10 rounded transition-colors" data-action="approve-membership" data-id="${membership.id}" data-name="${safeName} (${typeLabel})" title="Approve Membership">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+        </button>
+        <button class="admin-action-btn p-2 text-red-400 hover:bg-red-400/10 rounded transition-colors" data-action="reject-membership" data-id="${membership.id}" data-name="${safeName} (${typeLabel})" title="Reject Membership">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+    `;
+
+    return `
+        <div class="p-4 flex items-center justify-between hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
+            <div>
+                <h4 class="text-sm font-bold text-white">${safeName}</h4>
+                <p class="text-xs text-slate-400">${safeEmail}</p>
+                ${regLabel}
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="text-right">
+                    <span class="block text-xs font-bold text-brand-gold">${typeLabel}</span>
+                    <span class="block text-[10px] text-slate-500">${membership.membershipYear}</span>
+                </div>
+                <div class="flex gap-1 ml-2 border-l border-white/10 pl-3">
+                    ${actions}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
 function createMemberRow(user: User, isPending: boolean) {
-    const regLabel = user.registrationNumber ? `<span class="px-2 py-0.5 mt-1 font-mono text-[10px] bg-slate-800 text-slate-300 rounded block w-fit">REG: ${user.registrationNumber}</span>` : '';
+    const displayName = `${(user as any).firstName || ''} ${(user as any).lastName || ''}`.trim() || user.name || user.email;
+    const safeName = escapeHTML(displayName);
+    const safeEmail = escapeHTML(user.email);
+    const safeRegNo = escapeHTML(user.registrationNumber || '');
+
+    const regLabel = safeRegNo ? `<span class="px-2 py-0.5 mt-1 font-mono text-[10px] bg-slate-800 text-slate-300 rounded block w-fit">REG: ${safeRegNo}</span>` : '';
 
     let actions = '';
-    if (isPending) {
-        actions = `
-            <button class="admin-action-btn p-2 text-brand-gold-muted hover:bg-brand-gold-muted/10 rounded transition-colors" data-action="approve" data-id="${user.id}" data-name="${user.name}" title="Approve Member">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-            </button>
-            <button class="admin-action-btn p-2 text-red-400 hover:bg-red-400/10 rounded transition-colors" data-action="reject" data-id="${user.id}" data-name="${user.name}" title="Reject Member">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
-        `;
-    }
-
     let committeeRoleSelector = '';
 
     if (!isPending) {
@@ -211,28 +267,29 @@ function createMemberRow(user: User, isPending: boolean) {
 
             if (isRootAdmin && user.email !== 'sheffieldclimbing@gmail.com') {
                 actions = `
-                    <button class="admin-action-btn text-xs font-bold px-3 py-1 bg-amber-500/10 text-amber-500 border border-amber-500/30 rounded hover:bg-amber-500/20" data-action="demote" data-id="${user.id}" data-name="${user.name}">
+                    <button class="admin-action-btn text-xs font-bold px-3 py-1 bg-amber-500/10 text-amber-500 border border-amber-500/30 rounded hover:bg-amber-500/20" data-action="demote" data-id="${user.id}" data-name="${safeName}">
                         Remove Admin
                     </button>
                 `;
             }
         } else {
             actions = `
-                <button class="admin-action-btn text-xs font-bold px-3 py-1 bg-brand-gold/10 text-brand-gold border border-brand-gold/30 rounded hover:bg-brand-gold/20 mr-1" data-action="promote" data-id="${user.id}" data-name="${user.name}">
+                <button class="admin-action-btn text-xs font-bold px-3 py-1 bg-brand-gold/10 text-brand-gold border border-brand-gold/30 rounded hover:bg-brand-gold/20 mr-1" data-action="promote" data-id="${user.id}" data-name="${safeName}">
                     Make Admin
                 </button>
-                <button class="admin-action-btn text-xs font-bold px-3 py-1 bg-red-500/10 text-red-500 border border-red-500/30 rounded hover:bg-red-500/20" data-action="delete" data-id="${user.id}" data-name="${user.name}">
+                <button class="admin-action-btn text-xs font-bold px-3 py-1 bg-red-500/10 text-red-500 border border-red-500/30 rounded hover:bg-red-500/20" data-action="delete" data-id="${user.id}" data-name="${safeName}">
                     Delete
                 </button>
             `;
         }
     }
 
+    // Active roster row...
     return `
         <div class="p-4 flex items-center justify-between hover:bg-white/5 transition-colors">
             <div>
-                <h4 class="text-sm font-bold text-white">${user.name} ${user.role === 'committee' ? '<span class="text-[10px] ml-1 px-1.5 py-0.5 bg-amber-500/20 text-amber-500 rounded uppercase tracking-widest">Admin</span>' : ''}</h4>
-                <p class="text-xs text-slate-400">${user.email}</p>
+                <h4 class="text-sm font-bold text-white">${safeName} ${user.role === 'committee' ? '<span class="text-[10px] ml-1 px-1.5 py-0.5 bg-amber-500/20 text-amber-500 rounded uppercase tracking-widest">Admin</span>' : ''}</h4>
+                <p class="text-xs text-slate-400">${safeEmail}</p>
                 ${regLabel}
                 ${committeeRoleSelector}
             </div>

@@ -4,8 +4,9 @@ export default defineConfig({
     test: {
         environment: 'node',
         include: ['tests/backend/**/*.test.ts'],
+        setupFiles: ['tests/backend/setup.ts'],
         globals: true,
-        fileParallelism: true,
+        fileParallelism: false,
         coverage: {
             provider: 'v8',
             reporter: ['text', 'html'],

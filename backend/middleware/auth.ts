@@ -4,10 +4,14 @@ import { db } from '../db';
 
 // Middleware to verify JWT
 export const authenticateToken = (req: any, res: any, next: any) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    // Get token from cookies, fallback to Authorization header
+    let token = req.cookies?.uscc_token;
+    if (!token) {
+        const authHeader = req.headers['authorization'];
+        token = authHeader && authHeader.split(' ')[1];
+    }
 
-    if (token == null) return res.sendStatus(401);
+    if (!token) return res.sendStatus(401);
 
     jwt.verify(token, SECRET_KEY, (err: any, user: any) => {
         if (err) return res.sendStatus(403);

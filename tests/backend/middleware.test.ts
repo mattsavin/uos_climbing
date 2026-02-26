@@ -14,68 +14,122 @@ describe('Middleware Auth API', () => {
 
         // Create a regular user
         const u1 = await request(app).post('/api/auth/register').send({
-            name: 'Member', email: 'mem@ex.com', password: 'Password123!', registrationNumber: 'MEM1'
+            firstName: 'Member',
+            lastName: 'User',
+            email: 'mem@example.com',
+            password: 'Password123!', passwordConfirm: 'Password123!',
+            registrationNumber: 'MEM1'
         });
-        memToken = u1.body.token;
+        const tc1 = u1.headers['set-cookie']?.find((c: string) => c.startsWith('uscc_token='));
+        memToken = tc1 ? tc1.split(';')[0].split('=')[1] : '';
 
         // Create committee
         const u2 = await request(app).post('/api/auth/register').send({
-            name: 'Com', email: 'com@committee.sheffield.ac.uk', password: 'Password123!', registrationNumber: 'COM2'
+            firstName: 'Com',
+            lastName: 'User',
+            email: 'com@example.com',
+            password: 'Password123!', passwordConfirm: 'Password123!',
+            registrationNumber: 'COM2'
         });
-        comToken = u2.body.token;
+        const tc2 = u2.headers['set-cookie']?.find((c: string) => c.startsWith('uscc_token='));
+        comToken = tc2 ? tc2.split(';')[0].split('=')[1] : '';
 
         // Create kit sec (needs promotion by admin)
         const u3 = await request(app).post('/api/auth/register').send({
-            name: 'Kit', email: 'kit@ex.com', password: 'Password123!', registrationNumber: 'KIT3'
+            firstName: 'Kit',
+            lastName: 'User',
+            email: 'kit@example.com',
+            password: 'Password123!', passwordConfirm: 'Password123!',
+            registrationNumber: 'KIT3'
         });
-        kitToken = u3.body.token;
+        const tc3 = u3.headers['set-cookie']?.find((c: string) => c.startsWith('uscc_token='));
+        kitToken = tc3 ? tc3.split(';')[0].split('=')[1] : '';
         const kitId = u3.body.user.id;
 
         // Login Admin
         const adminRes = await request(app).post('/api/auth/login').send({
             email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!'
         });
-        const rootToken = adminRes.body.token;
+        const adminCookies = adminRes.headers['set-cookie'];
+        const adminCookieArray = Array.isArray(adminCookies) ? adminCookies : (adminCookies ? [adminCookies] : []);
+        const adminCookie = adminCookieArray.find((c: string) => c.startsWith('uscc_token='));
+        const rootToken = adminCookie ? adminCookie.split(';')[0].split('=')[1] : '';
 
         // Promote Kit
         await request(app).post(`/api/admin/users/${kitId}/promote`).set('Authorization', `Bearer ${rootToken}`);
         await request(app).post(`/api/admin/users/${kitId}/committee-role`).set('Authorization', `Bearer ${rootToken}`).send({ committeeRole: 'Kit & Safety Sec' });
+
+        // Re-login kit user to get fresh JWT with updated role
+        const kitLoginRes = await request(app).post('/api/auth/login').send({
+            email: 'kit@example.com', password: 'Password123!'
+        });
+        const kitCookies = kitLoginRes.headers['set-cookie'];
+        const kitCookieArray = Array.isArray(kitCookies) ? kitCookies : (kitCookies ? [kitCookies] : []);
+        const kitCookie = kitCookieArray.find((c: string) => c.startsWith('uscc_token='));
+        kitToken = kitCookie ? kitCookie.split(';')[0].split('=')[1] : '';
     });
 
     afterAll(async () => {
         db.close();
     });
 
+    const getAdminToken = async () => {
+        const adminRes = await request(app).post('/api/auth/login').send({
+            email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!'
+        });
+        const adminCookies = adminRes.headers['set-cookie'];
+        const adminCookieArray = Array.isArray(adminCookies) ? adminCookies : (adminCookies ? [adminCookies] : []);
+        const adminCookie = adminCookieArray.find((c: string) => c.startsWith('uscc_token='));
+        return adminCookie ? adminCookie.split(';')[0].split('=')[1] : '';
+    };
+
     const createRoleUser = async (roleType: 'member' | 'committee' | 'kit') => {
         const ts = Date.now();
-        const base = { password: 'Password123!' };
+        const base = { password: 'Password123!', passwordConfirm: 'Password123!' };
+
+        const extractToken = (res: any) => {
+            const cookies = res.headers['set-cookie'];
+            const cookieArray = Array.isArray(cookies) ? cookies : (cookies ? [cookies] : []);
+            const tc = cookieArray.find((c: string) => c.startsWith('uscc_token='));
+            return tc ? tc.split(';')[0].split('=')[1] : '';
+        };
 
         if (roleType === 'member') {
             const res = await request(app).post('/api/auth/register').send({
-                ...base, name: 'Mem', email: `mem${ts}@ex.com`, registrationNumber: `M${ts}`
+                ...base, firstName: 'Mem', lastName: 'User', email: `mem${ts}@example.com`, registrationNumber: `M${ts}`
             });
-            return res.body.token;
+            return extractToken(res);
         } else if (roleType === 'committee') {
             const res = await request(app).post('/api/auth/register').send({
-                ...base, name: 'Com', email: `com${ts}@committee.sheffield.ac.uk`, registrationNumber: `C${ts}`
+                ...base, firstName: 'Com', lastName: 'User', email: `com${ts}@example.com`, registrationNumber: `C${ts}`
             });
-            return res.body.token;
+            const comId = res.body.user?.id || res.body.id || '';
+
+            // Promote to committee via admin
+            const rootToken = await getAdminToken();
+            await request(app).post(`/api/admin/users/${comId}/promote`).set('Authorization', `Bearer ${rootToken}`);
+
+            // Re-login to get a fresh JWT with the updated committee role
+            const loginRes = await request(app).post('/api/auth/login').send({
+                email: `com${ts}@example.com`, password: 'Password123!'
+            });
+            return extractToken(loginRes);
         } else {
             // Kit Sec
             const res = await request(app).post('/api/auth/register').send({
-                ...base, name: 'Kit', email: `kit${ts}@ex.com`, registrationNumber: `K${ts}`
+                ...base, firstName: 'Kit', lastName: 'User', email: `kit${ts}@example.com`, registrationNumber: `K${ts}`
             });
-            const token = res.body.token;
-            const kitId = res.body.user.id;
+            const kitId = res.body.user?.id || res.body.id || '';
 
-            const adminRes = await request(app).post('/api/auth/login').send({
-                email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!'
-            });
-            const rootToken = adminRes.body.token;
-
+            const rootToken = await getAdminToken();
             await request(app).post(`/api/admin/users/${kitId}/promote`).set('Authorization', `Bearer ${rootToken}`);
             await request(app).post(`/api/admin/users/${kitId}/committee-role`).set('Authorization', `Bearer ${rootToken}`).send({ committeeRole: 'Kit & Safety Sec' });
-            return token;
+
+            // Re-login to get a fresh JWT with the updated role
+            const loginRes = await request(app).post('/api/auth/login').send({
+                email: `kit${ts}@example.com`, password: 'Password123!'
+            });
+            return extractToken(loginRes);
         }
     };
 

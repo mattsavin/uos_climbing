@@ -1,5 +1,5 @@
 export const accountManagerModalHtml = `
-    <div id="account-manager-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div id="account-manager-modal" class="hidden fixed inset-0 z-[150] flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="account-manager-backdrop"></div>
         <div
             class="relative glass-card !p-0 w-full max-w-lg shadow-2xl border border-white/10 animate-[fade-in-up_0.2s_ease-out] flex flex-col overflow-hidden">
@@ -35,11 +35,17 @@ export const accountManagerModalHtml = `
             <!-- Profile Form Tab -->
             <div id="account-profile-pane" class="p-6">
                 <form id="profile-form" class="space-y-4">
-                    <div>
-                        <label class="text-xs text-slate-500 uppercase tracking-wider font-bold block mb-1">Your
-                            Name</label>
-                        <input type="text" id="profile-name" required
-                            class="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-400">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-xs text-slate-500 uppercase tracking-wider font-bold block mb-1">First Name</label>
+                            <input type="text" id="profile-fname" required
+                                class="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-400">
+                        </div>
+                        <div>
+                            <label class="text-xs text-slate-500 uppercase tracking-wider font-bold block mb-1">Last Name</label>
+                            <input type="text" id="profile-sname" required
+                                class="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-400">
+                        </div>
                     </div>
                     <div>
                         <label class="text-xs text-slate-500 uppercase tracking-wider font-bold block mb-1">Pronouns

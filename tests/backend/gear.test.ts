@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import request from 'supertest';
 import { app } from '../../backend/server';
 import { db } from '../../backend/db';
@@ -23,12 +23,14 @@ describe('Gear API', () => {
         const userRes = await request(app)
             .post('/api/auth/register')
             .send({
-                name: 'Gear User',
+                firstName: 'Gear',
+                lastName: 'User',
                 email: 'gear_user@example.com',
-                password: 'Password123!',
+                password: 'Password123!', passwordConfirm: 'Password123!',
                 registrationNumber: 'GEAR123'
             });
-        userToken = userRes.body.token;
+        const tokenCookie1 = (userRes.headers['set-cookie'] as any)?.find((c: string) => c.startsWith('uscc_token='));
+        userToken = tokenCookie1 ? tokenCookie1.split(';')[0].split('=')[1] : (userRes.body.token || '');
 
         // Login as the root admin (pre-seeded in db.ts)
         const adminRes = await request(app)
@@ -37,7 +39,10 @@ describe('Gear API', () => {
                 email: 'sheffieldclimbing@gmail.com',
                 password: 'SuperSecret123!'
             });
-        adminToken = adminRes.body.token;
+        const cookies = adminRes.headers['set-cookie'];
+        const cookieArray = Array.isArray(cookies) ? cookies : (cookies ? [cookies] : []);
+        const adminCookie = cookieArray.find((c: string) => c.startsWith('uscc_token='));
+        adminToken = adminCookie ? adminCookie.split(';')[0].split('=')[1] : (adminRes.body.token || '');
     });
 
     afterAll(async () => {
@@ -278,10 +283,42 @@ describe('Gear API', () => {
 
         it('should handle reject request DB errors', async () => {
             const { vi } = await import('vitest');
-            const spy = vi.spyOn(db, 'run').mockImplementationOnce((query, params, cb) => cb.call({}, new Error('DB Error')));
+            const originalRun = db.run.bind(db);
+            // Mock run instead of get, but only for the actual update
+            const spyRun = vi.spyOn(db, 'run').mockImplementation((query, params, cb) => {
+                if (typeof query === 'string' && query.includes('UPDATE gear_requests')) {
+                    if (typeof params === 'function') {
+                        (params as any).call({}, new Error('DB Error'));
+                    } else if (typeof cb === 'function') {
+                        (cb as any).call({}, new Error('DB Error'));
+                    }
+                    return db;
+                } else {
+                    return originalRun(query, params as any, cb as any);
+                }
+            });
             const res = await request(app).post('/api/gear/requests/1/reject').set('Authorization', `Bearer ${adminToken}`);
-            expect(res.status).toBe(500);
+            // Wait, if I mockImplementationOnce, it might catch a background run?
+            // Let's use mockImplementation and check query, then restore.
+            spyRun.mockRestore();
+
+            const spy = vi.spyOn(db, 'get').mockImplementation((query, params, cb) => {
+                if (typeof query === 'string' && query.includes('FROM gear_requests')) {
+                    cb(null, { status: 'pending', email: 't@t.com', name: 'T' });
+                } else if (typeof query === 'string' && query.includes('FROM users')) {
+                    cb(null, { email: 'sheffieldclimbing@gmail.com', committeeRole: 'Kit & Safety Sec' });
+                }
+            });
+            const spyRun2 = vi.spyOn(db, 'run').mockImplementationOnce((query, params, cb) => {
+                cb.call({}, new Error('DB Error'));
+                return db;
+            });
+
+            const res2 = await request(app).post('/api/gear/requests/1/reject').set('Authorization', `Bearer ${adminToken}`);
+            expect(res2.status).toBe(500);
+
             spy.mockRestore();
+            spyRun2.mockRestore();
         });
     });
 });

@@ -2,6 +2,7 @@ import sqlite3 from 'sqlite3';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -23,7 +24,9 @@ function initializeDatabase() {
         // Users Table
         db.run(`CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
+            firstName TEXT,
+            lastName TEXT,
+            name TEXT, -- Keep for backward compatibility during migration
             email TEXT UNIQUE NOT NULL,
             passwordHash TEXT NOT NULL,
             registrationNumber TEXT,
@@ -34,16 +37,77 @@ function initializeDatabase() {
             role TEXT DEFAULT 'member',
             committeeRole TEXT,
             membershipStatus TEXT DEFAULT 'pending',
-            membershipYear TEXT
+            membershipYear TEXT,
+            calendarToken TEXT UNIQUE,
+            emailVerified INTEGER DEFAULT 0
+        )`);
+
+        // Email Verifications Table (OTP storage)
+        db.run(`CREATE TABLE IF NOT EXISTS email_verifications (
+            userId TEXT NOT NULL,
+            code TEXT NOT NULL,
+            expiresAt INTEGER NOT NULL,
+            PRIMARY KEY (userId)
+        )`);
+
+        // Password Reset Tokens Table
+        db.run(`CREATE TABLE IF NOT EXISTS password_resets (
+            token TEXT PRIMARY KEY,
+            userId TEXT NOT NULL,
+            expiresAt INTEGER NOT NULL,
+            FOREIGN KEY (userId) REFERENCES users(id)
+        )`);
+
+        // User Memberships Table (many-to-many: one user can hold multiple membership types)
+        db.run(`CREATE TABLE IF NOT EXISTS user_memberships (
+            id TEXT PRIMARY KEY,
+            userId TEXT NOT NULL,
+            membershipType TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            membershipYear TEXT NOT NULL,
+            FOREIGN KEY (userId) REFERENCES users(id)
         )`);
 
         // Migrations: add new fields if updating existing DB
+        db.run('ALTER TABLE users ADD COLUMN firstName TEXT', (err) => {
+            if (!err) {
+                // If we successfully added firstName, also try adding lastName and migrating data
+                db.run('ALTER TABLE users ADD COLUMN lastName TEXT', (err2) => {
+                    db.all('SELECT id, name FROM users WHERE (firstName IS NULL OR firstName = "") AND name IS NOT NULL', [], (err3, rows) => {
+                        if (!err3 && rows && rows.length > 0) {
+                            const stmt = db.prepare('UPDATE users SET firstName = ?, lastName = ? WHERE id = ?');
+                            rows.forEach((row: any) => {
+                                const parts = (row.name || '').trim().split(' ');
+                                const f = parts[0] || '';
+                                const l = parts.slice(1).join(' ') || '';
+                                stmt.run([f, l, row.id]);
+                            });
+                            stmt.finalize();
+                        }
+                    });
+                });
+            }
+        });
+        db.run('ALTER TABLE users ADD COLUMN lastName TEXT', (err) => { });
         db.run('ALTER TABLE users ADD COLUMN emergencyContactName TEXT', (err) => { });
         db.run('ALTER TABLE users ADD COLUMN emergencyContactMobile TEXT', (err) => { });
         db.run('ALTER TABLE users ADD COLUMN pronouns TEXT', (err) => { });
         db.run('ALTER TABLE users ADD COLUMN dietaryRequirements TEXT', (err) => { });
         db.run('ALTER TABLE users ADD COLUMN committeeRole TEXT', (err) => { });
         db.run('ALTER TABLE users ADD COLUMN membershipYear TEXT', (err) => { });
+        db.run('ALTER TABLE users ADD COLUMN emailVerified INTEGER DEFAULT 0', (err) => { });
+        db.run('ALTER TABLE users ADD COLUMN calendarToken TEXT', (err) => {
+            // If the column was just added, populate existing users with tokens
+            if (!err) {
+                db.all('SELECT id FROM users WHERE calendarToken IS NULL', [], (err, rows) => {
+                    if (!err && rows) {
+                        const stmt = db.prepare('UPDATE users SET calendarToken = ? WHERE id = ?');
+                        rows.forEach((row: any) => stmt.run([crypto.randomUUID(), row.id]));
+                        stmt.finalize();
+                    }
+                });
+            }
+        });
 
         // Sessions Table
         db.run(`CREATE TABLE IF NOT EXISTS sessions (
@@ -52,8 +116,11 @@ function initializeDatabase() {
             title TEXT NOT NULL,
             date TEXT NOT NULL,
             capacity INTEGER NOT NULL,
-            bookedSlots INTEGER DEFAULT 0
+            bookedSlots INTEGER DEFAULT 0,
+            requiredMembership TEXT DEFAULT 'basic'
         )`);
+
+        db.run('ALTER TABLE sessions ADD COLUMN requiredMembership TEXT DEFAULT "basic"', (err) => { });
 
         // Bookings Table
         db.run(`CREATE TABLE IF NOT EXISTS bookings (
@@ -120,10 +187,13 @@ function initializeDatabase() {
                 const membershipYear = currentMonth < 8 ? `${currentYear - 1}/${currentYear}` : `${currentYear}/${currentYear + 1}`;
 
                 db.run(
-                    'INSERT INTO users (id, name, email, passwordHash, role, membershipStatus, membershipYear) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                    ['user_root', 'Root Admin', 'sheffieldclimbing@gmail.com', rootHash, 'committee', 'active', membershipYear]
+                    'INSERT INTO users (id, firstName, lastName, email, passwordHash, role, membershipStatus, membershipYear, calendarToken, emailVerified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                    ['user_root', 'Root', 'Admin', 'sheffieldclimbing@gmail.com', rootHash, 'committee', 'active', membershipYear, crypto.randomUUID(), 1]
                 );
                 console.log('Root admin created.');
+            } else {
+                // Ensure existing root admin is marked as verified
+                db.run('UPDATE users SET emailVerified = 1 WHERE email = ?', ['sheffieldclimbing@gmail.com']);
             }
         });
 
@@ -143,15 +213,15 @@ function initializeDatabase() {
                 const pad = (n: number) => n.toString().padStart(2, '0');
 
                 const defaultSessions = [
-                    ['sess_1', 'Squad', 'Advanced Lead Training', `${currentYear}-${pad(currentMonth)}-14T19:00:00`, 15, 15],
-                    ['sess_2', 'Social', 'Friday Night Bouldering', `${currentYear}-${pad(currentMonth)}-16T18:00:00`, 40, 28],
-                    ['sess_3', 'Rope', 'Beginner Top Rope', `${currentYear}-${pad(currentMonth)}-18T14:00:00`, 12, 12],
-                    ['sess_4', 'Squad', 'NUBS Prep Simulator', `${currentYear}-${pad(currentMonth)}-21T17:30:00`, 20, 18],
-                    ['sess_5', 'Social', 'Pub + Board Games', `${currentYear}-${pad(currentMonth)}-23T20:00:00`, 50, 45],
-                    ['sess_6', 'Rope', 'Lead Belay Course', `${currentYear}-${pad(currentMonth)}-25T13:00:00`, 8, 4]
+                    ['sess_1', 'Squad', 'Advanced Lead Training', `${currentYear}-${pad(currentMonth)}-14T19:00:00`, 15, 15, 'comp_team'],
+                    ['sess_2', 'Social', 'Friday Night Bouldering', `${currentYear}-${pad(currentMonth)}-16T18:00:00`, 40, 28, 'basic'],
+                    ['sess_3', 'Rope', 'Beginner Top Rope', `${currentYear}-${pad(currentMonth)}-18T14:00:00`, 12, 12, 'basic'],
+                    ['sess_4', 'Squad', 'NUBS Prep Simulator', `${currentYear}-${pad(currentMonth)}-21T17:30:00`, 20, 18, 'comp_team'],
+                    ['sess_5', 'Social', 'Pub + Board Games', `${currentYear}-${pad(currentMonth)}-23T20:00:00`, 50, 45, 'basic'],
+                    ['sess_6', 'Rope', 'Lead Belay Course', `${currentYear}-${pad(currentMonth)}-25T13:00:00`, 8, 4, 'basic']
                 ];
 
-                const stmt = db.prepare('INSERT INTO sessions (id, type, title, date, capacity, bookedSlots) VALUES (?, ?, ?, ?, ?, ?)');
+                const stmt = db.prepare('INSERT INTO sessions (id, type, title, date, capacity, bookedSlots, requiredMembership) VALUES (?, ?, ?, ?, ?, ?, ?)');
                 defaultSessions.forEach(s => stmt.run(s));
                 stmt.finalize();
             }

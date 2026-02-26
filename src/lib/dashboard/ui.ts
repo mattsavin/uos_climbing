@@ -28,10 +28,18 @@ export async function updateUI() {
                 renewalOverlay.classList.remove('hidden');
 
                 confirmRenewalBtn.addEventListener('click', async () => {
+                    const selectedTypes: string[] = [];
+                    document.querySelectorAll<HTMLInputElement>('input[name="renewalMembershipType"]:checked').forEach(cb => {
+                        selectedTypes.push(cb.value);
+                    });
+                    if (selectedTypes.length === 0) selectedTypes.push('basic');
+
                     try {
                         confirmRenewalBtn.textContent = 'Renewing...';
                         (confirmRenewalBtn as HTMLButtonElement).disabled = true;
-                        await authState.confirmMembershipRenewal(currentYearStr);
+
+                        await authState.confirmMembershipRenewal(currentYearStr, selectedTypes);
+
                         renewalOverlay.classList.add('hidden');
                         updateUI();
                     } catch (err: any) {
@@ -68,6 +76,100 @@ export async function updateUI() {
             }
         }
 
+        // Render individual membership types
+        const membershipsContainer = document.getElementById('memberships-container');
+        if (membershipsContainer) {
+            membershipsContainer.innerHTML = '<div class="flex justify-center"><div class="animate-spin rounded-full h-5 w-5 border-b-2 border-brand-gold"></div></div>';
+            try {
+                const memberships = await authState.getMyMemberships();
+                if (memberships.length === 0) {
+                    membershipsContainer.innerHTML = '<p class="text-xs text-slate-500 text-center uppercase tracking-wider">No memberships</p>';
+                } else {
+                    membershipsContainer.innerHTML = memberships.map(m => {
+                        let colorClass = 'bg-slate-800 text-slate-400 border-slate-700';
+                        if (m.status === 'active') colorClass = 'bg-brand-gold/10 text-brand-gold border-brand-gold/20';
+                        else if (m.status === 'pending') colorClass = 'bg-amber-500/10 text-amber-500 border-amber-500/20';
+                        else if (m.status === 'rejected') colorClass = 'bg-red-500/10 text-red-400 border-red-500/20';
+
+                        const typeLabel = { basic: 'Basic', bouldering: 'Bouldering', comp_team: 'Comp Team' }[m.membershipType] || m.membershipType;
+
+                        return `
+                        <div class="flex items-center justify-between p-2 rounded border ${colorClass} mb-2 text-xs font-bold uppercase tracking-wide">
+                            <div class="flex flex-col">
+                                <span>${typeLabel}</span>
+                                <span class="text-[9px] opacity-70">${m.membershipYear}</span>
+                            </div>
+                            <span>${m.status}</span>
+                        </div>
+                        `;
+                    }).join('');
+                }
+            } catch (e) {
+                membershipsContainer.innerHTML = '<p class="text-xs text-red-400 text-center uppercase tracking-wider">Failed to load</p>';
+            }
+        }
+
+        // Action Required Section for rejected members
+        const actionRequiredContainer = document.getElementById('action-required-container');
+        if (actionRequiredContainer) {
+            if (user.membershipStatus === 'rejected') {
+                actionRequiredContainer.classList.remove('hidden');
+            } else {
+                actionRequiredContainer.classList.add('hidden');
+            }
+        }
+
+        const reRequestBtn = document.getElementById('re-request-btn');
+        if (reRequestBtn && !reRequestBtn.hasAttribute('data-initialized')) {
+            reRequestBtn.setAttribute('data-initialized', 'true');
+            reRequestBtn.addEventListener('click', async () => {
+                try {
+                    reRequestBtn.textContent = 'Requesting...';
+                    (reRequestBtn as HTMLButtonElement).disabled = true;
+                    await authState.requestMembership();
+                    updateUI(); // Refresh state
+                } catch (e: any) {
+                    alert(e.message || 'Failed to re-request');
+                    reRequestBtn.textContent = 'Re-request Membership';
+                    (reRequestBtn as HTMLButtonElement).disabled = false;
+                }
+            });
+        }
+
+        // Additional Membership Logic
+        const reqAddMbBtn = document.getElementById('request-additional-membership-btn');
+        const addMbSelector = document.getElementById('additional-membership-selector');
+        const cancelAddMbBtn = document.getElementById('cancel-additional-membership-btn');
+        const submitAddMbBtn = document.getElementById('submit-additional-membership-btn');
+        const addMbTypeSelect = document.getElementById('additional-membership-type') as HTMLSelectElement;
+
+        if (reqAddMbBtn && addMbSelector && !reqAddMbBtn.hasAttribute('data-init')) {
+            reqAddMbBtn.setAttribute('data-init', 'true');
+            reqAddMbBtn.addEventListener('click', () => {
+                addMbSelector.classList.toggle('hidden');
+            });
+
+            cancelAddMbBtn?.addEventListener('click', () => {
+                addMbSelector.classList.add('hidden');
+            });
+
+            submitAddMbBtn?.addEventListener('click', async () => {
+                const type = addMbTypeSelect.value;
+                try {
+                    submitAddMbBtn.textContent = '...';
+                    (submitAddMbBtn as HTMLButtonElement).disabled = true;
+                    await authState.requestMembershipType(type, currentYearStr);
+                    addMbSelector.classList.add('hidden');
+                    updateUI(); // Refresh state
+                } catch (e: any) {
+                    alert(e.message || 'Failed to request membership');
+                } finally {
+                    submitAddMbBtn.textContent = 'Request';
+                    (submitAddMbBtn as HTMLButtonElement).disabled = false;
+                }
+            });
+        }
+
         if (user.role === 'committee') {
             if (committeePanel) committeePanel.classList.remove('hidden');
             if (addSessionToggleBtn) addSessionToggleBtn.classList.remove('hidden');
@@ -79,7 +181,7 @@ export async function updateUI() {
         }
 
         if (icalLink) {
-            icalLink.dataset.link = `${window.location.origin}/api/ical/${user.id}`;
+            icalLink.dataset.link = `${window.location.origin}/api/sessions/ical/${user.calendarToken}`;
         }
 
         await renderSessions(user.role === 'committee');
@@ -95,8 +197,8 @@ export function initGeneralHandlers() {
 
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
-            authState.logout();
-            await updateUI();
+            await authState.logout();
+            window.location.href = '/login.html';
         });
     }
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import request from 'supertest';
 import { app } from '../../backend/server';
 import { db } from '../../backend/db';
@@ -15,12 +15,14 @@ describe('Voting API', () => {
         const userRes = await request(app)
             .post('/api/auth/register')
             .send({
-                name: 'Voting User',
+                firstName: 'Voting',
+                lastName: 'User',
                 email: 'voter@example.com',
-                password: 'Password123!',
+                password: 'Password123!', passwordConfirm: 'Password123!',
                 registrationNumber: 'VOTER1'
             });
-        userToken = userRes.body.token;
+        const tokenCookie1 = userRes.headers['set-cookie']?.find((c: string) => c.startsWith('uscc_token='));
+        userToken = tokenCookie1 ? tokenCookie1.split(';')[0].split('=')[1] : '';
         userId = userRes.body.user.id;
     });
 
@@ -29,10 +31,15 @@ describe('Voting API', () => {
     });
 
     const createVoterUser = async (prefix: string) => {
+        const ts = Date.now() + Math.floor(Math.random() * 1000);
+        const email = `${prefix}${ts}_voter@example.com`;
         const userRes = await request(app).post('/api/auth/register').send({
-            name: `${prefix} Voting User`, email: `${prefix}_voter@example.com`, password: 'Password123!', registrationNumber: `${prefix}VOTER`
+            firstName: prefix + ts, lastName: 'Voting User', email, password: 'Password123!', passwordConfirm: 'Password123!', registrationNumber: `${prefix}${ts}VOTER`
         });
-        return { token: userRes.body.token, id: userRes.body.user.id };
+        const cookies = userRes.headers['set-cookie'];
+        const cookieArray = Array.isArray(cookies) ? cookies : (cookies ? [cookies] : []);
+        const tokenCookie = cookieArray.find((c: string) => c.startsWith('uscc_token='));
+        return { token: tokenCookie ? tokenCookie.split(';')[0].split('=')[1] : (userRes.body.token || ''), id: userRes.body.user?.id || userRes.body.id || '', email };
     };
 
     it('should fail to apply when elections are closed', async () => {

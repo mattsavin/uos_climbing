@@ -6,6 +6,8 @@
 export interface User {
     id: string;
     email: string;
+    firstName?: string;
+    lastName?: string;
     name: string;
     password?: string;
     registrationNumber?: string;
@@ -17,7 +19,23 @@ export interface User {
     committeeRole?: string | null;
     membershipStatus: 'active' | 'pending' | 'rejected';
     membershipYear?: string;
+    calendarToken?: string;
+    memberships?: MembershipRow[];
 }
+
+export interface MembershipRow {
+    id: string;
+    userId: string;
+    membershipType: 'basic' | 'bouldering' | 'comp_team';
+    status: 'pending' | 'active' | 'rejected';
+    membershipYear: string;
+}
+
+export const MEMBERSHIP_TYPE_LABELS: Record<string, string> = {
+    basic: 'Basic',
+    bouldering: 'Bouldering',
+    comp_team: 'Competition Team'
+};
 
 export function getCurrentAcademicYear() {
     const now = new Date();
@@ -39,29 +57,26 @@ export interface Session {
     date: string; // ISO 8601 Date String
     capacity: number;
     bookedSlots: number;
+    requiredMembership?: 'basic' | 'bouldering' | 'comp_team';
 }
 
 // Current Session State
 export const authState = {
     user: null as User | null,
-    token: null as string | null,
 
     async init() {
-        this.token = localStorage.getItem('uscc_token');
-        if (this.token) {
-            try {
-                const res = await fetch('/api/auth/me', {
-                    headers: { 'Authorization': `Bearer ${this.token}` }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    this.user = data.user;
-                } else {
-                    this.logout();
-                }
-            } catch (e) {
+        try {
+            const res = await fetch('/api/auth/me', {
+                credentials: 'include'
+            });
+            if (res.ok) {
+                const data = await res.json();
+                this.user = data.user;
+            } else {
                 this.logout();
             }
+        } catch (e) {
+            this.logout();
         }
     },
 
@@ -69,54 +84,109 @@ export const authState = {
         const res = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ email, password })
         });
 
-        const data = await res.json();
+        let data: any = {};
+        try { data = await res.json(); } catch {
+            throw new Error('Server returned an unexpected response. Please try again.');
+        }
 
         if (!res.ok) {
-            throw new Error(data.error || "Login failed");
+            // Surface pendingVerification info so the UI can show the OTP panel
+            const err: any = new Error(data.error || 'Login failed');
+            err.pendingVerification = data.pendingVerification;
+            err.userId = data.userId;
+            throw err;
         }
 
         this.user = data.user;
-        this.token = data.token;
-        if (this.token) localStorage.setItem('uscc_token', this.token);
         return this.user;
     },
 
-    async register(name: string, email: string, passwordHash: string, registrationNumber: string) {
+    async verifyEmail(userId: string, code: string) {
+        const res = await fetch('/api/auth/verify-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ userId, code })
+        });
+
+        let data: any = {};
+        try { data = await res.json(); } catch {
+            throw new Error('Server returned an unexpected response. Please try again.');
+        }
+        if (!res.ok) throw new Error(data.error || 'Verification failed');
+
+        this.user = data.user;
+        return this.user;
+    },
+
+    async requestVerification(userId: string) {
+        const res = await fetch('/api/auth/request-verification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId })
+        });
+        let data: any = {};
+        try { data = await res.json(); } catch {
+            throw new Error('Server returned an unexpected response. Please try again.');
+        }
+        if (!res.ok) throw new Error(data.error || 'Failed to resend code');
+        return data;
+    },
+
+    async register(firstName: string, lastName: string, email: string, passwordHash: string, passwordConfirm: string, registrationNumber: string, membershipTypes: string[]) {
         const res = await fetch('/api/auth/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, email, password: passwordHash, registrationNumber })
+            credentials: 'include',
+            body: JSON.stringify({ firstName, lastName, email, password: passwordHash, passwordConfirm, registrationNumber, membershipTypes })
         });
 
-        const data = await res.json();
+        let data: any = {};
+        try { data = await res.json(); } catch {
+            throw new Error('Server returned an unexpected response. Please try again.');
+        }
         if (!res.ok) {
             throw new Error(data.error || "Registration failed");
         }
 
         this.user = data.user;
-        this.token = data.token;
-        if (this.token) localStorage.setItem('uscc_token', this.token);
-        return this.user;
+        return data; // Return full response including pendingVerification flag
     },
 
-    async updateProfile(name: string, emergencyContactName: string, emergencyContactMobile: string, pronouns: string, dietaryRequirements: string) {
-        if (!this.user || !this.token) throw new Error("Not logged in");
+    async getProfile() {
+        const res = await fetch('/api/users/me/profile', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include'
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to fetch profile");
+        return data; // Returns { firstName, lastName, emergencyContactName, ... }
+    },
+
+    async updateProfile(fname: string, sname: string, emergencyContactName: string, emergencyContactMobile: string, pronouns: string, dietaryRequirements: string) {
+        if (!this.user) throw new Error("Not logged in");
+
+        const name = `${fname} ${sname}`.trim();
 
         const res = await fetch(`/api/users/${this.user.id}`, {
             method: 'PUT',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.token}`
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ name, emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements })
+            credentials: 'include',
+            body: JSON.stringify({ firstName: fname, lastName: sname, emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements })
         });
 
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed to update profile");
 
+        this.user.firstName = fname;
+        this.user.lastName = sname;
         this.user.name = name;
         this.user.emergencyContactName = emergencyContactName;
         this.user.emergencyContactMobile = emergencyContactMobile;
@@ -125,16 +195,16 @@ export const authState = {
         return this.user;
     },
 
-    async confirmMembershipRenewal(membershipYear: string) {
-        if (!this.user || !this.token) throw new Error("Not logged in");
+    async confirmMembershipRenewal(membershipYear: string, membershipTypes: string[]) {
+        if (!this.user) throw new Error("Not logged in");
 
         const res = await fetch('/api/users/me/membership-renewal', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.token}`
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ membershipYear })
+            credentials: 'include',
+            body: JSON.stringify({ membershipYear, membershipTypes })
         });
 
         const data = await res.json();
@@ -146,14 +216,12 @@ export const authState = {
     },
 
     async changePassword(currentPassword: string, newPassword: string) {
-        if (!this.user || !this.token) throw new Error("Not logged in");
+        if (!this.user) throw new Error("Not logged in");
 
         const res = await fetch('/api/users/me/password', {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.token}`
-            },
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ currentPassword, newPassword })
         });
 
@@ -162,13 +230,74 @@ export const authState = {
         return data;
     },
 
+    async forgotPassword(email: string) {
+        const res = await fetch('/api/auth/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        let data: any = {};
+        try { data = await res.json(); } catch { /* ignore */ }
+        if (!res.ok) throw new Error(data.error || 'Request failed');
+        return data;
+    },
+
+    async resetPassword(token: string, newPassword: string) {
+        const res = await fetch('/api/auth/reset-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token, newPassword })
+        });
+        let data: any = {};
+        try { data = await res.json(); } catch { /* ignore */ }
+        if (!res.ok) throw new Error(data.error || 'Reset failed');
+        return data;
+    },
+
+    async getMyMemberships(): Promise<MembershipRow[]> {
+        const res = await fetch('/api/users/me/memberships', { credentials: 'include' });
+        let data: any = [];
+        try { data = await res.json(); } catch { /* ignore */ }
+        if (!res.ok) throw new Error(data.error || 'Failed to fetch memberships');
+        return data;
+    },
+
+    async requestMembershipType(membershipType: string, membershipYear?: string) {
+        const res = await fetch('/api/users/me/memberships', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ membershipType, membershipYear })
+        });
+        let data: any = {};
+        try { data = await res.json(); } catch { /* ignore */ }
+        if (!res.ok) throw new Error(data.error || 'Request failed');
+        return data;
+    },
+
+    async requestMembership() {
+        if (!this.user) throw new Error('Not logged in');
+        const res = await fetch('/api/users/me/request-membership', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include'
+        });
+        let data: any = {};
+        try { data = await res.json(); } catch { /* ignore */ }
+        if (!res.ok) throw new Error(data.error || 'Request failed');
+        this.user.membershipStatus = data.membershipStatus;
+        this.user.membershipYear = data.membershipYear;
+        return data;
+    },
+
     async deleteAccount(password: string) {
-        if (!this.user || !this.token) throw new Error("Not logged in");
+        if (!this.user) throw new Error("Not logged in");
 
         // First verify password
         const verifyRes = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ email: this.user.email, password })
         });
 
@@ -176,9 +305,7 @@ export const authState = {
 
         const res = await fetch(`/api/users/${this.user.id}`, {
             method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${this.token}`
-            }
+            credentials: 'include'
         });
 
         const data = await res.json();
@@ -187,10 +314,13 @@ export const authState = {
         return data;
     },
 
-    logout() {
+    async logout() {
         this.user = null;
-        this.token = null;
-        localStorage.removeItem('uscc_token');
+        try {
+            await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+        } catch {
+            // Ignore network errors — user is still logged out client-side
+        }
     },
 
     getUser() {
@@ -200,17 +330,12 @@ export const authState = {
 
 // Helper for authenticated fetch
 async function apiFetch(endpoint: string, options: RequestInit = {}) {
-    const token = localStorage.getItem('uscc_token');
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         ...((options.headers as Record<string, string>) || {})
     };
 
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const res = await fetch(endpoint, { ...options, headers });
+    const res = await fetch(endpoint, { ...options, headers, credentials: 'include' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'API Request Failed');
     return data;
@@ -246,6 +371,14 @@ export const adminApi = {
 
     async deleteUser(id: string) {
         return apiFetch(`/api/users/${id}`, { method: 'DELETE' });
+    },
+
+    async approveMembershipRow(id: string) {
+        return apiFetch(`/api/admin/memberships/${id}/approve`, { method: 'POST' });
+    },
+
+    async rejectMembershipRow(id: string) {
+        return apiFetch(`/api/admin/memberships/${id}/reject`, { method: 'POST' });
     },
 
     async setCommitteeRole(id: string, committeeRole: string | null) {

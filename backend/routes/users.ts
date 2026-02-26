@@ -2,17 +2,112 @@ import express from 'express';
 import bcrypt from 'bcrypt';
 import { db } from '../db';
 import { authenticateToken } from '../middleware/auth';
+import crypto from 'crypto';
 
 const router = express.Router();
 
+const VALID_MEMBERSHIP_TYPES = ['basic', 'bouldering', 'comp_team'];
+
+/** Get current user's membership rows */
+router.get('/me/memberships', authenticateToken, (req: any, res) => {
+    db.all('SELECT * FROM user_memberships WHERE userId = ? ORDER BY membershipYear DESC, membershipType ASC', [req.user.id], (err, rows) => {
+        if (err) return res.status(500).json({ error: 'Database error' });
+        res.json(rows || []);
+    });
+});
+
+/** Get current user's full profile details */
+router.get('/me/profile', authenticateToken, (req: any, res) => {
+    db.get('SELECT firstName, lastName, emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements FROM users WHERE id = ?', [req.user.id], (err, user) => {
+        if (err) return res.status(500).json({ error: 'Database error' });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        res.json(user);
+    });
+});
+
+/** Request an additional (or new) membership type */
+router.post('/me/memberships', authenticateToken, (req: any, res) => {
+    const { membershipType, membershipYear } = req.body;
+
+    if (!membershipType) return res.status(400).json({ error: 'membershipType is required' });
+    if (!VALID_MEMBERSHIP_TYPES.includes(membershipType)) {
+        return res.status(400).json({ error: 'Invalid membership type' });
+    }
+
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth();
+    const year = membershipYear || (currentMonth < 8
+        ? `${currentYear - 1}/${currentYear}`
+        : `${currentYear}/${currentYear + 1}`);
+
+    const id = 'umem_' + crypto.randomUUID();
+
+    db.run(
+        'INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)',
+        [id, req.user.id, membershipType, 'pending', year],
+        function (err) {
+            if (err) return res.status(500).json({ error: 'Database error' });
+            res.json({ success: true, id, membershipType, status: 'pending', membershipYear: year });
+        }
+    );
+});
+
+/** Renew overall membership (resets to pending for current year) */
 router.post('/me/membership-renewal', authenticateToken, (req: any, res) => {
-    const { membershipYear } = req.body;
+    const { membershipYear, membershipTypes } = req.body;
     if (!membershipYear) return res.status(400).json({ error: 'Missing membership year' });
 
     db.run('UPDATE users SET membershipYear = ?, membershipStatus = ? WHERE id = ?', [membershipYear, 'pending', req.user.id], function (err) {
         if (err) return res.status(500).json({ error: 'Database error' });
+
+        // Optionally insert new membership type rows for the new year
+        if (Array.isArray(membershipTypes) && membershipTypes.length > 0) {
+            const validTypes = membershipTypes.filter((t: string) => VALID_MEMBERSHIP_TYPES.includes(t));
+            if (validTypes.length > 0) {
+                const stmt = db.prepare('INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)');
+                validTypes.forEach((t: string) => {
+                    stmt.run(['umem_' + crypto.randomUUID(), req.user.id, t, 'pending', membershipYear]);
+                });
+                stmt.finalize();
+            }
+        }
+
         res.json({ success: true, membershipYear, membershipStatus: 'pending' });
     });
+});
+
+/** Re-request membership (e.g. after rejection) */
+router.post('/me/request-membership', authenticateToken, (req: any, res) => {
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth();
+    const membershipYear = currentMonth < 8
+        ? `${currentYear - 1}/${currentYear}`
+        : `${currentYear}/${currentYear + 1}`;
+
+    db.run(
+        'UPDATE users SET membershipStatus = ?, membershipYear = ? WHERE id = ?',
+        ['pending', membershipYear, req.user.id],
+        function (err) {
+            if (err) return res.status(500).json({ error: 'Database error' });
+
+            // Upsert the 'basic' membership row so it appears in the admin pending list
+            db.get('SELECT id FROM user_memberships WHERE userId = ? AND membershipType = ? AND membershipYear = ?',
+                [req.user.id, 'basic', membershipYear],
+                (err2, row: any) => {
+                    if (row) {
+                        // Row exists — update its status back to pending
+                        db.run('UPDATE user_memberships SET status = ? WHERE id = ?', ['pending', row.id]);
+                    } else {
+                        // No row for this year yet — insert a fresh pending one
+                        db.run('INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)',
+                            ['umem_' + crypto.randomUUID(), req.user.id, 'basic', 'pending', membershipYear]);
+                    }
+                }
+            );
+
+            res.json({ success: true, membershipStatus: 'pending', membershipYear });
+        }
+    );
 });
 
 router.put('/:id', authenticateToken, (req: any, res) => {
@@ -20,10 +115,10 @@ router.put('/:id', authenticateToken, (req: any, res) => {
         return res.status(403).json({ error: 'Unauthorized to update this user' });
     }
 
-    const { name, emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements } = req.body;
+    const { firstName, lastName, emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements } = req.body;
     db.run(
-        'UPDATE users SET name = ?, emergencyContactName = ?, emergencyContactMobile = ?, pronouns = ?, dietaryRequirements = ? WHERE id = ?',
-        [name, emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements, req.params.id],
+        'UPDATE users SET firstName = ?, lastName = ?, name = ?, emergencyContactName = ?, emergencyContactMobile = ?, pronouns = ?, dietaryRequirements = ? WHERE id = ?',
+        [firstName, lastName, `${firstName} ${lastName}`.trim(), emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements, req.params.id],
         function (err) {
             if (err) return res.status(500).json({ error: 'Database error' });
             res.json({ success: true });
@@ -74,12 +169,14 @@ router.delete('/:id', authenticateToken, (req: any, res) => {
 });
 
 function performUserDelete(userId: string, res: any) {
-    db.run('DELETE FROM bookings WHERE userId = ?', [userId], () => { // Fixed table name from sessions_bookings to bookings
+    db.run('DELETE FROM bookings WHERE userId = ?', [userId], () => {
         db.run('DELETE FROM votes WHERE userId = ?', [userId], () => {
             db.run('DELETE FROM candidates WHERE userId = ?', [userId], () => {
-                db.run('DELETE FROM users WHERE id = ?', [userId], function (err) {
-                    if (err) return res.status(500).json({ error: 'Database error' });
-                    res.json({ success: true });
+                db.run('DELETE FROM user_memberships WHERE userId = ?', [userId], () => {
+                    db.run('DELETE FROM users WHERE id = ?', [userId], function (err) {
+                        if (err) return res.status(500).json({ error: 'Database error' });
+                        res.json({ success: true });
+                    });
                 });
             });
         });

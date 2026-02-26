@@ -2,7 +2,8 @@ import { authState } from '../../auth';
 
 export function initProfileHandlers() {
     const profileForm = document.getElementById('profile-form');
-    const profileName = document.getElementById('profile-name') as HTMLInputElement;
+    const profileFName = document.getElementById('profile-fname') as HTMLInputElement;
+    const profileSName = document.getElementById('profile-sname') as HTMLInputElement;
     const profilePronouns = document.getElementById('profile-pronouns') as HTMLInputElement;
     const profileDietary = document.getElementById('profile-dietary') as HTMLInputElement;
     const profileEmergencyName = document.getElementById('profile-emergency-name') as HTMLInputElement;
@@ -23,7 +24,8 @@ export function initProfileHandlers() {
                 if (submitBtn) submitBtn.textContent = 'Updating...';
 
                 await authState.updateProfile(
-                    profileName.value.trim(),
+                    profileFName.value.trim(),
+                    profileSName.value.trim(),
                     profileEmergencyName.value.trim(),
                     profileEmergencyMobile.value.trim(),
                     profilePronouns.value.trim(),
@@ -119,12 +121,35 @@ export function initAccountModalHandlers() {
         if (accountModal) accountModal.classList.add('hidden');
     }
 
-    if (openAccountBtn) openAccountBtn.addEventListener('click', () => {
+    if (openAccountBtn) openAccountBtn.addEventListener('click', async () => {
         if (accountModal) accountModal.classList.remove('hidden');
         if (profileSuccess) profileSuccess.classList.add('hidden');
         if (profileError) profileError.classList.add('hidden');
         if (passSuccess) passSuccess.classList.add('hidden');
         if (passError) passError.classList.add('hidden');
+
+        try {
+            // Load user data to populate the form
+            // @ts-ignore
+            const { authState } = await import('../../auth');
+            const userProfile = await authState.getProfile();
+
+            const fnameEl = document.getElementById('profile-fname') as HTMLInputElement;
+            const snameEl = document.getElementById('profile-sname') as HTMLInputElement;
+            const pronounsEl = document.getElementById('profile-pronouns') as HTMLInputElement;
+            const dietEl = document.getElementById('profile-dietary') as HTMLInputElement;
+            const emergNameEl = document.getElementById('profile-emergency-name') as HTMLInputElement;
+            const emergMobileEl = document.getElementById('profile-emergency-mobile') as HTMLInputElement;
+
+            if (fnameEl) fnameEl.value = userProfile.firstName || '';
+            if (snameEl) snameEl.value = userProfile.lastName || '';
+            if (pronounsEl) pronounsEl.value = userProfile.pronouns || '';
+            if (dietEl) dietEl.value = userProfile.dietaryRequirements || '';
+            if (emergNameEl) emergNameEl.value = userProfile.emergencyContactName || '';
+            if (emergMobileEl) emergMobileEl.value = userProfile.emergencyContactMobile || '';
+        } catch (e) {
+            console.error('Failed to pre-populate profile:', e);
+        }
     });
 
     [closeAccountBtn, accountBackdrop].forEach(el => {

@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { db } from './db';
@@ -10,6 +11,7 @@ import gearRoutes from './routes/gear';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import history from 'connect-history-api-fallback';
+import cookieParser from 'cookie-parser';
 
 // ESM dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
@@ -18,8 +20,12 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+app.use(cors({
+    origin: process.env.NODE_ENV === 'production' ? true : ['http://localhost:5173', 'http://127.0.0.1:5173'],
+    credentials: true,
+}));
 app.use(express.json());
+app.use(cookieParser());
 
 // Routes
 app.use('/api/auth', authRoutes);

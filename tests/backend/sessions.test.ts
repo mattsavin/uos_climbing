@@ -22,23 +22,47 @@ describe('Sessions API', () => {
         const userRes = await request(app)
             .post('/api/auth/register')
             .send({
-                name: 'Regular User',
+                firstName: 'Regular',
+                lastName: 'User',
                 email: 'user@example.com',
-                password: 'Password123!',
+                password: 'Password123!', passwordConfirm: 'Password123!',
                 registrationNumber: 'REG123'
             });
-        userToken = userRes.body.token;
+        const tokenCookie1 = (userRes.headers['set-cookie'] as any)?.find((c: string) => c.startsWith('uscc_token='));
+        userToken = tokenCookie1 ? tokenCookie1.split(';')[0].split('=')[1] : (userRes.body.token || '');
 
-        // Create a committee user (using the email domain check in auth.ts)
+        // Create a committee user (promoted by root admin)
         const committeeRes = await request(app)
             .post('/api/auth/register')
             .send({
-                name: 'Committee User',
-                email: 'admin@committee.sheffield.ac.uk',
-                password: 'Password123!',
+                firstName: 'Committee',
+                lastName: 'User',
+                email: 'committee_sessions@example.com',
+                password: 'Password123!', passwordConfirm: 'Password123!',
                 registrationNumber: 'ADM123'
             });
-        committeeToken = committeeRes.body.token;
+        const tokenCookie2 = (committeeRes.headers['set-cookie'] as any)?.find((c: string) => c.startsWith('uscc_token='));
+        committeeToken = tokenCookie2 ? tokenCookie2.split(';')[0].split('=')[1] : (committeeRes.body.token || '');
+        const committeeUserId = committeeRes.body.user?.id || '';
+
+        // Promote via root admin
+        const adminLoginRes = await request(app).post('/api/auth/login').send({
+            email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!'
+        });
+        const adminCookies = adminLoginRes.headers['set-cookie'];
+        const adminCookieArray = Array.isArray(adminCookies) ? adminCookies : (adminCookies ? [adminCookies] : []);
+        const adminCookie = adminCookieArray.find((c: string) => c.startsWith('uscc_token='));
+        const adminToken = adminCookie ? adminCookie.split(';')[0].split('=')[1] : '';
+        await request(app).post(`/api/admin/users/${committeeUserId}/promote`).set('Authorization', `Bearer ${adminToken}`);
+
+        // Re-login to get a fresh JWT with the updated committee role
+        const refreshRes = await request(app).post('/api/auth/login').send({
+            email: 'committee_sessions@example.com', password: 'Password123!'
+        });
+        const refreshCookies = refreshRes.headers['set-cookie'];
+        const refreshCookieArray = Array.isArray(refreshCookies) ? refreshCookies : (refreshCookies ? [refreshCookies] : []);
+        const refreshCookie = refreshCookieArray.find((c: string) => c.startsWith('uscc_token='));
+        committeeToken = refreshCookie ? refreshCookie.split(';')[0].split('=')[1] : '';
     });
 
     afterAll(async () => {
@@ -163,9 +187,10 @@ describe('Sessions API', () => {
 
         // Another user tries to book
         const user2Res = await request(app).post('/api/auth/register').send({
-            name: 'User 2', email: 'user2_full@example.com', password: 'Password123!', registrationNumber: 'U2FULL'
+            firstName: 'User', lastName: '2', email: 'user2_full@example.com', password: 'Password123!', passwordConfirm: 'Password123!', registrationNumber: 'U2FULL'
         });
-        const user2Token = user2Res.body.token;
+        const tokenCookie3 = (user2Res.headers['set-cookie'] as any)?.find((c: string) => c.startsWith('uscc_token='));
+        const user2Token = tokenCookie3 ? tokenCookie3.split(';')[0].split('=')[1] : (user2Res.body.token || '');
 
         const res = await request(app)
             .post(`/api/sessions/${sessionId}/book`)
@@ -186,14 +211,15 @@ describe('Sessions API', () => {
     });
 
     it('should generate iCal file for user bookings', async () => {
-        // Get user ID
+        // Get user profile
         const meRes = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${userToken}`);
-        const userId = meRes.body.user.id;
+        const user = meRes.body.user;
+        const calendarToken = user.calendarToken;
 
         const sessionId = await createSession(committeeToken, 'iCal Session');
         await bookSession(userToken, sessionId);
 
-        const res = await request(app).get(`/api/sessions/ical/${userId}`);
+        const res = await request(app).get(`/api/sessions/ical/${calendarToken}`);
 
         expect(res.status).toBe(200);
         expect(res.headers['content-type']).toContain('text/calendar');
@@ -222,11 +248,11 @@ describe('Sessions API', () => {
             const { vi } = await import('vitest');
             const spyAll = vi.spyOn(db, 'all').mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null));
 
-            // Get user ID
+            // Get user info
             const meRes = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${userToken}`);
-            const userId = meRes.body.user.id;
+            const user = meRes.body.user;
 
-            const res = await request(app).get(`/api/sessions/ical/${userId}`);
+            const res = await request(app).get(`/api/sessions/ical/${user.calendarToken}`);
             expect(res.status).toBe(500);
             spyAll.mockRestore();
         });

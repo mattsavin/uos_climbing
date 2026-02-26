@@ -48,7 +48,130 @@
                     </div>
 
                     <div class="p-8">
-                        <!-- Login Form -->
+
+                        <!-- ── Email Verification Panel ── -->
+                        <div id="verify-panel" class="hidden space-y-6 animate-[fade-in-up_0.3s_ease-out]">
+                            <div class="text-center">
+                                <div
+                                    class="w-16 h-16 bg-brand-gold/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-brand-gold/20">
+                                    <svg class="w-8 h-8 text-brand-gold" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                    </svg>
+                                </div>
+                                <h2 class="text-white font-black text-xl uppercase tracking-widest mb-2">Check Your
+                                    Email</h2>
+                                <p class="text-slate-400 text-sm leading-relaxed">We've sent a <span
+                                        class="text-brand-gold font-bold">6-digit code</span> to your email address.
+                                    Enter it below to verify your account.</p>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2"
+                                    for="verify-code">Verification Code</label>
+                                <input type="text" id="verify-code" maxlength="6" pattern="[0-9]{6}" inputmode="numeric"
+                                    autocomplete="one-time-code"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-4 text-white text-center text-3xl font-black tracking-[0.4em] placeholder-slate-700 focus:outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold transition-all shadow-inner"
+                                    placeholder="······" />
+                            </div>
+                            <p id="verify-error"
+                                class="hidden text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-center font-bold">
+                            </p>
+                            <button type="button" id="verify-btn"
+                                class="w-full btn-primary !py-4 text-sm uppercase tracking-widest font-black shadow-[0_0_20px_rgba(253,185,19,0.3)] hover:shadow-[0_0_30px_rgba(253,185,19,0.5)] flex items-center justify-center gap-3">
+                                <span>Verify Email</span>
+                                <svg class="w-5 h-5 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </button>
+                            <p class="text-center text-xs text-slate-500">Didn't receive a code? <button type="button"
+                                    id="resend-link"
+                                    class="text-brand-gold hover:text-brand-gold-muted font-bold transition-colors">Resend
+                                    code</button></p>
+                        </div>
+
+                        <!-- ── Forgot Password Panel ── -->
+                        <div id="forgot-panel" class="hidden space-y-6 animate-[fade-in-up_0.3s_ease-out]">
+                            <div class="text-center">
+                                <div
+                                    class="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-500/20">
+                                    <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                                    </svg>
+                                </div>
+                                <h2 class="text-white font-black text-xl uppercase tracking-widest mb-2">Forgot Password
+                                </h2>
+                                <p class="text-slate-400 text-sm leading-relaxed">Enter your university email address
+                                    and we'll send you a password reset link.</p>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2"
+                                    for="forgot-email">Email Address</label>
+                                <input type="email" id="forgot-email"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3.5 text-white placeholder-slate-600 focus:outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold transition-all shadow-inner"
+                                    placeholder="name@sheffield.ac.uk" />
+                            </div>
+                            <p id="forgot-error"
+                                class="hidden text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-center font-bold">
+                            </p>
+                            <p id="forgot-success"
+                                class="hidden text-emerald-400 text-sm bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 text-center font-bold">
+                            </p>
+                            <button type="button" id="forgot-btn"
+                                class="w-full btn-primary !py-4 text-sm uppercase tracking-widest font-black shadow-[0_0_20px_rgba(253,185,19,0.3)] hover:shadow-[0_0_30px_rgba(253,185,19,0.5)] flex items-center justify-center gap-3">
+                                <span>Send Reset Link</span>
+                            </button>
+                            <p class="text-center text-xs text-slate-500"><button type="button"
+                                    id="back-to-login-from-forgot"
+                                    class="text-brand-gold hover:text-brand-gold-muted font-bold transition-colors">←
+                                    Back to Sign In</button></p>
+                        </div>
+
+                        <!-- ── Reset Password Panel ── -->
+                        <div id="reset-panel" class="hidden space-y-6 animate-[fade-in-up_0.3s_ease-out]">
+                            <div class="text-center">
+                                <div
+                                    class="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/20">
+                                    <svg class="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                    </svg>
+                                </div>
+                                <h2 class="text-white font-black text-xl uppercase tracking-widest mb-2">Set New
+                                    Password</h2>
+                                <p class="text-slate-400 text-sm leading-relaxed">Enter your new password below.</p>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2"
+                                    for="reset-password">New Password</label>
+                                <input type="password" id="reset-password" minlength="6"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3.5 text-white placeholder-slate-600 focus:outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold transition-all shadow-inner"
+                                    placeholder="Min. 6 characters" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2"
+                                    for="reset-password-confirm">Confirm Password</label>
+                                <input type="password" id="reset-password-confirm" minlength="6"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3.5 text-white placeholder-slate-600 focus:outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold transition-all shadow-inner"
+                                    placeholder="••••••••" />
+                            </div>
+                            <p id="reset-error"
+                                class="hidden text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-center font-bold">
+                            </p>
+                            <p id="reset-success"
+                                class="hidden text-emerald-400 text-sm bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 text-center font-bold">
+                            </p>
+                            <button type="button" id="reset-btn"
+                                class="w-full btn-primary !py-4 text-sm uppercase tracking-widest font-black shadow-[0_0_20px_rgba(253,185,19,0.3)] hover:shadow-[0_0_30px_rgba(253,185,19,0.5)] flex items-center justify-center gap-3">
+                                <span>Update Password</span>
+                            </button>
+                        </div>
+
+                        <!-- ── Login Form ── -->
                         <form id="login-form" class="space-y-6 block animate-[fade-in-up_0.3s_ease-out]">
                             <div>
                                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2"
@@ -58,8 +181,13 @@
                                     placeholder="name@sheffield.ac.uk" />
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2"
-                                    for="login-password">Password</label>
+                                <div class="flex justify-between items-center mb-2">
+                                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest"
+                                        for="login-password">Password</label>
+                                    <button type="button" id="forgot-password-link"
+                                        class="text-xs text-brand-gold hover:text-brand-gold-muted font-bold transition-colors">Forgot
+                                        password?</button>
+                                </div>
                                 <input type="password" id="login-password" required
                                     class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3.5 text-white placeholder-slate-600 focus:outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold transition-all shadow-inner"
                                     placeholder="••••••••" />
@@ -78,7 +206,7 @@
                             </button>
                         </form>
 
-                        <!-- Registration Form -->
+                        <!-- ── Registration Form ── -->
                         <form id="register-form" class="space-y-5 hidden animate-[fade-in-up_0.3s_ease-out]">
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
@@ -123,6 +251,50 @@
                                     for="reg-password">Password</label>
                                 <input type="password" id="reg-password" required minlength="6"
                                     class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold transition-all shadow-inner" />
+                            </div>
+
+                            <div>
+                                <label
+                                    class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5"
+                                    for="reg-password-confirm">Confirm Password</label>
+                                <input type="password" id="reg-password-confirm" required minlength="6"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold transition-all shadow-inner" />
+                            </div>
+
+                            <!-- Membership Type Selection -->
+                            <div>
+                                <label
+                                    class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Membership
+                                    Type(s)</label>
+                                <div class="space-y-2 bg-slate-900 border border-slate-700 rounded-lg p-3">
+                                    <label class="flex items-start gap-3 cursor-pointer group">
+                                        <input type="checkbox" id="mtype-basic" name="membershipType" value="basic"
+                                            checked class="mt-0.5 accent-brand-gold w-4 h-4 shrink-0" />
+                                        <div>
+                                            <span class="text-white text-xs font-bold">Basic Membership</span>
+                                            <p class="text-slate-500 text-[10px]">Club access, social events & general
+                                                sessions</p>
+                                        </div>
+                                    </label>
+                                    <label class="flex items-start gap-3 cursor-pointer group">
+                                        <input type="checkbox" id="mtype-bouldering" name="membershipType"
+                                            value="bouldering" class="mt-0.5 accent-brand-gold w-4 h-4 shrink-0" />
+                                        <div>
+                                            <span class="text-white text-xs font-bold">Bouldering Add-on</span>
+                                            <p class="text-slate-500 text-[10px]">Additional access to
+                                                bouldering-specific sessions</p>
+                                        </div>
+                                    </label>
+                                    <label class="flex items-start gap-3 cursor-pointer group">
+                                        <input type="checkbox" id="mtype-comp" name="membershipType" value="comp_team"
+                                            class="mt-0.5 accent-brand-gold w-4 h-4 shrink-0" />
+                                        <div>
+                                            <span class="text-white text-xs font-bold">Competition Team</span>
+                                            <p class="text-slate-500 text-[10px]">Squad training & competition
+                                                representation</p>
+                                        </div>
+                                    </label>
+                                </div>
                             </div>
 
                             <p id="register-error"

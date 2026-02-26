@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import request from 'supertest';
 import { app } from '../../backend/server';
 import { db } from '../../backend/db';
@@ -6,6 +6,7 @@ import { db } from '../../backend/db';
 describe('Admin API', () => {
     let rootToken: string;
     let userToken: string;
+    let committeeToken: string;
     let targetUserId: string;
 
     beforeAll(async () => {
@@ -16,13 +17,15 @@ describe('Admin API', () => {
         const userRes = await request(app)
             .post('/api/auth/register')
             .send({
-                name: 'Target User',
+                firstName: 'Target',
+                lastName: 'User',
                 email: 'target@example.com',
-                password: 'Password123!',
+                password: 'Password123!', passwordConfirm: 'Password123!',
                 registrationNumber: 'TGT123'
             });
-        userToken = userRes.body.token;
-        targetUserId = userRes.body.user.id;
+        const tokenCookie1 = (userRes.headers['set-cookie'] as any)?.find((c: string) => c.startsWith('uscc_token='));
+        userToken = tokenCookie1 ? tokenCookie1.split(';')[0].split('=')[1] : '';
+        targetUserId = userRes.body.user?.id || '';
 
         // Login as the root admin
         const adminRes = await request(app)
@@ -31,7 +34,22 @@ describe('Admin API', () => {
                 email: 'sheffieldclimbing@gmail.com',
                 password: 'SuperSecret123!'
             });
-        rootToken = adminRes.body.token;
+        const cookies = adminRes.headers['set-cookie'];
+        const cookieArray = Array.isArray(cookies) ? cookies : (cookies ? [cookies] : []);
+        const adminCookie = cookieArray.find((c: string) => c.startsWith('uscc_token='));
+        rootToken = adminCookie ? adminCookie.split(';')[0].split('=')[1] : (adminRes.body.token || '');
+
+        // Login as a committee member
+        const committeeRes = await request(app)
+            .post('/api/auth/login')
+            .send({
+                email: 'sheffieldclimbing@gmail.com',
+                password: 'SuperSecret123!'
+            });
+        const committeeCookies = committeeRes.headers['set-cookie'];
+        const committeeCookieArray = Array.isArray(committeeCookies) ? committeeCookies : (committeeCookies ? [committeeCookies] : []);
+        const tokenCookie2 = committeeCookieArray.find((c: string) => c.startsWith('uscc_token='));
+        committeeToken = tokenCookie2 ? tokenCookie2.split(';')[0].split('=')[1] : '';
     });
 
     afterAll(async () => {
@@ -40,9 +58,14 @@ describe('Admin API', () => {
 
     const createTargetUser = async (prefix: string) => {
         const userRes = await request(app).post('/api/auth/register').send({
-            name: `${prefix} Target User`, email: `${prefix}_target@example.com`, password: 'Password123!', registrationNumber: `${prefix}123`
+            firstName: prefix, lastName: 'Target User', email: `${prefix}_target@example.com`, password: 'Password123!', passwordConfirm: 'Password123!', registrationNumber: `${prefix}123`
         });
-        return { token: userRes.body.token, id: userRes.body.user.id };
+        const cookies = userRes.headers['set-cookie'];
+        const cookieArray = Array.isArray(cookies) ? cookies : (cookies ? [cookies] : []);
+        const tokenCookie = cookieArray.find((c: string) => c.startsWith('uscc_token='));
+        const token = tokenCookie ? tokenCookie.split(';')[0].split('=')[1] : (userRes.body.token || '');
+        const id = userRes.body.user?.id || userRes.body.id || '';
+        return { token, id };
     };
 
     it('should list all users for committee', async () => {
@@ -123,7 +146,7 @@ describe('Admin API', () => {
 
     it('should reject invalid committee role', async () => {
         const targetRes = await request(app).post('/api/auth/register').send({
-            name: 'Role Test', email: 'role@ex.com', password: 'pwd', registrationNumber: 'R1'
+            firstName: 'Role', lastName: 'Test', email: 'role@ex.com', password: 'pwd', passwordConfirm: 'pwd', registrationNumber: 'R1'
         });
         const res = await request(app)
             .post(`/api/admin/users/${targetRes.body.user.id}/committee-role`)
@@ -136,7 +159,7 @@ describe('Admin API', () => {
 
     it('should clear committee role if none provided', async () => {
         const targetRes = await request(app).post('/api/auth/register').send({
-            name: 'Role Clear', email: 'clear@ex.com', password: 'pwd', registrationNumber: 'RC1'
+            firstName: 'Role', lastName: 'Clear', email: 'clear@ex.com', password: 'pwd', passwordConfirm: 'pwd', registrationNumber: 'RC1'
         });
         const res = await request(app)
             .post(`/api/admin/users/${targetRes.body.user.id}/committee-role`)
