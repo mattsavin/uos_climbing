@@ -1,0 +1,64 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  test:
+    name: Run Tests
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run Backend Tests
+      run: npm run test:backend
+
+    - name: Install Playwright Browsers
+      run: npx playwright install --with-deps
+
+    - name: Run E2E Tests
+      run: npm run test:e2e
+      env:
+        CI: true
+
+    - name: Upload Playwright Report
+      uses: actions/upload-artifact@v4
+      if: ${{ !cancelled() }}
+      with:
+        name: playwright-report
+        path: playwright-report/
+        retention-days: 7
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ~/uos_climbing || git clone https://github.com/mattsavin/uos_climbing.git ~/uos_climbing
+            cd ~/uos_climbing
+            git pull origin main
+            docker build -t uos_climbing .
+            docker stop uos_climbing || true
+            docker rm uos_climbing || true
+            docker run -d --name uos_climbing -p 3000:3000 -v ~/data:/data uos_climbing
