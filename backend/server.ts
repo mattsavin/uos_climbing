@@ -62,7 +62,7 @@ if (process.env.NODE_ENV === 'production') {
     }));
 
     // 2. Serve static files from the build directory
-    const distPath = path.join(__dirname, '../../dist');
+    const distPath = path.join(__dirname, '../dist');
     console.log(`Serving static files from: ${distPath}`);
     app.use(express.static(distPath));
 }
