@@ -41,23 +41,44 @@ router.post('/me/memberships', authenticateToken, (req: any, res) => {
         : `${currentYear}/${currentYear + 1}`);
 
     const id = 'umem_' + crypto.randomUUID();
+    // Committee members get auto-approved memberships
+    const status = req.user.role === 'committee' ? 'active' : 'pending';
 
+    // Try to insert; if a row already exists for (userId, membershipType, membershipYear), upgrade its status
     db.run(
-        'INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)',
-        [id, req.user.id, membershipType, 'pending', year],
-        function (err) {
+        'INSERT OR IGNORE INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)',
+        [id, req.user.id, membershipType, status, year],
+        function (this: any, err) {
             if (err) return res.status(500).json({ error: 'Database error' });
-            res.json({ success: true, id, membershipType, status: 'pending', membershipYear: year });
+
+            if (this.changes === 0) {
+                // Row already exists — upgrade status if the requested status is higher priority
+                db.run(
+                    `UPDATE user_memberships SET status = ?
+                     WHERE userId = ? AND membershipType = ? AND membershipYear = ?
+                       AND (status = 'rejected' OR (status = 'pending' AND ? = 'active'))`,
+                    [status, req.user.id, membershipType, year, status],
+                    function (err2) {
+                        if (err2) return res.status(500).json({ error: 'Database error' });
+                        res.json({ success: true, membershipType, status, membershipYear: year });
+                    }
+                );
+            } else {
+                res.json({ success: true, id, membershipType, status, membershipYear: year });
+            }
         }
     );
 });
 
-/** Renew overall membership (resets to pending for current year) */
+/** Renew overall membership (resets to pending for current year, or active for committee) */
 router.post('/me/membership-renewal', authenticateToken, (req: any, res) => {
     const { membershipYear, membershipTypes } = req.body;
     if (!membershipYear) return res.status(400).json({ error: 'Missing membership year' });
 
-    db.run('UPDATE users SET membershipYear = ?, membershipStatus = ? WHERE id = ?', [membershipYear, 'pending', req.user.id], function (err) {
+    // Committee members stay active; regular members go to pending
+    const newStatus = req.user.role === 'committee' ? 'active' : 'pending';
+
+    db.run('UPDATE users SET membershipYear = ?, membershipStatus = ? WHERE id = ?', [membershipYear, newStatus, req.user.id], function (err) {
         if (err) return res.status(500).json({ error: 'Database error' });
 
         // Optionally insert new membership type rows for the new year
@@ -66,13 +87,13 @@ router.post('/me/membership-renewal', authenticateToken, (req: any, res) => {
             if (validTypes.length > 0) {
                 const stmt = db.prepare('INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)');
                 validTypes.forEach((t: string) => {
-                    stmt.run(['umem_' + crypto.randomUUID(), req.user.id, t, 'pending', membershipYear]);
+                    stmt.run(['umem_' + crypto.randomUUID(), req.user.id, t, newStatus, membershipYear]);
                 });
                 stmt.finalize();
             }
         }
 
-        res.json({ success: true, membershipYear, membershipStatus: 'pending' });
+        res.json({ success: true, membershipYear, membershipStatus: newStatus });
     });
 });
 

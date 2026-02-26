@@ -1,4 +1,5 @@
 import { authState } from '../../auth';
+import { showToast, showPromptModal } from '../../utils';
 
 export function initProfileHandlers() {
     const profileForm = document.getElementById('profile-form');
@@ -86,15 +87,15 @@ export function initProfileHandlers() {
 
     const deleteSelfAccountBtn = document.getElementById('delete-self-account-btn');
     if (deleteSelfAccountBtn) {
-        deleteSelfAccountBtn.addEventListener('click', () => {
-            const pwd = prompt("Please enter your password to confirm account deletion:");
+        deleteSelfAccountBtn.addEventListener('click', async () => {
+            const pwd = await showPromptModal("Please enter your password to confirm account deletion:");
             if (pwd) {
                 deleteSelfAccountBtn.textContent = 'Deleting...';
                 (deleteSelfAccountBtn as HTMLButtonElement).disabled = true;
                 authState.deleteAccount(pwd).then(() => {
                     window.location.href = '/login.html';
                 }).catch(err => {
-                    alert(err.message || "Failed to delete account");
+                    showToast(err.message || "Failed to delete account", 'error');
                     deleteSelfAccountBtn.textContent = 'Delete Account';
                     (deleteSelfAccountBtn as HTMLButtonElement).disabled = false;
                 });

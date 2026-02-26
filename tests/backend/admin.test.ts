@@ -89,7 +89,7 @@ describe('Admin API', () => {
         const { id } = await createTargetUser('assign_role');
         const res = await request(app).post(`/api/admin/users/${id}/committee-role`)
             .set('Authorization', `Bearer ${rootToken}`)
-            .send({ committeeRole: 'Treasurer' });
+            .send({ committeeRoles: ['Treasurer'] });
 
         expect(res.status).toBe(200);
         expect(res.body).toHaveProperty('success', true);
@@ -99,10 +99,27 @@ describe('Admin API', () => {
         const { id } = await createTargetUser('invalid_role');
         const res = await request(app).post(`/api/admin/users/${id}/committee-role`)
             .set('Authorization', `Bearer ${rootToken}`)
-            .send({ committeeRole: 'Emperor' });
+            .send({ committeeRoles: ['Emperor'] });
 
         expect(res.status).toBe(400);
         expect(res.body).toHaveProperty('error', 'Invalid committee role');
+    });
+
+    it('should allow assigning multiple committee roles', async () => {
+        const { id } = await createTargetUser('multi_role');
+        const res = await request(app).post(`/api/admin/users/${id}/committee-role`)
+            .set('Authorization', `Bearer ${rootToken}`)
+            .send({ committeeRoles: ['Chair', 'Treasurer'] });
+
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveProperty('success', true);
+
+        // Verify both roles are returned in GET /api/admin/users
+        const usersRes = await request(app).get('/api/admin/users').set('Authorization', `Bearer ${rootToken}`);
+        const member = usersRes.body.find((u: any) => u.id === id);
+        expect(member).toBeDefined();
+        expect(member.committeeRoles).toContain('Chair');
+        expect(member.committeeRoles).toContain('Treasurer');
     });
 
     it('should allow committee to reject user', async () => {
@@ -164,7 +181,7 @@ describe('Admin API', () => {
         const res = await request(app)
             .post(`/api/admin/users/${targetRes.body.user.id}/committee-role`)
             .set('Authorization', `Bearer ${rootToken}`)
-            .send({ committeeRole: null });
+            .send({ committeeRoles: [] });
 
         expect(res.status).toBe(200);
         expect(res.body).toHaveProperty('success', true);
@@ -241,6 +258,45 @@ describe('Admin API', () => {
             const { vi } = await import('vitest');
             const spy = vi.spyOn(db, 'run').mockImplementationOnce((query, params, cb) => cb.call({}, new Error('DB Error')));
             const res = await request(app).post('/api/admin/users/1/committee-role').set('Authorization', `Bearer ${rootToken}`).send({ committeeRole: 'Chair' });
+            expect(res.status).toBe(500);
+            spy.mockRestore();
+        });
+    });
+
+    describe('Membership Deletion', () => {
+        it('should allow committee to delete a membership row', async () => {
+            // Create a user and approve their basic membership
+            const { id } = await createTargetUser('del_memb');
+            await request(app).post(`/api/admin/users/${id}/approve`).set('Authorization', `Bearer ${rootToken}`);
+
+            // Get the membership row id
+            const usersRes = await request(app).get('/api/admin/users').set('Authorization', `Bearer ${rootToken}`);
+            const member = usersRes.body.find((u: any) => u.id === id);
+            const membId = member?.memberships?.[0]?.id;
+            expect(membId).toBeDefined();
+
+            const res = await request(app)
+                .delete(`/api/admin/memberships/${membId}`)
+                .set('Authorization', `Bearer ${rootToken}`);
+
+            expect(res.status).toBe(200);
+            expect(res.body).toHaveProperty('success', true);
+        });
+
+        it('should return 404 for unknown membership row', async () => {
+            const res = await request(app)
+                .delete('/api/admin/memberships/nonexistent_id')
+                .set('Authorization', `Bearer ${rootToken}`);
+
+            expect(res.status).toBe(404);
+        });
+
+        it('should handle DB errors on membership delete', async () => {
+            const { vi } = await import('vitest');
+            const spy = vi.spyOn(db, 'get').mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null));
+            const res = await request(app)
+                .delete('/api/admin/memberships/any_id')
+                .set('Authorization', `Bearer ${rootToken}`);
             expect(res.status).toBe(500);
             spy.mockRestore();
         });

@@ -65,8 +65,32 @@ function initializeDatabase() {
             membershipType TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'pending',
             membershipYear TEXT NOT NULL,
+            UNIQUE (userId, membershipType, membershipYear),
             FOREIGN KEY (userId) REFERENCES users(id)
         )`);
+
+        // Migration: add unique index to existing DBs and deduplicate rows first
+        // (keep the row with the highest-priority status: active > pending > rejected)
+        db.run(`
+            DELETE FROM user_memberships
+            WHERE id NOT IN (
+                SELECT id FROM user_memberships AS um1
+                WHERE id = (
+                    SELECT id FROM user_memberships AS um2
+                    WHERE um2.userId = um1.userId
+                      AND um2.membershipType = um1.membershipType
+                      AND um2.membershipYear = um1.membershipYear
+                    ORDER BY
+                        CASE status WHEN 'active' THEN 0 WHEN 'pending' THEN 1 ELSE 2 END ASC,
+                        rowid DESC
+                    LIMIT 1
+                )
+            )
+        `, (err) => {
+            // Create unique index after deduplication (safe to run even if already exists)
+            db.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_user_memberships_unique
+                ON user_memberships (userId, membershipType, membershipYear)`);
+        });
 
         // Migrations: add new fields if updating existing DB
         db.run('ALTER TABLE users ADD COLUMN firstName TEXT', (err) => {
@@ -131,6 +155,19 @@ function initializeDatabase() {
             FOREIGN KEY (sessionId) REFERENCES sessions(id)
         )`);
 
+        // Committee Roles Table (many-to-many: one user can hold multiple committee roles)
+        db.run(`CREATE TABLE IF NOT EXISTS committee_roles (
+            userId TEXT NOT NULL,
+            role   TEXT NOT NULL,
+            PRIMARY KEY (userId, role),
+            FOREIGN KEY (userId) REFERENCES users(id)
+        )`);
+
+        // Migration: seed committee_roles from legacy committeeRole column
+        db.run(`INSERT OR IGNORE INTO committee_roles (userId, role)
+            SELECT id, committeeRole FROM users
+            WHERE committeeRole IS NOT NULL AND committeeRole != ''`);
+
         // Candidates Table
         db.run(`CREATE TABLE IF NOT EXISTS candidates (
             userId TEXT PRIMARY KEY,
@@ -179,7 +216,7 @@ function initializeDatabase() {
         )`);
 
         // Create root admin if not exists
-        db.get('SELECT id FROM users WHERE email = ?', ['sheffieldclimbing@gmail.com'], async (err, row) => {
+        db.get('SELECT id, membershipYear FROM users WHERE email = ?', ['sheffieldclimbing@gmail.com'], async (err, row: any) => {
             if (!row) {
                 const rootHash = await bcrypt.hash('SuperSecret123!', 10);
                 const currentYear = new Date().getFullYear();
@@ -188,12 +225,36 @@ function initializeDatabase() {
 
                 db.run(
                     'INSERT INTO users (id, firstName, lastName, email, passwordHash, role, membershipStatus, membershipYear, calendarToken, emailVerified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                    ['user_root', 'Root', 'Admin', 'sheffieldclimbing@gmail.com', rootHash, 'committee', 'active', membershipYear, crypto.randomUUID(), 1]
+                    ['user_root', 'Root', 'Admin', 'sheffieldclimbing@gmail.com', rootHash, 'committee', 'active', membershipYear, crypto.randomUUID(), 1],
+                    () => {
+                        // Insert the active basic membership row for the root admin
+                        db.run(
+                            'INSERT OR IGNORE INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)',
+                            ['umem_root', 'user_root', 'basic', 'active', membershipYear]
+                        );
+                    }
                 );
                 console.log('Root admin created.');
             } else {
-                // Ensure existing root admin is marked as verified
-                db.run('UPDATE users SET emailVerified = 1 WHERE email = ?', ['sheffieldclimbing@gmail.com']);
+                // Ensure existing root admin is always marked as active + verified
+                db.run('UPDATE users SET emailVerified = 1, membershipStatus = ? WHERE email = ?', ['active', 'sheffieldclimbing@gmail.com']);
+                // Upgrade any existing basic memberships to active (avoids pending+active duplicates)
+                db.run(
+                    'UPDATE user_memberships SET status = ? WHERE userId = ? AND membershipType = ?',
+                    ['active', 'user_root', 'basic'],
+                    function (this: any) {
+                        // If no rows were updated, insert a fresh active row
+                        if (this.changes === 0) {
+                            const currentYear = new Date().getFullYear();
+                            const currentMonth = new Date().getMonth();
+                            const membershipYear = currentMonth < 8 ? `${currentYear - 1}/${currentYear}` : `${currentYear}/${currentYear + 1}`;
+                            db.run(
+                                'INSERT OR IGNORE INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)',
+                                ['umem_root', 'user_root', 'basic', 'active', row.membershipYear || membershipYear]
+                            );
+                        }
+                    }
+                );
             }
         });
 

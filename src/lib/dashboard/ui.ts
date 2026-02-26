@@ -1,6 +1,7 @@
 import { authState, getCurrentAcademicYear } from '../../auth';
 import { renderSessions } from './sessions';
 import { renderAdminLists } from './admin';
+import { showToast } from '../../utils';
 
 export async function updateUI() {
     const user = authState.getUser();
@@ -43,7 +44,7 @@ export async function updateUI() {
                         renewalOverlay.classList.add('hidden');
                         updateUI();
                     } catch (err: any) {
-                        alert(err.message || 'Renewal failed');
+                        showToast(err.message || 'Renewal failed', 'error');
                         confirmRenewalBtn.textContent = 'Confirm Registration Renewal';
                         (confirmRenewalBtn as HTMLButtonElement).disabled = false;
                     }
@@ -62,26 +63,42 @@ export async function updateUI() {
         if (userRegNo) userRegNo.textContent = user.registrationNumber || 'N/A';
         if (userRole) userRole.textContent = user.role;
 
-        if (statusBadge) {
-            statusBadge.className = 'px-4 py-3 rounded-lg text-center font-bold tracking-widest uppercase mb-4 shadow-[0_0_15px_rgba(0,0,0,0.2)]';
-            if (user.membershipStatus === 'active') {
-                statusBadge.classList.add('bg-brand-gold-muted/20', 'border', 'border-brand-gold-muted', 'text-brand-gold-muted');
-                statusBadge.textContent = `Active ${user.membershipYear || ''}`;
-            } else if (user.membershipStatus === 'pending') {
-                statusBadge.classList.add('bg-amber-500/20', 'border', 'border-amber-500', 'text-amber-500');
-                statusBadge.textContent = `Pending ${user.membershipYear || ''}`;
-            } else {
-                statusBadge.classList.add('bg-red-500/20', 'border', 'border-red-500', 'text-red-500');
-                statusBadge.textContent = 'Action Required';
-            }
-        }
-
         // Render individual membership types
         const membershipsContainer = document.getElementById('memberships-container');
+        const addMbTypeSelect = document.getElementById('additional-membership-type') as HTMLSelectElement;
+        const ALL_MEMBERSHIP_TYPES = [
+            { value: 'basic', label: 'Basic Membership' },
+            { value: 'bouldering', label: 'Bouldering Add-on' },
+            { value: 'comp_team', label: 'Competition Team' },
+        ];
         if (membershipsContainer) {
             membershipsContainer.innerHTML = '<div class="flex justify-center"><div class="animate-spin rounded-full h-5 w-5 border-b-2 border-brand-gold"></div></div>';
             try {
                 const memberships = await authState.getMyMemberships();
+                const heldTypes = new Set(
+                    memberships
+                        .filter(m => (m.status === 'active' || m.status === 'pending') && m.membershipYear === currentYearStr)
+                        .map(m => m.membershipType as string)
+                );
+
+                const hasActiveRow = memberships.some(m => m.status === 'active' && m.membershipYear === currentYearStr);
+                const isCommittee = user.role === 'committee' || !!user.committeeRole || (Array.isArray(user.committeeRoles) && user.committeeRoles.length > 0);
+                const derivedStatus = (hasActiveRow || isCommittee) ? 'active' : user.membershipStatus;
+
+                if (statusBadge) {
+                    statusBadge.className = 'px-4 py-3 rounded-lg text-center font-bold tracking-widest uppercase mb-4 shadow-[0_0_15px_rgba(0,0,0,0.2)]';
+                    if (derivedStatus === 'active') {
+                        statusBadge.classList.add('bg-brand-gold-muted/20', 'border', 'border-brand-gold-muted', 'text-brand-gold-muted');
+                        statusBadge.textContent = `Active ${user.membershipYear || currentYearStr}`;
+                    } else if (derivedStatus === 'pending') {
+                        statusBadge.classList.add('bg-amber-500/20', 'border', 'border-amber-500', 'text-amber-500');
+                        statusBadge.textContent = `Pending ${user.membershipYear || currentYearStr}`;
+                    } else {
+                        statusBadge.classList.add('bg-red-500/20', 'border', 'border-red-500', 'text-red-500');
+                        statusBadge.textContent = 'Action Required';
+                    }
+                }
+
                 if (memberships.length === 0) {
                     membershipsContainer.innerHTML = '<p class="text-xs text-slate-500 text-center uppercase tracking-wider">No memberships</p>';
                 } else {
@@ -90,9 +107,7 @@ export async function updateUI() {
                         if (m.status === 'active') colorClass = 'bg-brand-gold/10 text-brand-gold border-brand-gold/20';
                         else if (m.status === 'pending') colorClass = 'bg-amber-500/10 text-amber-500 border-amber-500/20';
                         else if (m.status === 'rejected') colorClass = 'bg-red-500/10 text-red-400 border-red-500/20';
-
                         const typeLabel = { basic: 'Basic', bouldering: 'Bouldering', comp_team: 'Comp Team' }[m.membershipType] || m.membershipType;
-
                         return `
                         <div class="flex items-center justify-between p-2 rounded border ${colorClass} mb-2 text-xs font-bold uppercase tracking-wide">
                             <div class="flex flex-col">
@@ -104,6 +119,25 @@ export async function updateUI() {
                         `;
                     }).join('');
                 }
+
+                if (addMbTypeSelect) {
+                    addMbTypeSelect.innerHTML = ALL_MEMBERSHIP_TYPES.map(t => {
+                        const held = heldTypes.has(t.value);
+                        return `<option value="${t.value}" ${held ? 'disabled' : ''}>${t.label}${held ? ' (already held)' : ''}</option>`;
+                    }).join('');
+                    const firstAvailable = addMbTypeSelect.querySelector('option:not([disabled])') as HTMLOptionElement | null;
+                    if (firstAvailable) addMbTypeSelect.value = firstAvailable.value;
+                }
+
+                document.querySelectorAll<HTMLInputElement>('input[name="renewalMembershipType"]').forEach(cb => {
+                    if (heldTypes.has(cb.value as string)) {
+                        cb.checked = true;
+                        cb.disabled = true;
+                        cb.title = 'You already have this membership';
+                        (cb.closest('label') as HTMLElement | null)?.style.setProperty('opacity', '0.6');
+                    }
+                });
+
             } catch (e) {
                 membershipsContainer.innerHTML = '<p class="text-xs text-red-400 text-center uppercase tracking-wider">Failed to load</p>';
             }
@@ -129,7 +163,7 @@ export async function updateUI() {
                     await authState.requestMembership();
                     updateUI(); // Refresh state
                 } catch (e: any) {
-                    alert(e.message || 'Failed to re-request');
+                    showToast(e.message || 'Failed to re-request', 'error');
                     reRequestBtn.textContent = 'Re-request Membership';
                     (reRequestBtn as HTMLButtonElement).disabled = false;
                 }
@@ -141,7 +175,6 @@ export async function updateUI() {
         const addMbSelector = document.getElementById('additional-membership-selector');
         const cancelAddMbBtn = document.getElementById('cancel-additional-membership-btn');
         const submitAddMbBtn = document.getElementById('submit-additional-membership-btn');
-        const addMbTypeSelect = document.getElementById('additional-membership-type') as HTMLSelectElement;
 
         if (reqAddMbBtn && addMbSelector && !reqAddMbBtn.hasAttribute('data-init')) {
             reqAddMbBtn.setAttribute('data-init', 'true');
@@ -154,7 +187,7 @@ export async function updateUI() {
             });
 
             submitAddMbBtn?.addEventListener('click', async () => {
-                const type = addMbTypeSelect.value;
+                const type = (document.getElementById('additional-membership-type') as HTMLSelectElement).value;
                 try {
                     submitAddMbBtn.textContent = '...';
                     (submitAddMbBtn as HTMLButtonElement).disabled = true;
@@ -162,7 +195,7 @@ export async function updateUI() {
                     addMbSelector.classList.add('hidden');
                     updateUI(); // Refresh state
                 } catch (e: any) {
-                    alert(e.message || 'Failed to request membership');
+                    showToast(e.message || 'Failed to request membership', 'error');
                 } finally {
                     submitAddMbBtn.textContent = 'Request';
                     (submitAddMbBtn as HTMLButtonElement).disabled = false;
@@ -170,7 +203,8 @@ export async function updateUI() {
             });
         }
 
-        if (user.role === 'committee') {
+        const isCommittee = user.role === 'committee' || !!user.committeeRole || (Array.isArray(user.committeeRoles) && user.committeeRoles.length > 0);
+        if (isCommittee) {
             if (committeePanel) committeePanel.classList.remove('hidden');
             if (addSessionToggleBtn) addSessionToggleBtn.classList.remove('hidden');
             await renderAdminLists();
@@ -184,7 +218,7 @@ export async function updateUI() {
             icalLink.dataset.link = `${window.location.origin}/api/sessions/ical/${user.calendarToken}`;
         }
 
-        await renderSessions(user.role === 'committee');
+        await renderSessions(isCommittee);
 
     } else {
         window.location.href = '/login.html';
@@ -209,20 +243,10 @@ export function initGeneralHandlers() {
             if (link) {
                 try {
                     await navigator.clipboard.writeText(link);
-                    const toast = document.getElementById('toast-notification');
-                    if (toast) {
-                        toast.classList.remove('translate-y-10', 'opacity-0');
-                        toast.classList.add('translate-y-0', 'opacity-100');
-                        setTimeout(() => {
-                            toast.classList.remove('translate-y-0', 'opacity-100');
-                            toast.classList.add('translate-y-10', 'opacity-0');
-                        }, 3000);
-                    } else {
-                        alert('Copied iCal link to your clipboard!');
-                    }
+                    showToast('Copied iCal link to your clipboard!', 'success');
                 } catch (err) {
                     console.error('Failed to copy text: ', err);
-                    alert('Could not copy link. Try manually selecting it if possible.');
+                    showToast('Could not copy link. Try manually selecting it if possible.', 'error');
                 }
             }
         });

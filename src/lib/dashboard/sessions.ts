@@ -60,13 +60,19 @@ export function initSessionHandlers() {
     const addSessionForm = document.getElementById('add-session-form');
     const cancelSessionBtn = document.getElementById('cancel-session-btn');
 
+    const getIsCommittee = () => {
+        const u = authState.getUser();
+        if (!u) return false;
+        return u.role === 'committee' || !!u.committeeRole || (Array.isArray(u.committeeRoles) && u.committeeRoles.length > 0);
+    };
+
     if (prevMonthBtn) prevMonthBtn.addEventListener('click', async () => {
         currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
-        await renderSessions(authState.getUser()?.role === 'committee');
+        await renderSessions(getIsCommittee());
     });
     if (nextMonthBtn) nextMonthBtn.addEventListener('click', async () => {
         currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
-        await renderSessions(authState.getUser()?.role === 'committee');
+        await renderSessions(getIsCommittee());
     });
 
     if (addSessionToggleBtn && addSessionFormContainer) {
@@ -94,7 +100,7 @@ export function initSessionHandlers() {
                 await adminApi.addSession({ title, type, date: dateStr, capacity, requiredMembership });
                 (addSessionForm as HTMLFormElement).reset();
                 addSessionFormContainer?.classList.add('hidden');
-                await renderSessions(authState.getUser()?.role === 'committee');
+                await renderSessions(getIsCommittee());
             }
         });
     }
@@ -127,7 +133,7 @@ export function initSessionHandlers() {
                 btn.classList.remove('border-slate-700', 'text-slate-400');
             }
 
-            await renderSessions(authState.getUser()?.role === 'committee');
+            await renderSessions(getIsCommittee());
         });
     });
 }

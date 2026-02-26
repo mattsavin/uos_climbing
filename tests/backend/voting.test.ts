@@ -155,4 +155,26 @@ describe('Voting API', () => {
         expect(res.status).toBe(400);
         expect(res.body).toHaveProperty('error', 'You have already voted');
     });
+
+    it('should allow withdrawal of candidacy', async () => {
+        const candidate = await createVoterUser('withdraw_candidate');
+
+        const adminRes = await request(app).post('/api/auth/login').send({ email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!' });
+        await request(app).post('/api/admin/config/elections').set('Authorization', `Bearer ${adminRes.body.token}`).send({ open: true });
+
+        // Apply
+        await request(app).post('/api/voting/apply').set('Authorization', `Bearer ${candidate.token}`).send({ manifesto: 'Will withdraw', role: 'President' });
+
+        // Withdraw
+        const res = await request(app)
+            .post('/api/voting/withdraw')
+            .set('Authorization', `Bearer ${candidate.token}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveProperty('success', true);
+
+        // Verify status reflects not being a candidate
+        const statusRes = await request(app).get('/api/voting/status').set('Authorization', `Bearer ${candidate.token}`);
+        expect(statusRes.body).toHaveProperty('isCandidate', false);
+    });
 });

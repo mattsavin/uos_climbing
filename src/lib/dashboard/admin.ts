@@ -1,9 +1,10 @@
 import { adminApi, authState, type User } from '../../auth';
-import { escapeHTML } from '../../utils';
+import { escapeHTML, showToast } from '../../utils';
 
 let confirmActionCallback: (() => Promise<void>) | null = null;
 let activeRosterPage = 1;
-const ITEMS_PER_PAGE = 5;
+const ITEMS_PER_PAGE = 10;
+let currentSearchQuery = '';
 
 export function initAdminConfirm() {
     const adminConfirmModal = document.getElementById('admin-confirm-modal');
@@ -29,7 +30,7 @@ export function initAdminConfirm() {
                     btn.textContent = 'Processing...';
                     await confirmActionCallback();
                 } catch (err: any) {
-                    alert(err.message || 'Action failed');
+                    showToast(err.message || 'Action failed', 'error');
                 } finally {
                     const btn = adminConfirmProceedBtn as HTMLButtonElement;
                     btn.disabled = false;
@@ -59,16 +60,22 @@ export async function renderAdminLists() {
     const pendingList = document.getElementById('pending-list');
     const activeList = document.getElementById('active-list');
 
+    // Save open dropdown states before re-rendering so we don't annoy the user
+    // when they check a box and the list re-renders
+    const openRoleDropdowns = new Set(
+        Array.from(document.querySelectorAll('details.admin-role-details[open]')).map((d: any) => d.dataset.id)
+    );
+
     if (!pendingList || !activeList) return;
 
-    // Render Pending
-    const allUsers = await adminApi.getAllUsers();
+    // Fetch all users once and derive both lists from it
+    const allUsersRaw = await adminApi.getAllUsersRaw();
 
-    // Flatten pending membership rows
+    // Flatten ALL pending membership rows (across all users, including already-active ones)
     const pendingMemberships: any[] = [];
-    allUsers.forEach(u => {
+    allUsersRaw.forEach(u => {
         if (u.memberships) {
-            u.memberships.forEach(m => {
+            (u.memberships as any[]).forEach(m => {
                 if (m.status === 'pending') {
                     pendingMemberships.push({ user: u, membership: m });
                 }
@@ -80,9 +87,33 @@ export async function renderAdminLists() {
         ? pendingMemberships.map(pm => createPendingMembershipRow(pm.user, pm.membership)).join('')
         : '<p class="p-5 text-sm text-slate-500 text-center">No pending registrations.</p>';
 
-    // Render Active
-    const allActive = await adminApi.getActiveMembers();
-    const totalActive = allActive.length;
+    // Render Active — committee members + anyone with at least one active membership row,
+    // excluding root admin. We check individual rows because the top-level membershipStatus
+    // can be stale if rows were approved individually rather than via the bulk approve action.
+    const allActive = allUsersRaw.filter((u: any) => {
+        if (u.email === 'sheffieldclimbing@gmail.com') return false;
+        if (u.role === 'committee') return true;
+        return (u.memberships as any[] || []).some((m: any) => m.status === 'active');
+    });
+
+    // Apply search filter if query exists
+    const filteredActive = allActive.filter(u => {
+        if (!currentSearchQuery) return true;
+        const q = currentSearchQuery.toLowerCase();
+        const nameMatch = `${u.firstName || ''} ${u.lastName || ''}`.toLowerCase().includes(q) || (u.name || '').toLowerCase().includes(q);
+        const emailMatch = u.email.toLowerCase().includes(q);
+        const regMatch = (u.registrationNumber || '').toLowerCase().includes(q);
+        return nameMatch || emailMatch || regMatch;
+    });
+
+    const totalActive = filteredActive.length;
+
+    // Optional: Render search input
+    let searchHtml = `
+        <div class="px-5 py-3 border-b border-white/10 bg-slate-900/30">
+            <input type="text" id="roster-search-input" value="${escapeHTML(currentSearchQuery)}" placeholder="Search members by name, email, or reg no..." class="w-full bg-slate-800 text-sm text-white border border-slate-700 rounded-lg px-3 py-2 focus:border-brand-gold focus:ring-1 focus:ring-brand-gold outline-none">
+        </div>
+    `;
 
     // Pagination logic
     const totalPages = Math.ceil(totalActive / ITEMS_PER_PAGE) || 1;
@@ -90,9 +121,10 @@ export async function renderAdminLists() {
 
     const startIdx = (activeRosterPage - 1) * ITEMS_PER_PAGE;
     const endIdx = startIdx + ITEMS_PER_PAGE;
-    const pagedActive = allActive.slice(startIdx, endIdx);
+    const pagedActive = filteredActive.slice(startIdx, endIdx);
 
-    let activeHtml = pagedActive.length ? pagedActive.map(u => createMemberRow(u, false)).join('') : '<p class="p-5 text-sm text-slate-500 text-center">No active members yet.</p>';
+    let activeHtml = searchHtml;
+    activeHtml += pagedActive.length ? pagedActive.map(u => createMemberRow(u, false)).join('') : '<p class="p-5 text-sm text-slate-500 text-center">No active members found.</p>';
 
     if (totalActive > ITEMS_PER_PAGE) {
         activeHtml += `
@@ -107,6 +139,28 @@ export async function renderAdminLists() {
     }
 
     activeList.innerHTML = activeHtml;
+
+    // Restore open state
+    openRoleDropdowns.forEach(id => {
+        const details = document.querySelector(`details.admin-role-details[data-id="${id}"]`) as HTMLDetailsElement | null;
+        if (details) details.open = true;
+    });
+
+    // Attach search listener
+    const searchInput = document.getElementById('roster-search-input') as HTMLInputElement | null;
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            currentSearchQuery = (e.target as HTMLInputElement).value;
+            activeRosterPage = 1; // reset to first page on search
+            renderAdminLists();
+        });
+        // Refocus to keep typing seamless
+        if (currentSearchQuery) {
+            searchInput.focus();
+            const len = searchInput.value.length;
+            searchInput.setSelectionRange(len, len);
+        }
+    }
 
     // Attach pagination listeners
     const prevPageBtn = document.getElementById('prev-member-page-btn');
@@ -156,37 +210,44 @@ export async function renderAdminLists() {
                     title = 'Delete Member'; message = `Are you absolutely sure you want to permanently delete ${escapeHTML(name)}'s account? This action cannot be undone.`;
                     actionCallback = async () => adminApi.deleteUser(id);
                 }
+                if (action === 'delete-membership') {
+                    title = 'Remove Membership'; message = `Remove this membership from ${name}? This cannot be undone.`;
+                    actionCallback = async () => adminApi.deleteMembershipRow(id);
+                }
 
                 requestAdminConfirmation(title, message, actionCallback);
             }
         });
     });
 
-    // Attach Event Listeners to role dropdowns
-    document.querySelectorAll('.admin-role-select').forEach(select => {
-        select.addEventListener('change', async (e) => {
-            const target = e.target as HTMLSelectElement;
+    // Attach Event Listeners to committee role checkboxes
+    document.querySelectorAll('.admin-role-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', async (e) => {
+            const target = e.target as HTMLInputElement;
             const id = target.dataset.id;
-            const role = target.value || null; // empty string becomes null
+            if (!id) return;
 
-            if (id) {
-                try {
-                    target.disabled = true;
-                    await adminApi.setCommitteeRole(id, role);
+            // Collect all checked roles for this user
+            const allChecked = Array.from(
+                document.querySelectorAll<HTMLInputElement>(`.admin-role-checkbox[data-id="${id}"]:checked`)
+            ).map(cb => cb.value);
 
-                    target.style.borderColor = '#10b981'; // emerald-500
-                    setTimeout(async () => {
-                        await renderAdminLists();
-                    }, 500);
+            // Disable all checkboxes for this user while saving
+            document.querySelectorAll<HTMLInputElement>(`.admin-role-checkbox[data-id="${id}"]`).forEach(cb => cb.disabled = true);
 
-                } catch (err: any) {
-                    alert(err.message || 'Failed to update role');
-                    target.disabled = false;
-                    target.value = (target as any).dataset.original || ''; // revert on error
-                }
+            try {
+                await adminApi.setCommitteeRole(id, allChecked);
+                // Brief visual confirmation
+                setTimeout(async () => {
+                    await renderAdminLists();
+                }, 400);
+            } catch (err: any) {
+                showToast(err.message || 'Failed to update role', 'error');
+                // Revert this checkbox
+                target.checked = !target.checked;
+                document.querySelectorAll<HTMLInputElement>(`.admin-role-checkbox[data-id="${id}"]`).forEach(cb => cb.disabled = false);
             }
         });
-        (select as HTMLElement).dataset.original = (select as HTMLSelectElement).value;
     });
 }
 
@@ -235,33 +296,62 @@ function createMemberRow(user: User, isPending: boolean) {
     const safeEmail = escapeHTML(user.email);
     const safeRegNo = escapeHTML(user.registrationNumber || '');
 
-    const regLabel = safeRegNo ? `<span class="px-2 py-0.5 mt-1 font-mono text-[10px] bg-slate-800 text-slate-300 rounded block w-fit">REG: ${safeRegNo}</span>` : '';
+    const regLabel = safeRegNo ? `<p class="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">Reg: ${safeRegNo}</p>` : '';
+
+    // Contact mapping helpers
+    const pronounsLabel = user.pronouns ? `<span class="bg-white/10 text-slate-300 px-1.5 py-0.5 rounded ml-1">${escapeHTML(user.pronouns)}</span>` : '';
+    const dietLabel = user.dietaryRequirements ? `<p class="text-[10px] text-red-300 mt-1 max-w-[200px] truncate" title="Dietary: ${escapeHTML(user.dietaryRequirements)}">⚠️ ${escapeHTML(user.dietaryRequirements)}</p>` : '';
+    const emergencyInfo = (!isPending && (user.emergencyContactName || user.emergencyContactMobile))
+        ? `<div class="mt-1 flex items-center gap-1.5 text-[9px] text-slate-400 bg-red-500/10 border border-red-500/20 px-2 py-1 rounded w-max">
+             <span class="text-red-400">🚨 ICE:</span>
+             <span class="font-bold text-white">${escapeHTML(user.emergencyContactName || 'Unknown')}</span>
+             <span>${escapeHTML(user.emergencyContactMobile || 'No number')}</span>
+           </div>`
+        : '';
 
     let actions = '';
     let committeeRoleSelector = '';
 
     if (!isPending) {
-        const isCommittee = user.role === 'committee';
+        const isCommittee = user.role === 'committee' || !!user.committeeRole || (Array.isArray(user.committeeRoles) && user.committeeRoles.length > 0);
         const isRootAdmin = authState.user?.email === 'sheffieldclimbing@gmail.com';
 
         if (isCommittee) {
-            const roles = [
+            const ROLES = [
                 'Chair', 'Secretary', 'Treasurer', 'Welfare & Inclusions',
                 'Team Captain', 'Social Sec', "Women's Captain",
                 "Men's Captain", 'Publicity', 'Kit & Safety Sec'
             ];
 
-            let options = `<option value="">-- No Specific Role --</option>`;
-            roles.forEach(r => {
-                options += `<option value="${r}" ${user.committeeRole === r ? 'selected' : ''}>${r}</option>`;
-            });
+            const currentRoles: string[] = (user as any).committeeRoles || [];
+
+            // Build checkbox list for each possible role
+            const checkboxRows = ROLES.map(r => {
+                const checked = currentRoles.includes(r) ? 'checked' : '';
+                const safeRole = escapeHTML(r);
+                return `
+                    <label class="flex items-center gap-2 px-2 py-1 rounded hover:bg-white/5 cursor-pointer text-xs text-slate-300">
+                        <input type="checkbox" class="admin-role-checkbox accent-amber-400 w-3.5 h-3.5 rounded" data-id="${user.id}" value="${safeRole}" ${checked}>
+                        <span>${safeRole}</span>
+                    </label>`;
+            }).join('');
+
+            const rolesBadge = currentRoles.length > 0
+                ? `<span class="text-[10px] text-amber-400/80">${escapeHTML(currentRoles.join(', '))}</span>`
+                : `<span class="text-[10px] text-slate-500">No specific roles</span>`;
 
             committeeRoleSelector = `
-                <div class="mt-2 text-xs text-slate-400 flex items-center gap-2">
-                    <span>Role:</span>
-                    <select class="admin-role-select bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white focus:outline-none focus:border-brand-gold w-48" data-id="${user.id}">
-                        ${options}
-                    </select>
+                <div class="mt-2">
+                    <div class="mb-1">${rolesBadge}</div>
+                    <details class="group admin-role-details" data-id="${user.id}">
+                        <summary class="text-xs text-slate-400 cursor-pointer list-none flex items-center gap-1 hover:text-slate-200">
+                            <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                            Edit Roles
+                        </summary>
+                        <div class="mt-1 pl-1 grid grid-cols-2 gap-0.5 border border-white/10 rounded p-2 bg-slate-900/50">
+                            ${checkboxRows}
+                        </div>
+                    </details>
                 </div>
             `;
 
@@ -285,16 +375,46 @@ function createMemberRow(user: User, isPending: boolean) {
     }
 
     // Active roster row...
+    const memberships: any[] = (user as any).memberships || [];
+    const activeMemberships = memberships.filter((m: any) => m.status === 'active' || m.status === 'rejected');
+    const typeLabel = (t: string) => ({ basic: 'Basic', bouldering: 'Bouldering', comp_team: 'Comp Team' }[t] || t);
+
+    const membershipsList = activeMemberships.length > 0 ? `
+        <div class="mt-2">
+            <details class="group">
+                <summary class="text-xs text-slate-400 cursor-pointer list-none flex items-center gap-1 hover:text-slate-200">
+                    <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    Memberships (${activeMemberships.length})
+                </summary>
+                <div class="mt-1 space-y-1">
+                    ${activeMemberships.map((m: any) => {
+        const statusColor = m.status === 'active' ? 'text-emerald-400' : 'text-red-400';
+        return `<div class="flex items-center justify-between px-2 py-1 rounded bg-slate-900/50 border border-white/5">
+                            <span class="text-xs text-slate-300">${escapeHTML(typeLabel(m.membershipType))}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] ${statusColor}">${m.status}</span>
+                                <button class="admin-action-btn text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded px-1 py-0.5 text-[10px] font-bold leading-none" data-action="delete-membership" data-id="${m.id}" data-name="${escapeHTML(safeName)} (${escapeHTML(typeLabel(m.membershipType))})" title="Remove membership">×</button>
+                            </div>
+                        </div>`;
+    }).join('')}
+                </div>
+            </details>
+        </div>
+    ` : '';
+
     return `
         <div class="p-4 flex items-center justify-between hover:bg-white/5 transition-colors">
             <div>
-                <h4 class="text-sm font-bold text-white">${safeName} ${user.role === 'committee' ? '<span class="text-[10px] ml-1 px-1.5 py-0.5 bg-amber-500/20 text-amber-500 rounded uppercase tracking-widest">Admin</span>' : ''}</h4>
+                <h4 class="text-sm font-bold text-white">${safeName}${pronounsLabel} ${user.role === 'committee' ? '<span class="text-[10px] ml-1 px-1.5 py-0.5 bg-amber-500/20 text-amber-500 rounded uppercase tracking-widest">Admin</span>' : ''}</h4>
                 <p class="text-xs text-slate-400">${safeEmail}</p>
                 ${regLabel}
+                ${dietLabel}
+                ${emergencyInfo}
                 ${committeeRoleSelector}
+                ${membershipsList}
             </div>
-            <div class="flex items-center gap-2">
-                ${actions}
+            <div class="flex flex-col items-end gap-2">
+                <div class="flex items-center gap-2">${actions}</div>
             </div>
         </div>
     `;

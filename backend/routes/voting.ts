@@ -6,7 +6,7 @@ const router = express.Router();
 
 router.get('/candidates', authenticateToken, (req, res) => {
     db.all(`
-        SELECT u.id, u.name, c.manifesto,
+        SELECT u.id, u.name, c.manifesto, c.role, c.presentationLink,
         (SELECT COUNT(*) FROM votes v WHERE v.candidateId = u.id) as voteCount
         FROM candidates c
         JOIN users u ON c.userId = u.id
@@ -32,6 +32,18 @@ router.post('/apply', authenticateToken, (req: any, res) => {
                 }
                 return res.status(500).json({ error: 'Database error' });
             }
+            res.json({ success: true });
+        });
+    });
+});
+router.post('/withdraw', authenticateToken, (req: any, res) => {
+    db.get('SELECT value FROM config WHERE key = ?', ['electionsOpen'], (err, config: any) => {
+        if (err || !config || config.value !== 'true') {
+            return res.status(403).json({ error: 'Elections are not currently open' });
+        }
+
+        db.run('DELETE FROM candidates WHERE userId = ?', [req.user.id], function (err) {
+            if (err) return res.status(500).json({ error: 'Database error' });
             res.json({ success: true });
         });
     });

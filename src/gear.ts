@@ -1,6 +1,7 @@
 import './style.css';
 import { authState, gearApi, type GearItem } from './auth';
-import { renderGearGrid, renderMyRequestsList, renderAllRequestsTable, showToast } from './lib/gear/ui';
+import { renderGearGrid, renderMyRequestsList, renderAllRequestsTable } from './lib/gear/ui';
+import { showToast, showConfirmModal } from './utils';
 import { gearRequestModalHtml } from './components';
 
 let currentGear: GearItem[] = [];
@@ -76,7 +77,7 @@ async function handleRequestAction(reqId: string, action: 'approve' | 'reject' |
         refreshAllRequests();
         refreshGear();
     } catch (err: any) {
-        alert(err.message || 'Failed to update request');
+        showToast(err.message || 'Failed to update request', 'error');
     }
 }
 
@@ -94,13 +95,14 @@ function handleEditGear(id: string) {
 }
 
 async function handleDeleteGear(id: string) {
-    if (!confirm('Are you sure you want to delete this gear? All related requests might be orphaned.')) return;
+    const confirmed = await showConfirmModal('Are you sure you want to delete this gear? All related requests might be orphaned.');
+    if (!confirmed) return;
     try {
         await gearApi.deleteGear(id);
         showToast('Gear deleted successfully.');
         refreshGear();
     } catch (err: any) {
-        alert(err.message || 'Error deleting gear');
+        showToast(err.message || 'Error deleting gear', 'error');
     }
 }
 
@@ -139,7 +141,7 @@ function setupEventListeners() {
             showToast(id ? 'Gear updated' : 'Gear added');
             refreshGear();
         } catch (err: any) {
-            alert(err.message || 'Failed to save gear');
+            showToast(err.message || 'Failed to save gear', 'error');
         }
     });
 
@@ -170,7 +172,7 @@ function setupEventListeners() {
             showToast('Request submitted!');
             refreshMyRequests();
         } catch (err: any) {
-            alert(err.message || 'Failed to submit request');
+            showToast(err.message || 'Failed to submit request', 'error');
         } finally {
             (confirmRequestBtn as HTMLButtonElement).disabled = false;
             confirmRequestBtn.innerText = oldText;

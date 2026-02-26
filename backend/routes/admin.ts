@@ -32,18 +32,30 @@ router.get('/users', authenticateToken, requireCommittee, (req, res) => {
             db.all('SELECT * FROM user_memberships', [], (err2, memberships: any[]) => {
                 if (err2) return res.status(500).json({ error: 'Database error' });
 
-                const membMap: Record<string, any[]> = {};
-                (memberships || []).forEach((m: any) => {
-                    if (!membMap[m.userId]) membMap[m.userId] = [];
-                    membMap[m.userId].push(m);
+                // Fetch all committee roles and attach per user
+                db.all('SELECT userId, role FROM committee_roles', [], (err3, committeeRoles: any[]) => {
+                    if (err3) return res.status(500).json({ error: 'Database error' });
+
+                    const membMap: Record<string, any[]> = {};
+                    (memberships || []).forEach((m: any) => {
+                        if (!membMap[m.userId]) membMap[m.userId] = [];
+                        membMap[m.userId].push(m);
+                    });
+
+                    const rolesMap: Record<string, string[]> = {};
+                    (committeeRoles || []).forEach((r: any) => {
+                        if (!rolesMap[r.userId]) rolesMap[r.userId] = [];
+                        rolesMap[r.userId].push(r.role);
+                    });
+
+                    const result = (users || []).map((u: any) => ({
+                        ...u,
+                        memberships: membMap[u.id] || [],
+                        committeeRoles: rolesMap[u.id] || []
+                    }));
+
+                    res.json(result);
                 });
-
-                const result = (users || []).map((u: any) => ({
-                    ...u,
-                    memberships: membMap[u.id] || []
-                }));
-
-                res.json(result);
             });
         }
     );
@@ -141,13 +153,22 @@ router.post('/users/:id/demote', authenticateToken, requireCommittee, (req: any,
 
         db.run('UPDATE users SET role = ?, committeeRole = ? WHERE id = ?', ['member', null, req.params.id], function (err) {
             if (err) return res.status(500).json({ error: 'Database error' });
+            // Also clear all committee roles from the junction table
+            db.run('DELETE FROM committee_roles WHERE userId = ?', [req.params.id]);
             res.json({ success: true });
         });
     });
 });
 
 router.post('/users/:id/committee-role', authenticateToken, requireCommittee, (req: any, res) => {
-    const { committeeRole } = req.body;
+    // Accept either committeeRoles (array) or legacy committeeRole (string) for backward compat
+    let roles: string[] = [];
+    if (Array.isArray(req.body.committeeRoles)) {
+        roles = req.body.committeeRoles;
+    } else if (req.body.committeeRole !== undefined) {
+        // Legacy single-role path
+        roles = req.body.committeeRole ? [req.body.committeeRole] : [];
+    }
 
     const validRoles = [
         'Chair', 'Secretary', 'Treasurer', 'Welfare & Inclusions',
@@ -155,13 +176,31 @@ router.post('/users/:id/committee-role', authenticateToken, requireCommittee, (r
         "Men's Captain", 'Publicity', 'Kit & Safety Sec'
     ];
 
-    if (committeeRole && !validRoles.includes(committeeRole)) {
+    const invalidRole = roles.find(r => !validRoles.includes(r));
+    if (invalidRole) {
         return res.status(400).json({ error: 'Invalid committee role' });
     }
 
-    db.run('UPDATE users SET committeeRole = ? WHERE id = ?', [committeeRole || null, req.params.id], function (err) {
+    const legacyRole = roles.length > 0 ? roles[0] : null;
+
+    // Update legacy column for backward compatibility, then replace committee_roles rows
+    db.run('UPDATE users SET committeeRole = ? WHERE id = ?', [legacyRole, req.params.id], function (err) {
         if (err) return res.status(500).json({ error: 'Database error' });
-        res.json({ success: true });
+
+        db.run('DELETE FROM committee_roles WHERE userId = ?', [req.params.id], function (err2) {
+            if (err2) return res.status(500).json({ error: 'Database error' });
+
+            if (roles.length === 0) {
+                return res.json({ success: true });
+            }
+
+            const stmt = db.prepare('INSERT OR IGNORE INTO committee_roles (userId, role) VALUES (?, ?)');
+            roles.forEach(r => stmt.run([req.params.id, r]));
+            stmt.finalize((err3: any) => {
+                if (err3) return res.status(500).json({ error: 'Database error' });
+                res.json({ success: true });
+            });
+        });
     });
 });
 
@@ -225,6 +264,33 @@ router.post('/memberships/:id/reject', authenticateToken, requireCommittee, (req
                     ).catch((e: any) => console.error('Failed to send membership rejection email:', e));
                 }
             });
+
+            res.json({ success: true });
+        });
+    });
+});
+
+/** Delete a specific user_memberships row */
+router.delete('/memberships/:id', authenticateToken, requireCommittee, (req, res) => {
+    db.get('SELECT * FROM user_memberships WHERE id = ?', [req.params.id], (err, row: any) => {
+        if (err) return res.status(500).json({ error: 'Database error' });
+        if (!row) return res.status(404).json({ error: 'Membership row not found' });
+
+        db.run('DELETE FROM user_memberships WHERE id = ?', [req.params.id], function (err2) {
+            if (err2) return res.status(500).json({ error: 'Database error' });
+
+            // If we just deleted the user's only active basic membership, mark them as pending
+            if (row.membershipType === 'basic') {
+                db.get(
+                    'SELECT id FROM user_memberships WHERE userId = ? AND membershipType = ? AND status = ?',
+                    [row.userId, 'basic', 'active'],
+                    (err3, remaining: any) => {
+                        if (!remaining) {
+                            db.run('UPDATE users SET membershipStatus = ? WHERE id = ?', ['pending', row.userId]);
+                        }
+                    }
+                );
+            }
 
             res.json({ success: true });
         });

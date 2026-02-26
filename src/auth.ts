@@ -17,6 +17,7 @@ export interface User {
     dietaryRequirements?: string;
     role: 'member' | 'committee';
     committeeRole?: string | null;
+    committeeRoles?: string[];
     membershipStatus: 'active' | 'pending' | 'rejected';
     membershipYear?: string;
     calendarToken?: string;
@@ -348,6 +349,11 @@ export const adminApi = {
         return users.filter((u: User) => u.membershipStatus === 'pending');
     },
 
+    /** Returns all users without filtering — used for pending membership scans */
+    async getAllUsersRaw(): Promise<User[]> {
+        return apiFetch('/api/admin/users');
+    },
+
     async getActiveMembers(): Promise<User[]> {
         const users = await apiFetch('/api/admin/users');
         return users.filter((u: User) => u.membershipStatus === 'active' && u.email !== 'sheffieldclimbing@gmail.com');
@@ -381,10 +387,14 @@ export const adminApi = {
         return apiFetch(`/api/admin/memberships/${id}/reject`, { method: 'POST' });
     },
 
-    async setCommitteeRole(id: string, committeeRole: string | null) {
+    async deleteMembershipRow(id: string) {
+        return apiFetch(`/api/admin/memberships/${id}`, { method: 'DELETE' });
+    },
+
+    async setCommitteeRole(id: string, committeeRoles: string[]) {
         return apiFetch(`/api/admin/users/${id}/committee-role`, {
             method: 'POST',
-            body: JSON.stringify({ committeeRole })
+            body: JSON.stringify({ committeeRoles })
         });
     },
 
@@ -465,6 +475,10 @@ export const votingApi = {
             method: 'POST',
             body: JSON.stringify({ candidateId })
         });
+    },
+
+    async withdrawCandidate() {
+        return apiFetch('/api/voting/withdraw', { method: 'POST' });
     }
 };
 

@@ -21,7 +21,8 @@ export const authenticateToken = (req: any, res: any, next: any) => {
 };
 
 export const requireCommittee = (req: any, res: any, next: any) => {
-    if (req.user.role !== 'committee') return res.status(403).json({ error: 'Requires committee privileges' });
+    const isCommittee = req.user.role === 'committee' || !!req.user.committeeRole || (Array.isArray(req.user.committeeRoles) && req.user.committeeRoles.length > 0);
+    if (!isCommittee) return res.status(403).json({ error: 'Requires committee privileges' });
     next();
 };
 

@@ -10,15 +10,18 @@ import { sendEmail } from '../services/email';
 
 const IS_TEST = process.env.NODE_ENV === 'test';
 
+// Create the limiter once at module init — express-rate-limit forbids per-request creation
+const _rateLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    message: { error: 'Too many requests from this IP, please try again after 15 minutes' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 const authLimiter = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (IS_TEST) return next();
-    rateLimit({
-        windowMs: 15 * 60 * 1000,
-        max: 20,
-        message: { error: 'Too many requests from this IP, please try again after 15 minutes' },
-        standardHeaders: true,
-        legacyHeaders: false,
-    })(req, res, next);
+    return _rateLimiter(req, res, next);
 };
 
 const router = express.Router();
@@ -332,9 +335,17 @@ router.post('/logout', (req, res) => {
 });
 
 router.get('/me', authenticateToken, (req: any, res) => {
-    db.get('SELECT id, firstName, lastName, name, email, registrationNumber, role, committeeRole, membershipStatus, membershipYear, emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements, calendarToken FROM users WHERE id = ?', [req.user.id], (err, user) => {
+    db.get('SELECT id, firstName, lastName, name, email, registrationNumber, role, committeeRole, membershipStatus, membershipYear, emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements, calendarToken FROM users WHERE id = ?', [req.user.id], (err, user: any) => {
         if (err || !user) return res.status(404).json({ error: 'User not found' });
-        res.json({ user });
+
+        db.all('SELECT role FROM committee_roles WHERE userId = ?', [req.user.id], (errRoles, rows: any[]) => {
+            if (!errRoles && rows) {
+                user.committeeRoles = rows.map(r => r.role);
+            } else {
+                user.committeeRoles = [];
+            }
+            res.json({ user });
+        });
     });
 });
 

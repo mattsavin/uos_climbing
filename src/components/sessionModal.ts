@@ -1,4 +1,5 @@
 import { adminApi, type Session, type User } from '../auth';
+import { showConfirmModal } from '../utils';
 
 export interface SessionModalOptions {
     session: Session;
@@ -140,13 +141,16 @@ export function openSessionModal(options: SessionModalOptions) {
 
         document.getElementById('usm-delete-btn')?.addEventListener('click', async () => {
             const id = (document.getElementById('usm-edit-id') as HTMLInputElement).value;
-            if (id && confirm('Are you sure you want to delete this session?')) {
-                try {
-                    await adminApi.deleteSession(id);
-                    close();
-                    if ((window as any)._usmCurrentOnDeleteSuccess) (window as any)._usmCurrentOnDeleteSuccess();
-                } catch (err: any) {
-                    showError(err.message || "Failed to delete session");
+            if (id) {
+                const confirmed = await showConfirmModal('Are you sure you want to delete this session?');
+                if (confirmed) {
+                    try {
+                        await adminApi.deleteSession(id);
+                        close();
+                        if ((window as any)._usmCurrentOnDeleteSuccess) (window as any)._usmCurrentOnDeleteSuccess();
+                    } catch (err: any) {
+                        showError(err.message || "Failed to delete session");
+                    }
                 }
             }
         });
@@ -270,7 +274,8 @@ export function openSessionModal(options: SessionModalOptions) {
         }
 
         // Committee Edit Toggle
-        if (user.role === 'committee') {
+        const isCommittee = user.role === 'committee' || !!user.committeeRole || (Array.isArray(user.committeeRoles) && user.committeeRoles.length > 0);
+        if (isCommittee) {
             const toggleWrapper = document.createElement('div');
             toggleWrapper.className = 'text-center mt-3';
 

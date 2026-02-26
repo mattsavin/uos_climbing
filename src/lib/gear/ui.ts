@@ -168,14 +168,3 @@ export function renderAllRequestsTable(requests: GearRequest[], onAction: (reqId
     });
 }
 
-export function showToast(message: string) {
-    const toast = document.getElementById('toast-notification');
-    const text = document.getElementById('toast-message');
-    if (toast && text) {
-        text.textContent = message;
-        toast.classList.remove('opacity-0', 'translate-y-10');
-        setTimeout(() => {
-            toast.classList.add('opacity-0', 'translate-y-10');
-        }, 3000);
-    }
-}
