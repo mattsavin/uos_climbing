@@ -23,6 +23,7 @@ export default defineConfig({
         gear: resolve(__dirname, 'gear.html'),
         login: resolve(__dirname, 'login.html'),
         elections: resolve(__dirname, 'elections.html'),
+        admin: resolve(__dirname, 'admin.html'),
       },
     },
   },

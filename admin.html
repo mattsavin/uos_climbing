@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/climbing%20team%20logo.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <title>Committee Portal | USCC</title>
+</head>
+
+<body>
+    <div id="app">
+        <main class="flex-grow pt-32 pb-20 relative px-4" id="admin-content">
+            <div class="max-w-7xl mx-auto">
+                <div class="mb-8 flex justify-between items-center border-b border-white/10 pb-6">
+                    <div>
+                        <h1 class="text-3xl font-black text-white mb-2 flex items-center gap-3">
+                            <svg class="w-8 h-8 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
+                                </path>
+                            </svg>
+                            Committee Portal
+                        </h1>
+                        <p class="text-slate-400 max-w-2xl">Verify pending member registrations and manage committee
+                            access privileges.</p>
+                    </div>
+                    <a href="/dashboard.html"
+                        class="text-sm font-bold text-slate-400 hover:text-brand-gold transition-colors flex items-center gap-2">
+                        &larr; Back to Dashboard
+                    </a>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="glass-card !p-0 overflow-hidden">
+                        <div class="p-5 border-b border-white/10 bg-slate-800/50">
+                            <h3 class="text-lg font-bold text-white">Pending Registrations</h3>
+                        </div>
+                        <div id="pending-list" class="divide-y divide-white/5 max-h-[400px] overflow-y-auto"></div>
+                    </div>
+
+                    <div class="glass-card !p-0 overflow-hidden">
+                        <div class="p-5 border-b border-white/10 bg-slate-800/50">
+                            <h3 class="text-lg font-bold text-white">Active Member Roster</h3>
+                        </div>
+                        <div id="active-list" class="divide-y divide-white/5 max-h-[400px] overflow-y-auto"></div>
+                    </div>
+
+                    <div id="manage-session-types-card"
+                        class="glass-card !p-0 overflow-hidden border border-amber-500/20">
+                        <div class="p-5 border-b border-white/10 bg-slate-800/50 flex justify-between items-center">
+                            <h3 class="text-lg font-bold text-white">Session Types</h3>
+                            <button id="add-session-type-btn" class="btn-primary !py-1 !px-3 !text-[10px]">Add
+                                New</button>
+                        </div>
+                        <div id="session-types-list" class="divide-y divide-white/5 max-h-[400px] overflow-y-auto">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="/src/admin.ts"></script>
+    <script type="module">
+        import { initApp } from '/src/main.ts';
+        initApp();
+    </script>
+</body>
+
+</html>

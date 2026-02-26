@@ -14,11 +14,6 @@
 <body>
     <div id="app">
         <main class="flex-grow pt-32 pb-20 relative px-4" id="dashboard-content">
-            <!-- Link to the auth script specific to this page -->
-            <!-- Edit Session Modal removed to be dynamically injected by sessionModal component -->
-
-            <!-- Toast Notification -->
-
             <div class="max-w-7xl mx-auto">
                 <div
                     class="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 border-b border-white/10 pb-6 gap-6">
@@ -282,7 +277,6 @@
                             </div>
                         </div>
 
-                        <!-- Session Modals removed to be dynamically injected by sessionModal component -->
                         <!-- Committee Elections Portal Link -->
                         <div
                             class="glass-card !p-6 flex flex-col justify-center items-center text-center border border-amber-500/20 mt-8">
@@ -324,67 +318,32 @@
                                 Open Gear Portal
                             </a>
                         </div>
+
+                        <!-- Admin Portal Card (Hidden by default, shown for committee) -->
+                        <div id="admin-portal-card"
+                            class="hidden glass-card !p-6 flex flex-col justify-center items-center text-center border border-amber-400/20 mt-8">
+                            <div
+                                class="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mb-4 text-amber-400 shadow-lg shadow-amber-400/20">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4">
+                                    </path>
+                                </svg>
+                            </div>
+                            <h3 class="text-lg font-bold text-white mb-2 uppercase tracking-wider">Committee Portal</h3>
+                            <p class="text-xs text-slate-400 mb-6">Manage members, verify registrations, and manage
+                                session types.</p>
+                            <a href="/admin.html"
+                                class="w-full btn-outline text-center border-amber-400 text-amber-400 hover:bg-amber-400 hover:text-white transition-colors py-2 text-sm font-bold shadow-lg shadow-amber-400/10 block">
+                                Open Committee Portal
+                            </a>
+                        </div>
+
                     </div>
                 </div> <!-- End of lg:grid-cols-3 -->
-
-                <!-- Committee Only Section -->
-                <div id="committee-panel" class="hidden mt-12 pt-12 border-t border-white/10">
-                    <h2 class="text-3xl font-black text-white mb-2 flex items-center gap-3">
-                        <svg class="w-8 h-8 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
-                            </path>
-                        </svg>
-                        Committee Override
-                    </h2>
-                    <p class="text-slate-400 mb-8 max-w-2xl">Verify pending member registrations against the SU
-                        database, and manage committee access privileges.</p>
-
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        <!-- Pending Approvals -->
-                        <div class="glass-card !p-0 overflow-hidden">
-                            <div class="p-5 border-b border-white/10 bg-slate-800/50">
-                                <h3 class="text-lg font-bold text-white">Pending Registrations</h3>
-                            </div>
-                            <div id="pending-list" class="divide-y divide-white/5 max-h-[400px] overflow-y-auto">
-                                <!-- Injected via JS -->
-                            </div>
-                        </div>
-
-                        <!-- Active Members Manager -->
-                        <div class="glass-card !p-0 overflow-hidden">
-                            <div class="p-5 border-b border-white/10 bg-slate-800/50">
-                                <h3 class="text-lg font-bold text-white">Active Member Roster</h3>
-                            </div>
-                            <div id="active-list" class="divide-y divide-white/5 max-h-[400px] overflow-y-auto">
-                                <!-- Injected via JS -->
-                            </div>
-                        </div>
-
-                        <!-- Session Type Management -->
-                        <div id="manage-session-types-card"
-                            class="glass-card !p-0 overflow-hidden border border-amber-500/20">
-                            <div class="p-5 border-b border-white/10 bg-slate-800/50 flex justify-between items-center">
-                                <h3 class="text-lg font-bold text-white">Session Types</h3>
-                                <button id="add-session-type-btn" class="btn-primary !py-1 !px-3 !text-[10px]">Add
-                                    New</button>
-                            </div>
-                            <div id="session-types-list" class="divide-y divide-white/5 max-h-[400px] overflow-y-auto">
-                                <!-- Injected via JS -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
-
+        </main>
     </div>
-    </div>
-    </main>
-    </div>
-
-
-    <!-- Link to the auth script specific to this page -->
-    <!-- Edit Session Modal removed to be dynamically injected by sessionModal component -->
 
     <!-- Toast Notification -->
     <div id="toast-notification"

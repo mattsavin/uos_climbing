@@ -1,7 +1,5 @@
 import { authState, getCurrentAcademicYear } from '../../auth';
 import { renderSessions } from './sessions';
-import { renderAdminLists } from './admin';
-import { renderSessionTypes, initSessionTypeHandlers } from './session-types';
 import { showToast } from '../../utils';
 import { config } from '../../config';
 
@@ -14,11 +12,11 @@ export async function updateUI() {
         const statusBadge = document.getElementById('status-badge');
         const userRegNo = document.getElementById('user-reg-no');
         const userRole = document.getElementById('user-role');
-        const committeePanel = document.getElementById('committee-panel');
         const manageTypesShortcut = document.getElementById('manage-types-shortcut');
         const addSessionToggleBtn = document.getElementById('add-session-toggle-btn');
         const addSessionFormContainer = document.getElementById('add-session-form-container');
         const icalLink = document.getElementById('ical-link') as HTMLAnchorElement | null;
+        const adminPortalCard = document.getElementById('admin-portal-card'); // Element to toggle
 
         // Check membership renewal
         const currentYearStr = getCurrentAcademicYear();
@@ -73,6 +71,7 @@ export async function updateUI() {
             value: m.id,
             label: m.label
         }));
+
         if (membershipsContainer) {
             membershipsContainer.innerHTML = '<div class="flex justify-center"><div class="animate-spin rounded-full h-5 w-5 border-b-2 border-brand-gold"></div></div>';
             try {
@@ -206,20 +205,20 @@ export async function updateUI() {
             });
         }
 
+        // Committee Portal Toggle
         const isCommittee = user.role === 'committee' || !!user.committeeRole || (Array.isArray(user.committeeRoles) && user.committeeRoles.length > 0);
+
         if (isCommittee) {
-            if (committeePanel) committeePanel.classList.remove('hidden');
+            if (adminPortalCard) adminPortalCard.classList.remove('hidden');
             if (manageTypesShortcut) {
                 manageTypesShortcut.classList.remove('hidden');
                 manageTypesShortcut.onclick = () => {
-                    document.getElementById('manage-session-types-card')?.scrollIntoView({ behavior: 'smooth' });
+                    window.location.href = '/admin.html';
                 };
             }
             if (addSessionToggleBtn) addSessionToggleBtn.classList.remove('hidden');
-            await renderAdminLists();
-            await renderSessionTypes();
         } else {
-            if (committeePanel) committeePanel.classList.add('hidden');
+            if (adminPortalCard) adminPortalCard.classList.add('hidden');
             if (manageTypesShortcut) manageTypesShortcut.classList.add('hidden');
             if (addSessionToggleBtn) addSessionToggleBtn.classList.add('hidden');
             if (addSessionFormContainer) addSessionFormContainer.classList.add('hidden');
@@ -262,6 +261,4 @@ export function initGeneralHandlers() {
             }
         });
     }
-
-    initSessionTypeHandlers();
 }
