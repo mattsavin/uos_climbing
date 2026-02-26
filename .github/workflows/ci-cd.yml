@@ -71,3 +71,9 @@ jobs:
               -e EMAIL_CLIENT_SECRET="$EMAIL_CLIENT_SECRET" \
               -e EMAIL_REFRESH_TOKEN="$EMAIL_REFRESH_TOKEN" \
               uos_climbing
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_CLIENT_ID: ${{ secrets.EMAIL_CLIENT_ID }}
+          EMAIL_CLIENT_SECRET: ${{ secrets.EMAIL_CLIENT_SECRET }}
+          EMAIL_REFRESH_TOKEN: ${{ secrets.EMAIL_REFRESH_TOKEN }}
