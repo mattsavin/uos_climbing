@@ -46,13 +46,13 @@ function renderCalendarLegend(
 
     legendContainer.classList.remove('hidden');
     legendContainer.innerHTML = `
-        <div class="mt-6 flex flex-wrap gap-4 items-center text-xs text-slate-300 backdrop-blur-sm bg-brand-dark/30 p-4 rounded-xl border border-white/5 shadow-lg mx-auto w-fit max-w-full">
+        <div class="mt-6 mb-4 flex flex-wrap gap-4 items-center text-xs text-slate-300 backdrop-blur-sm bg-brand-dark/30 p-4 rounded-xl border border-white/5 shadow-lg mx-auto w-fit max-w-full">
             ${uniqueLegendTypes.map(type => {
                 const style = colorMap[type] || SESSION_COLOR_PALETTE[0];
                 return `
                     <div class="flex items-center gap-2 min-w-0">
                         <span class="w-2.5 h-2.5 rounded-full ${style.dot} shrink-0"></span>
-                        <span class="truncate max-w-[170px]">${type}</span>
+                        <span class="truncate max-w-42.5">${type}</span>
                     </div>
                 `;
             }).join('')}
@@ -152,12 +152,12 @@ export function renderCalendarEvents(
                     <div class="py-2 text-center text-[10px] font-bold text-slate-500 uppercase tracking-tighter">${day}</div>
                 `).join('')}
             </div>
-            <div class="grid grid-cols-7 auto-rows-[minmax(110px,_auto)] bg-white/5 gap-px">
+            <div class="grid grid-cols-7 auto-rows-[minmax(110px,auto)] bg-white/5 gap-px">
         `;
 
         // Blank days
         for (let i = 0; i < startOffset; i++) {
-            html += `<div class="bg-slate-800/20 p-2 min-h-[110px]"></div>`;
+            html += `<div class="bg-slate-800/20 p-2 min-h-27.5"></div>`;
         }
 
         const today = new Date();
@@ -170,7 +170,7 @@ export function renderCalendarEvents(
             const daySessions = sessions.filter(s => s.date.startsWith(dayStr));
 
             html += `
-                <div class="bg-slate-800/60 p-2 min-h-[110px] border border-white/5 hover:border-brand-gold/30 transition-colors flex flex-col">
+                <div class="bg-slate-800/60 p-2 min-h-27.5 border border-white/5 hover:border-brand-gold/30 transition-colors flex flex-col">
                     <div class="flex justify-end mb-1">
                         <span class="${dayClass}">${day}</span>
                     </div>
@@ -186,7 +186,7 @@ export function renderCalendarEvents(
         const remainder = totalCells % 7;
         if (remainder !== 0) {
             for (let i = 0; i < 7 - remainder; i++) {
-                html += `<div class="bg-slate-800/20 p-2 min-h-[110px]"></div>`;
+                html += `<div class="bg-slate-800/20 p-2 min-h-27.5"></div>`;
             }
         }
         html += `</div>`;
@@ -234,14 +234,14 @@ function renderSessionChip(
     return `
         <div class="session-chip mt-1 border rounded p-2 text-xs font-medium leading-tight w-full overflow-hidden ${isClickable ? 'cursor-pointer hover:opacity-80 transition-opacity' : 'cursor-default'} flex flex-col gap-1 ${bg}" data-id="${session.id}">
             <div class="w-full flex items-center justify-between gap-2 min-w-0">
-                <span class="font-bold block min-w-0 truncate" title="${timeStr} - ${session.title}">${timeStr} - ${session.title}</span>
+                <span class="font-bold block min-w-0 truncate" title="${timeStr}">${timeStr}</span>
                 ${isBooked ? '<span class="text-current font-black text-sm" title="Booked">✓</span>' : ''}
             </div>
-            <div class="text-[11px] font-semibold leading-snug break-words">${session.title}</div>
+            <div class="text-[11px] font-semibold leading-snug wrap-break-word">${session.title}</div>
             ${membBadge ? `<div>${membBadge}</div>` : ''}
-            <div class="flex items-center justify-between gap-1 mt-auto pt-1 border-t border-current border-opacity-20 min-w-0">
-                <span class="font-bold text-[10px] uppercase tracking-wider opacity-90 shrink-0">${session.bookedSlots}/${session.capacity} Slots</span>
-                <span class="text-[8px] uppercase tracking-widest opacity-75 truncate max-w-[55%]" title="${session.type}">${session.type}</span>
+            <div class="mt-auto pt-1 border-t border-current border-opacity-20 min-w-0">
+                <span class="block font-bold text-[10px] uppercase tracking-wider opacity-90">${session.bookedSlots}/${session.capacity} Slots</span>
+                <span class="block text-[8px] uppercase tracking-widest opacity-75 leading-snug break-words" title="${session.type}">${session.type}</span>
             </div>
         </div>
     `;
