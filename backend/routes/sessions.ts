@@ -316,4 +316,12 @@ router.delete('/:id/attendees/:userId', authenticateToken, requireCommittee, (re
     });
 });
 
+router.delete('/:id', authenticateToken, requireCommittee, (req, res) => {
+    db.run('DELETE FROM sessions WHERE id = ?', [req.params.id], function (err) {
+        if (err) return res.status(500).json({ error: 'Database error' });
+        if (this.changes === 0) return res.status(404).json({ error: 'Session not found' });
+        res.json({ success: true });
+    });
+});
+
 export default router;

@@ -339,6 +339,54 @@ describe('Sessions API', () => {
         expect(res.text).toContain('All Feed Committee Visible');
     });
 
+    it('should allow committee to view session attendees', async () => {
+        const sessionId = await createSession(committeeToken, 'Attendee View Session');
+        await bookSession(userToken, sessionId);
+
+        const res = await request(app)
+            .get(`/api/sessions/${sessionId}/attendees`)
+            .set('Authorization', `Bearer ${committeeToken}`);
+
+        expect(res.status).toBe(200);
+        expect(Array.isArray(res.body)).toBe(true);
+        expect(res.body.some((u: any) => u.email === 'user@example.com')).toBe(true);
+    });
+
+    it('should allow committee to remove an attendee', async () => {
+        const sessionId = await createSession(committeeToken, 'Attendee Removal Session');
+        await bookSession(userToken, sessionId);
+
+        // Get user ID
+        const userRes = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${userToken}`);
+        const userId = userRes.body.user.id;
+
+        const res = await request(app)
+            .delete(`/api/sessions/${sessionId}/attendees/${userId}`)
+            .set('Authorization', `Bearer ${committeeToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveProperty('success', true);
+
+        // Verify slot was freed
+        const sessionRes = await request(app).get('/api/sessions');
+        const session = sessionRes.body.find((s: any) => s.id === sessionId);
+        expect(session.bookedSlots).toBe(0);
+    });
+
+    it('should prevent booking a past session', async () => {
+        const resCreate = await request(app).post('/api/sessions').set('Authorization', `Bearer ${committeeToken}`).send({
+            title: 'Past Session', type: 'Social', date: '2020-01-01T10:00:00', capacity: 10
+        });
+        const sessionId = resCreate.body.id;
+
+        const res = await request(app)
+            .post(`/api/sessions/${sessionId}/book`)
+            .set('Authorization', `Bearer ${userToken}`);
+
+        expect(res.status).toBe(400);
+        expect(res.body).toHaveProperty('error', 'Cannot book a past session.');
+    });
+
     describe('Database Errors', () => {
         it('should handle list sessions DB errors', async () => {
             const { vi } = await import('vitest');
