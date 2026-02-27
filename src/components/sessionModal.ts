@@ -87,9 +87,7 @@ export function openSessionModal(options: SessionModalOptions) {
                             <div class="space-y-1 text-left mt-2">
                                 <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Required Membership</label>
                                 <select id="usm-edit-required-membership" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white text-[11px] focus:outline-none focus:border-amber-500 block">
-                                    <option value="basic">Basic (All Members)</option>
-                                    <option value="bouldering">Bouldering Add-on</option>
-                                    <option value="comp_team">Competition Team Only</option>
+                                    <option value="basic">Basic Membership</option>
                                 </select>
                             </div>
                             <div class="space-y-1 text-left mt-2">
@@ -123,7 +121,7 @@ export function openSessionModal(options: SessionModalOptions) {
             const type = (document.getElementById('usm-edit-type') as HTMLSelectElement).value as any;
             const capacity = parseInt((document.getElementById('usm-edit-capacity') as HTMLInputElement).value, 10);
             const bookedSlots = parseInt((document.getElementById('usm-edit-booked') as HTMLInputElement).value, 10) || 0;
-            const requiredMembership = (document.getElementById('usm-edit-required-membership') as HTMLSelectElement).value as 'basic' | 'bouldering' | 'comp_team';
+            const requiredMembership = (document.getElementById('usm-edit-required-membership') as HTMLSelectElement).value;
             const visibility = (document.getElementById('usm-edit-visibility') as HTMLSelectElement).value as 'all' | 'committee_only';
 
             if (id && title && date && type && !isNaN(capacity)) {
@@ -317,7 +315,16 @@ export function openSessionModal(options: SessionModalOptions) {
 
             (document.getElementById('usm-edit-capacity') as HTMLInputElement).value = session.capacity.toString();
             (document.getElementById('usm-edit-booked') as HTMLInputElement).value = session.bookedSlots.toString();
-            (document.getElementById('usm-edit-required-membership') as HTMLSelectElement).value = (session as any).requiredMembership || 'basic';
+            const requiredMembershipSelect = document.getElementById('usm-edit-required-membership') as HTMLSelectElement;
+            adminApi.getMembershipTypes().then(types => {
+                requiredMembershipSelect.innerHTML = types.length
+                    ? types.map(t => `<option value="${t.id}">${t.label}</option>`).join('')
+                    : '<option value="basic">Basic Membership</option>';
+                requiredMembershipSelect.value = (session as any).requiredMembership || (types.find(t => t.id === 'basic')?.id || types[0]?.id || 'basic');
+            }).catch(() => {
+                requiredMembershipSelect.innerHTML = '<option value="basic">Basic Membership</option>';
+                requiredMembershipSelect.value = (session as any).requiredMembership || 'basic';
+            });
             (document.getElementById('usm-edit-visibility') as HTMLSelectElement).value = (session as any).visibility || 'all';
         }
     }

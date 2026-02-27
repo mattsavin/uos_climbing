@@ -1,6 +1,5 @@
 import './style.css';
-import { authState } from './auth';
-import { showToast } from './utils';
+import { adminApi, authState } from './auth';
 
 export async function initLoginApp() {
     // If the user happens to hit this page while already logged in, redirect them
@@ -26,6 +25,10 @@ export async function initLoginApp() {
 
     const registerBtn = document.getElementById('register-btn') as HTMLButtonElement;
     const registerError = document.getElementById('register-error') as HTMLElement;
+    const domainEmailPopup = document.getElementById('domain-email-popup') as HTMLElement | null;
+    const domainEmailPopupBackdrop = document.getElementById('domain-email-popup-backdrop');
+    const domainEmailPopupClose = document.getElementById('domain-email-popup-close');
+    const domainEmailPopupMessage = document.getElementById('domain-email-popup-message') as HTMLElement | null;
 
     const verifyBtn = document.getElementById('verify-btn') as HTMLButtonElement;
     const verifyError = document.getElementById('verify-error') as HTMLElement;
@@ -47,6 +50,48 @@ export async function initLoginApp() {
 
     // In-memory state for active verification
     let pendingUserId: string | null = null;
+    let defaultMembershipType = 'basic';
+
+    function toMembershipOptionMarkup(typeId: string, label: string, checked: boolean): string {
+        return `
+            <label class="flex items-start gap-3 cursor-pointer group">
+                <input type="checkbox" name="membershipType" value="${typeId}" ${checked ? 'checked' : ''}
+                    class="mt-0.5 accent-brand-gold w-4 h-4 shrink-0" />
+                <div>
+                    <span class="text-white text-xs font-bold">${label}</span>
+                    <p class="text-slate-500 text-[10px]">Select this membership type for your account</p>
+                </div>
+            </label>
+        `;
+    }
+
+    async function renderRegistrationMembershipTypes() {
+        const optionsContainer = document.getElementById('registration-membership-types');
+        if (!optionsContainer) return;
+
+        try {
+            const membershipTypes = await adminApi.getMembershipTypes();
+            if (!membershipTypes.length) {
+                optionsContainer.innerHTML = '<p class="text-xs text-red-400">No membership types configured.</p>';
+                return;
+            }
+            defaultMembershipType = membershipTypes.some(t => t.id === 'basic')
+                ? 'basic'
+                : membershipTypes[0].id;
+            optionsContainer.innerHTML = membershipTypes
+                .map(t => toMembershipOptionMarkup(t.id, t.label, t.id === defaultMembershipType))
+                .join('');
+        } catch {
+            optionsContainer.innerHTML = [
+                toMembershipOptionMarkup('basic', 'Basic Membership', true),
+                toMembershipOptionMarkup('bouldering', 'Bouldering Add-on', false),
+                toMembershipOptionMarkup('comp_team', 'Competition Team', false)
+            ].join('');
+            defaultMembershipType = 'basic';
+        }
+    }
+
+    await renderRegistrationMembershipTypes();
 
     // Fade in layout
     setTimeout(() => {
@@ -85,6 +130,19 @@ export async function initLoginApp() {
         if (toggleHeader) toggleHeader.style.opacity = '0.35';
         resetPasswordInput?.focus();
     }
+
+    function closeDomainEmailPopup() {
+        domainEmailPopup?.classList.add('hidden');
+    }
+
+    function showDomainEmailPopup(message: string) {
+        if (domainEmailPopupMessage) domainEmailPopupMessage.textContent = message;
+        domainEmailPopup?.classList.remove('hidden');
+    }
+
+    [domainEmailPopupBackdrop, domainEmailPopupClose].forEach(el => {
+        el?.addEventListener('click', closeDomainEmailPopup);
+    });
 
     // Check if page loaded with a reset token in the URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -174,7 +232,7 @@ export async function initLoginApp() {
         document.querySelectorAll<HTMLInputElement>('input[name="membershipType"]:checked').forEach(cb => {
             membershipTypes.push(cb.value);
         });
-        if (membershipTypes.length === 0) membershipTypes.push('basic');
+        if (membershipTypes.length === 0) membershipTypes.push(defaultMembershipType);
 
         if (password !== passwordConfirm) {
             registerError.textContent = 'Passwords do not match.';
@@ -188,7 +246,7 @@ export async function initLoginApp() {
             const msg = 'Please register with your @sheffield.ac.uk email address.';
             registerError.textContent = msg;
             registerError.classList.remove('hidden');
-            showToast(msg, 'error');
+            showDomainEmailPopup(msg);
             registerBtn.disabled = false;
             registerBtn.textContent = 'Create Account';
             return;
@@ -216,8 +274,12 @@ export async function initLoginApp() {
             // No verification needed (test env / root admin) — already logged in
             window.location.href = '/dashboard.html';
         } catch (error: any) {
-            registerError.textContent = error.message || 'Registration failed.';
+            const msg = error.message || 'Registration failed.';
+            registerError.textContent = msg;
             registerError.classList.remove('hidden');
+            if (msg.toLowerCase().includes('@sheffield.ac.uk')) {
+                showDomainEmailPopup(msg);
+            }
             registerBtn.disabled = false;
             registerBtn.textContent = 'Create Account';
         }

@@ -1,7 +1,6 @@
-import { authState, getCurrentAcademicYear } from '../../auth';
+import { adminApi, authState, getCurrentAcademicYear, type MembershipType } from '../../auth';
 import { renderSessions } from './sessions';
 import { showToast } from '../../utils';
-import { config } from '../../config';
 
 async function copyTextWithFallback(text: string): Promise<boolean> {
     try {
@@ -52,6 +51,33 @@ export async function updateUI() {
         const icalLinkBooked = document.getElementById('ical-link-booked') as HTMLAnchorElement | null;
         const adminPortalCard = document.getElementById('admin-portal-card'); // Element to toggle
 
+        let membershipTypes: MembershipType[] = [];
+        try {
+            membershipTypes = await adminApi.getMembershipTypes();
+        } catch {
+            membershipTypes = [];
+        }
+
+        const defaultMembershipType = membershipTypes.find(t => t.id === 'basic')?.id || membershipTypes[0]?.id || 'basic';
+        const membershipTypeLabelMap = Object.fromEntries(membershipTypes.map(t => [t.id, t.label]));
+
+        const renewalMembershipTypesContainer = document.getElementById('renewal-membership-types');
+        if (renewalMembershipTypesContainer) {
+            if (membershipTypes.length === 0) {
+                renewalMembershipTypesContainer.innerHTML = '<p class="text-xs text-red-400">No membership types configured.</p>';
+            } else {
+                renewalMembershipTypesContainer.innerHTML = membershipTypes.map(t => `
+                    <label class="flex items-start gap-3 cursor-pointer group">
+                        <input type="checkbox" name="renewalMembershipType" value="${t.id}" ${t.id === defaultMembershipType ? 'checked' : ''}
+                            class="mt-0.5 accent-brand-gold w-4 h-4 shrink-0" />
+                        <div>
+                            <span class="text-white text-xs font-bold">${t.label}</span>
+                        </div>
+                    </label>
+                `).join('');
+            }
+        }
+
         // Check membership renewal
         const currentYearStr = getCurrentAcademicYear();
         const renewalOverlay = document.getElementById('membership-renewal-overlay');
@@ -68,7 +94,7 @@ export async function updateUI() {
                     document.querySelectorAll<HTMLInputElement>('input[name="renewalMembershipType"]:checked').forEach(cb => {
                         selectedTypes.push(cb.value);
                     });
-                    if (selectedTypes.length === 0) selectedTypes.push('basic');
+                    if (selectedTypes.length === 0) selectedTypes.push(defaultMembershipType);
 
                     try {
                         confirmRenewalBtn.textContent = 'Renewing...';
@@ -101,7 +127,7 @@ export async function updateUI() {
         // Render individual membership types
         const membershipsContainer = document.getElementById('memberships-container');
         const addMbTypeSelect = document.getElementById('additional-membership-type') as HTMLSelectElement;
-        const ALL_MEMBERSHIP_TYPES = config.membershipAddons.map((m: any) => ({
+        const ALL_MEMBERSHIP_TYPES = membershipTypes.map((m: any) => ({
             value: m.id,
             label: m.label
         }));
@@ -142,8 +168,7 @@ export async function updateUI() {
                         if (m.status === 'active') colorClass = 'bg-brand-gold/10 text-brand-gold border-brand-gold/20';
                         else if (m.status === 'pending') colorClass = 'bg-amber-500/10 text-amber-500 border-amber-500/20';
                         else if (m.status === 'rejected') colorClass = 'bg-red-500/10 text-red-400 border-red-500/20';
-                        const foundMb = config.membershipTypes.find((mt: any) => mt.id === m.membershipType);
-                        const typeLabel = foundMb ? foundMb.label.split(' ')[0] : m.membershipType;
+                        const typeLabel = membershipTypeLabelMap[m.membershipType] || m.membershipType;
                         return `
                         <div class="flex items-center justify-between p-2 rounded border ${colorClass} mb-2 text-xs font-bold uppercase tracking-wide">
                             <div class="flex flex-col">

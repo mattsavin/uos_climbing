@@ -6,6 +6,33 @@ import { SECRET_KEY } from '../config';
 
 const router = express.Router();
 
+function getDefaultMembershipType(callback: (err: Error | null, membershipTypeId: string | null) => void) {
+    db.get(
+        `SELECT id FROM membership_types
+         ORDER BY CASE WHEN id = 'basic' THEN 0 ELSE 1 END, label ASC
+         LIMIT 1`,
+        [],
+        (err, row: any) => {
+            if (err) return callback(err as any, null);
+            callback(null, row?.id || null);
+        }
+    );
+}
+
+function membershipTypeExists(membershipType: string, callback: (err: Error | null, exists: boolean) => void) {
+    db.get('SELECT id FROM membership_types WHERE id = ?', [membershipType], (err, row: any) => {
+        if (err) return callback(err as any, false);
+        callback(null, !!row);
+    });
+}
+
+function getMembershipTypeLabel(membershipType: string, callback: (label: string) => void) {
+    db.get('SELECT label FROM membership_types WHERE id = ?', [membershipType], (err, row: any) => {
+        if (err || !row?.label) return callback(membershipType);
+        callback(row.label);
+    });
+}
+
 function buildIcalContent(userId: string, sessions: any[]) {
     let icalContent = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//USCC//Calendar//EN\r\n";
     sessions.forEach((s: any) => {
@@ -112,32 +139,50 @@ router.get('/ical/:calendarToken/all', (req, res) => {
 router.post('/', authenticateToken, requireCommittee, (req, res) => {
     const { title, type, date, capacity, requiredMembership, visibility } = req.body;
     const id = 'sess_' + Date.now();
-    const reqMemb = requiredMembership || 'basic';
     const eventVisibility = visibility === 'committee_only' ? 'committee_only' : 'all';
+    getDefaultMembershipType((typeErr, defaultMembershipType) => {
+        if (typeErr) return res.status(500).json({ error: 'Database error' });
+        if (!defaultMembershipType) return res.status(500).json({ error: 'No membership types configured' });
 
-    db.run(
-        'INSERT INTO sessions (id, type, title, date, capacity, bookedSlots, requiredMembership, visibility) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [id, type, title, date, capacity, 0, reqMemb, eventVisibility],
-        function (err) {
-            if (err) return res.status(500).json({ error: 'Database error' });
-            res.json({ id, type, title, date, capacity, bookedSlots: 0, requiredMembership: reqMemb, visibility: eventVisibility });
-        }
-    );
+        const reqMemb = requiredMembership || defaultMembershipType;
+        membershipTypeExists(reqMemb, (existsErr, exists) => {
+            if (existsErr) return res.status(500).json({ error: 'Database error' });
+            if (!exists) return res.status(400).json({ error: 'Invalid required membership type' });
+
+            db.run(
+                'INSERT INTO sessions (id, type, title, date, capacity, bookedSlots, requiredMembership, visibility) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                [id, type, title, date, capacity, 0, reqMemb, eventVisibility],
+                function (err) {
+                    if (err) return res.status(500).json({ error: 'Database error' });
+                    res.json({ id, type, title, date, capacity, bookedSlots: 0, requiredMembership: reqMemb, visibility: eventVisibility });
+                }
+            );
+        });
+    });
 });
 
 router.put('/:id', authenticateToken, requireCommittee, (req, res) => {
     const { title, type, date, capacity, bookedSlots, requiredMembership, visibility } = req.body;
-    const reqMemb = requiredMembership || 'basic';
     const eventVisibility = visibility === 'committee_only' ? 'committee_only' : 'all';
+    getDefaultMembershipType((typeErr, defaultMembershipType) => {
+        if (typeErr) return res.status(500).json({ error: 'Database error' });
+        if (!defaultMembershipType) return res.status(500).json({ error: 'No membership types configured' });
 
-    db.run(
-        'UPDATE sessions SET title = ?, type = ?, date = ?, capacity = ?, bookedSlots = ?, requiredMembership = ?, visibility = ? WHERE id = ?',
-        [title, type, date, capacity, bookedSlots, reqMemb, eventVisibility, req.params.id],
-        function (err) {
-            if (err) return res.status(500).json({ error: 'Database error' });
-            res.json({ success: true });
-        }
-    );
+        const reqMemb = requiredMembership || defaultMembershipType;
+        membershipTypeExists(reqMemb, (existsErr, exists) => {
+            if (existsErr) return res.status(500).json({ error: 'Database error' });
+            if (!exists) return res.status(400).json({ error: 'Invalid required membership type' });
+
+            db.run(
+                'UPDATE sessions SET title = ?, type = ?, date = ?, capacity = ?, bookedSlots = ?, requiredMembership = ?, visibility = ? WHERE id = ?',
+                [title, type, date, capacity, bookedSlots, reqMemb, eventVisibility, req.params.id],
+                function (err) {
+                    if (err) return res.status(500).json({ error: 'Database error' });
+                    res.json({ success: true });
+                }
+            );
+        });
+    });
 });
 
 router.get('/me/bookings', authenticateToken, (req: any, res) => {
@@ -172,8 +217,9 @@ router.post('/:id/book', authenticateToken, (req: any, res) => {
                 if (err2) return res.status(500).json({ error: 'Database error checking membership' });
                 // Enforce requirement unless they are root admin testing it
                 if (!isCommitteeOnly && !userMemb && req.user.email !== 'sheffieldclimbing@gmail.com') {
-                    const typeLabel = { basic: 'Basic', bouldering: 'Bouldering', comp_team: 'Comp Team' }[reqMemb] || reqMemb;
-                    return res.status(403).json({ error: `This session requires an active ${typeLabel} membership.` });
+                    return getMembershipTypeLabel(reqMemb, (typeLabel) => {
+                        return res.status(403).json({ error: `This session requires an active ${typeLabel} membership.` });
+                    });
                 }
 
                 db.serialize(() => {

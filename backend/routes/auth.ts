@@ -38,7 +38,12 @@ function generateOTP(): string {
     return crypto.randomInt(100000, 999999).toString();
 }
 
-const VALID_MEMBERSHIP_TYPES = ['basic', 'bouldering', 'comp_team'];
+function getMembershipTypeIds(callback: (err: Error | null, ids: string[]) => void) {
+    db.all('SELECT id FROM membership_types', [], (err, rows: any[]) => {
+        if (err) return callback(err as any, []);
+        callback(null, (rows || []).map((r: any) => r.id));
+    });
+}
 
 router.post('/register', authLimiter, async (req, res) => {
     const { firstName, lastName, email, registrationNumber, password, passwordConfirm, membershipTypes } = req.body;
@@ -52,92 +57,103 @@ router.post('/register', authLimiter, async (req, res) => {
         return res.status(400).json({ error: 'Passwords do not match' });
     }
 
-    // Validate & default membership types
-    let types: string[] = Array.isArray(membershipTypes) && membershipTypes.length > 0
-        ? membershipTypes.filter((t: string) => VALID_MEMBERSHIP_TYPES.includes(t))
-        : ['basic'];
-    if (types.length === 0) types = ['basic'];
+    getMembershipTypeIds(async (typeErr, membershipTypeIds) => {
+        if (typeErr) return res.status(500).json({ error: 'Database error' });
 
-    try {
-        const passwordHash = await bcrypt.hash(password, 10);
-        const id = 'user_' + Date.now() + Math.random().toString(36).substr(2, 5);
-
-        let role = 'member';
-        let membershipStatus = 'pending';
-        // Root admin email is pre-verified
-        const isRootAdmin = normalizedEmail === 'sheffieldclimbing@gmail.com';
-        if (!IS_TEST && !isRootAdmin && !normalizedEmail.endsWith('@sheffield.ac.uk')) {
-            return res.status(400).json({ error: 'Please register with your @sheffield.ac.uk email address.' });
-        }
-        if (isRootAdmin) {
-            role = 'committee';
-            membershipStatus = 'active';
+        const defaultMembership = membershipTypeIds.includes('basic')
+            ? 'basic'
+            : membershipTypeIds[0];
+        if (!defaultMembership) {
+            return res.status(500).json({ error: 'No membership types configured' });
         }
 
-        const currentYear = new Date().getFullYear();
-        const currentMonth = new Date().getMonth();
-        const membershipYear = currentMonth < 8 ? `${currentYear - 1}/${currentYear}` : `${currentYear}/${currentYear + 1}`;
+        // Validate & default membership types
+        let types: string[] = Array.isArray(membershipTypes) && membershipTypes.length > 0
+            ? membershipTypes.filter((t: string) => membershipTypeIds.includes(t))
+            : [defaultMembership];
+        if (types.length === 0) types = [defaultMembership];
 
-        const calendarToken = crypto.randomUUID();
-        // In test env or for root admin, mark as verified immediately
-        const emailVerified = (IS_TEST || isRootAdmin) ? 1 : 0;
+        try {
+            const passwordHash = await bcrypt.hash(password, 10);
+            const id = 'user_' + Date.now() + Math.random().toString(36).substr(2, 5);
 
-        db.run(
-            'INSERT INTO users (id, firstName, lastName, name, email, passwordHash, registrationNumber, role, membershipStatus, membershipYear, calendarToken, emailVerified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [id, firstName, lastName, `${firstName} ${lastName}`, normalizedEmail, passwordHash, registrationNumber, role, membershipStatus, membershipYear, calendarToken, emailVerified],
-            function (err) {
-                if (err) {
-                    if (err.message.includes('UNIQUE constraint failed')) {
-                        return res.status(400).json({ error: 'Email already exists' });
-                    }
-                    return res.status(500).json({ error: 'Database error' });
-                }
-
-                // Insert user_memberships rows
-                const membershipRowStatus = (IS_TEST || isRootAdmin) ? 'active' : 'pending';
-                const stmt = db.prepare('INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)');
-                types.forEach((t: string) => {
-                    stmt.run(['umem_' + Date.now() + Math.random().toString(36).substr(2, 5), id, t, membershipRowStatus, membershipYear]);
-                });
-                stmt.finalize();
-
-                const user = { id, firstName, lastName, email: normalizedEmail, registrationNumber, role, committeeRole: null, membershipStatus, membershipYear, calendarToken };
-
-                if (IS_TEST || isRootAdmin) {
-                    // In test environment or for root admin: skip email verification, return token immediately
-                    const token = jwt.sign(user, SECRET_KEY, { expiresIn: '24h' });
-                    res.cookie('uscc_token', token, cookieOptions);
-                    return res.json({ user, token });
-                }
-
-                // Production/dev: send OTP, do not return a token yet
-                const otp = generateOTP();
-                const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
-
-                db.run(
-                    'INSERT OR REPLACE INTO email_verifications (userId, code, expiresAt) VALUES (?, ?, ?)',
-                    [id, otp, expiresAt],
-                    (otpErr) => {
-                        if (otpErr) {
-                            return res.status(500).json({ error: 'Failed to create verification code' });
-                        }
-
-                        // Send verification email (fire-and-forget)
-                        sendEmail(
-                            normalizedEmail,
-                            'Verify your USCC email address',
-                            `Hi ${firstName},\n\nYour verification code is: ${otp}\n\nThis code expires in 15 minutes.\n\nIf you did not register for the University of Sheffield Climbing Club, please ignore this email.`,
-                            `<p>Hi ${firstName},</p><p>Your verification code is:</p><h2 style="letter-spacing:8px;font-size:32px;">${otp}</h2><p>This code expires in 15 minutes.</p><p style="color:#999;font-size:12px;">If you did not register for the University of Sheffield Climbing Club, please ignore this email.</p>`
-                        ).catch(e => console.error('Failed to send verification email:', e));
-
-                        res.json({ pendingVerification: true, userId: id });
-                    }
-                );
+            let role = 'member';
+            let membershipStatus = 'pending';
+            // Root admin email is pre-verified
+            const isRootAdmin = normalizedEmail === 'sheffieldclimbing@gmail.com';
+            if (!IS_TEST && !isRootAdmin && !normalizedEmail.endsWith('@sheffield.ac.uk')) {
+                return res.status(400).json({ error: 'Please register with your @sheffield.ac.uk email address.' });
             }
-        );
-    } catch (err) {
-        res.status(500).json({ error: 'Server error' });
-    }
+            if (isRootAdmin) {
+                role = 'committee';
+                membershipStatus = 'active';
+            }
+
+            const currentYear = new Date().getFullYear();
+            const currentMonth = new Date().getMonth();
+            const membershipYear = currentMonth < 8 ? `${currentYear - 1}/${currentYear}` : `${currentYear}/${currentYear + 1}`;
+
+            const calendarToken = crypto.randomUUID();
+            // In test env or for root admin, mark as verified immediately
+            const emailVerified = (IS_TEST || isRootAdmin) ? 1 : 0;
+
+            db.run(
+                'INSERT INTO users (id, firstName, lastName, name, email, passwordHash, registrationNumber, role, membershipStatus, membershipYear, calendarToken, emailVerified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [id, firstName, lastName, `${firstName} ${lastName}`, normalizedEmail, passwordHash, registrationNumber, role, membershipStatus, membershipYear, calendarToken, emailVerified],
+                function (err) {
+                    if (err) {
+                        if (err.message.includes('UNIQUE constraint failed')) {
+                            return res.status(400).json({ error: 'Email already exists' });
+                        }
+                        return res.status(500).json({ error: 'Database error' });
+                    }
+
+                    // Insert user_memberships rows
+                    const membershipRowStatus = (IS_TEST || isRootAdmin) ? 'active' : 'pending';
+                    const stmt = db.prepare('INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)');
+                    types.forEach((t: string) => {
+                        stmt.run(['umem_' + Date.now() + Math.random().toString(36).substr(2, 5), id, t, membershipRowStatus, membershipYear]);
+                    });
+                    stmt.finalize();
+
+                    const user = { id, firstName, lastName, email: normalizedEmail, registrationNumber, role, committeeRole: null, membershipStatus, membershipYear, calendarToken };
+
+                    if (IS_TEST || isRootAdmin) {
+                        // In test environment or for root admin: skip email verification, return token immediately
+                        const token = jwt.sign(user, SECRET_KEY, { expiresIn: '24h' });
+                        res.cookie('uscc_token', token, cookieOptions);
+                        return res.json({ user, token });
+                    }
+
+                    // Production/dev: send OTP, do not return a token yet
+                    const otp = generateOTP();
+                    const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
+
+                    db.run(
+                        'INSERT OR REPLACE INTO email_verifications (userId, code, expiresAt) VALUES (?, ?, ?)',
+                        [id, otp, expiresAt],
+                        (otpErr) => {
+                            if (otpErr) {
+                                return res.status(500).json({ error: 'Failed to create verification code' });
+                            }
+
+                            // Send verification email (fire-and-forget)
+                            sendEmail(
+                                normalizedEmail,
+                                'Verify your USCC email address',
+                                `Hi ${firstName},\n\nYour verification code is: ${otp}\n\nThis code expires in 15 minutes.\n\nIf you did not register for the University of Sheffield Climbing Club, please ignore this email.`,
+                                `<p>Hi ${firstName},</p><p>Your verification code is:</p><h2 style="letter-spacing:8px;font-size:32px;">${otp}</h2><p>This code expires in 15 minutes.</p><p style="color:#999;font-size:12px;">If you did not register for the University of Sheffield Climbing Club, please ignore this email.</p>`
+                            ).catch(e => console.error('Failed to send verification email:', e));
+
+                            res.json({ pendingVerification: true, userId: id });
+                        }
+                    );
+                }
+            );
+        } catch (err) {
+            res.status(500).json({ error: 'Server error' });
+        }
+    });
 });
 
 router.post('/login', authLimiter, (req, res) => {

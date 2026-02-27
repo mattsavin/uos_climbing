@@ -58,6 +58,12 @@ function initializeDatabase() {
             FOREIGN KEY (userId) REFERENCES users(id)
         )`);
 
+        // Membership Types Table
+        db.run(`CREATE TABLE IF NOT EXISTS membership_types (
+            id TEXT PRIMARY KEY,
+            label TEXT NOT NULL
+        )`);
+
         // User Memberships Table (many-to-many: one user can hold multiple membership types)
         db.run(`CREATE TABLE IF NOT EXISTS user_memberships (
             id TEXT PRIMARY KEY,
@@ -304,6 +310,21 @@ function initializeDatabase() {
                 ];
                 const stmt = db.prepare('INSERT INTO session_types (id, label) VALUES (?, ?)');
                 defaultTypes.forEach(t => stmt.run(t));
+                stmt.finalize();
+            }
+        });
+
+        // Seed default membership types if table is empty
+        db.get('SELECT COUNT(*) as count FROM membership_types', (err, row: any) => {
+            if (row && row.count === 0) {
+                console.log('Seeding default membership types...');
+                const defaultMembershipTypes = [
+                    ['basic', 'Basic Membership (All Members)'],
+                    ['bouldering', 'Bouldering Add-on'],
+                    ['comp_team', 'Competition Team Only']
+                ];
+                const stmt = db.prepare('INSERT INTO membership_types (id, label) VALUES (?, ?)');
+                defaultMembershipTypes.forEach(t => stmt.run(t));
                 stmt.finalize();
             }
         });

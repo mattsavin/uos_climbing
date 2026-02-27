@@ -5,6 +5,11 @@ let confirmActionCallback: (() => Promise<void>) | null = null;
 let activeRosterPage = 1;
 const ITEMS_PER_PAGE = 10;
 let currentSearchQuery = '';
+let membershipTypeLabelMap: Record<string, string> = {};
+
+function membershipTypeLabel(typeId: string): string {
+    return membershipTypeLabelMap[typeId] || typeId;
+}
 
 export function initAdminConfirm() {
     const adminConfirmModal = document.getElementById('admin-confirm-modal');
@@ -68,6 +73,13 @@ export async function renderAdminLists() {
 
     if (!pendingList || !activeList) return;
 
+    try {
+        const membershipTypes = await adminApi.getMembershipTypes();
+        membershipTypeLabelMap = Object.fromEntries(membershipTypes.map((t: any) => [t.id, t.label]));
+    } catch {
+        membershipTypeLabelMap = {};
+    }
+
     // Fetch all users once and derive both lists from it
     const allUsersRaw = await adminApi.getAllUsersRaw();
 
@@ -87,11 +99,10 @@ export async function renderAdminLists() {
         ? pendingMemberships.map(pm => createPendingMembershipRow(pm.user, pm.membership)).join('')
         : '<p class="p-5 text-sm text-slate-500 text-center">No pending registrations.</p>';
 
-    // Render Active — committee members/role-holders + anyone with active membership data,
-    // excluding root admin. We prefer membership rows, but also allow legacy top-level
-    // membershipStatus='active' so older records without rows still appear.
+    // Render Active — committee members/role-holders + anyone with active membership data.
+    // We prefer membership rows, but also allow legacy top-level membershipStatus='active'
+    // so older records without rows still appear.
     const allActive = allUsersRaw.filter((u: any) => {
-        if (u.email === 'sheffieldclimbing@gmail.com') return false;
         const isCommittee = u.role === 'committee' || !!u.committeeRole || (Array.isArray(u.committeeRoles) && u.committeeRoles.length > 0);
         if (isCommittee) return true;
         const hasActiveMembershipRow = (u.memberships as any[] || []).some((m: any) => m.status === 'active');
@@ -209,6 +220,10 @@ export async function renderAdminLists() {
                     actionCallback = async () => adminApi.demoteToMember(id);
                 }
                 if (action === 'delete') {
+                    if (id === authState.user?.id) {
+                        showToast('You cannot delete your own account from the admin roster.', 'error');
+                        return;
+                    }
                     title = 'Delete Member'; message = `Are you absolutely sure you want to permanently delete ${escapeHTML(name)}'s account? This action cannot be undone.`;
                     actionCallback = async () => adminApi.deleteUser(id);
                 }
@@ -261,7 +276,7 @@ function createPendingMembershipRow(user: User, membership: any) {
     const regLabel = safeRegNo ? `<span class="px-2 py-0.5 mt-1 font-mono text-[10px] bg-slate-800 text-slate-300 rounded block w-fit">REG: ${safeRegNo}</span>` : '';
 
     // For pending memberships, we approve/reject the specific row
-    const typeLabel = { basic: 'Basic', bouldering: 'Bouldering', comp_team: 'Comp Team' }[membership.membershipType as string] || membership.membershipType;
+    const typeLabel = membershipTypeLabel(membership.membershipType as string);
 
     const actions = `
         <button class="admin-action-btn p-2 text-brand-gold-muted hover:bg-brand-gold-muted/10 rounded transition-colors" data-action="approve-membership" data-id="${membership.id}" data-name="${safeName} (${typeLabel})" title="Approve Membership">
@@ -313,6 +328,7 @@ function createMemberRow(user: User, isPending: boolean) {
 
     let actions = '';
     let committeeRoleSelector = '';
+    const isSelf = user.id === authState.user?.id;
 
     if (!isPending) {
         const isCommittee = user.role === 'committee' || !!user.committeeRole || (Array.isArray(user.committeeRoles) && user.committeeRoles.length > 0);
@@ -369,9 +385,11 @@ function createMemberRow(user: User, isPending: boolean) {
                 <button class="admin-action-btn text-xs font-bold px-3 py-1 bg-brand-gold/10 text-brand-gold border border-brand-gold/30 rounded hover:bg-brand-gold/20 mr-1" data-action="promote" data-id="${user.id}" data-name="${safeName}">
                     Make Admin
                 </button>
+                ${isSelf ? '' : `
                 <button class="admin-action-btn text-xs font-bold px-3 py-1 bg-red-500/10 text-red-500 border border-red-500/30 rounded hover:bg-red-500/20" data-action="delete" data-id="${user.id}" data-name="${safeName}">
                     Delete
                 </button>
+                `}
             `;
         }
     }
@@ -379,7 +397,7 @@ function createMemberRow(user: User, isPending: boolean) {
     // Active roster row...
     const memberships: any[] = (user as any).memberships || [];
     const activeMemberships = memberships.filter((m: any) => m.status === 'active' || m.status === 'rejected');
-    const typeLabel = (t: string) => ({ basic: 'Basic', bouldering: 'Bouldering', comp_team: 'Comp Team' }[t] || t);
+    const typeLabel = (t: string) => membershipTypeLabel(t);
 
     const membershipsList = activeMemberships.length > 0 ? `
         <div class="mt-2">

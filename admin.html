@@ -25,8 +25,8 @@
                             </svg>
                             Committee Portal
                         </h1>
-                        <p class="text-slate-400 max-w-2xl">Verify pending member registrations and manage committee
-                            access privileges.</p>
+                        <p class="text-slate-400 max-w-2xl">Review registrations, manage member/admin access, and
+                            maintain session and membership types.</p>
                     </div>
                     <div class="flex items-center gap-3">
                         <button id="root-send-test-email-btn"
@@ -40,7 +40,7 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <div class="glass-card !p-0 overflow-hidden">
                         <div class="p-5 border-b border-white/10 bg-slate-800/50">
                             <h3 class="text-lg font-bold text-white">Pending Registrations</h3>
@@ -63,6 +63,17 @@
                                 New</button>
                         </div>
                         <div id="session-types-list" class="divide-y divide-white/5 max-h-[400px] overflow-y-auto">
+                        </div>
+                    </div>
+
+                    <div id="manage-membership-types-card"
+                        class="glass-card !p-0 overflow-hidden border border-cyan-500/20">
+                        <div class="p-5 border-b border-white/10 bg-slate-800/50 flex justify-between items-center">
+                            <h3 class="text-lg font-bold text-white">Membership Types</h3>
+                            <button id="add-membership-type-btn" class="btn-primary !py-1 !px-3 !text-[10px]">Add
+                                New</button>
+                        </div>
+                        <div id="membership-types-list" class="divide-y divide-white/5 max-h-[400px] overflow-y-auto">
                         </div>
                     </div>
                 </div>

@@ -12,52 +12,52 @@ export const config = {
         {
             id: "president",
             title: "President",
-            description: "Committee elections are currently ongoing as we establish our new club structure."
+            description: "Leads the committee, sets priorities, and represents the club across the university."
         },
         {
             id: "secretary",
             title: "Secretary",
-            description: "Committee elections are currently ongoing as we establish our new club structure."
+            description: "Coordinates committee operations, agendas, and key club communications."
         },
         {
             id: "treasurer",
             title: "Treasurer",
-            description: "Committee elections are currently ongoing as we establish our new club structure."
+            description: "Manages budgeting, spend approvals, and financial planning for club activity."
         },
         {
             id: "welfare-inclusions",
             title: "Welfare & Inclusions",
-            description: "Committee elections are currently ongoing as we establish our new club structure."
+            description: "Supports member wellbeing and inclusion across socials, training, and competitions."
         },
         {
             id: "team-captain",
             title: "Team Captain",
-            description: "Committee elections are currently ongoing as we establish our new club structure."
+            description: "Leads competition planning, athlete coordination, and event-day team management."
         },
         {
             id: "social-sec",
             title: "Social Sec",
-            description: "Committee elections are currently ongoing as we establish our new club structure."
+            description: "Plans socials and community events to keep the club welcoming and connected."
         },
         {
             id: "womens-captain",
             title: "Women's Captain",
-            description: "Committee elections are currently ongoing as we establish our new club structure."
+            description: "Represents and supports women in the club across training and competition pathways."
         },
         {
             id: "mens-captain",
             title: "Men's Captain",
-            description: "Committee elections are currently ongoing as we establish our new club structure."
+            description: "Represents and supports men in the club across training and competition pathways."
         },
         {
             id: "publicity",
             title: "Publicity",
-            description: "Committee elections are currently ongoing as we establish our new club structure."
+            description: "Runs club publicity, digital comms, and promotion of sessions, socials, and results."
         },
         {
             id: "kit-safety-sec",
             title: "Kit & Safety Sec",
-            description: "Committee elections are currently ongoing as we establish our new club structure."
+            description: "Oversees gear inventory, hire workflows, and day-to-day safety standards."
         }
     ],
 

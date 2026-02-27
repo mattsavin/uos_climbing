@@ -2,6 +2,7 @@ import './style.css';
 import { adminApi, authState } from './auth';
 import { initAdminConfirm, renderAdminLists } from './lib/dashboard/admin';
 import { initSessionTypeHandlers, renderSessionTypes } from './lib/dashboard/session-types';
+import { initMembershipTypeHandlers, renderMembershipTypes } from './lib/dashboard/membership-types';
 import { adminConfirmModalHtml } from './components';
 import { showToast } from './utils';
 
@@ -16,11 +17,13 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('dashboardUpdate', () => {
         renderAdminLists();
         renderSessionTypes();
+        renderMembershipTypes();
     });
 
     // Initialize Handlers
     initAdminConfirm();
     initSessionTypeHandlers();
+    initMembershipTypeHandlers();
 
     // Authenticate and check permissions
     authState.init().then(() => {
@@ -65,5 +68,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         renderAdminLists();
         renderSessionTypes();
+        renderMembershipTypes();
     });
 });

@@ -5,6 +5,26 @@ import { sendEmail } from '../services/email';
 
 const router = express.Router();
 
+function getMembershipLabel(membershipType: string, callback: (label: string) => void) {
+    db.get('SELECT label FROM membership_types WHERE id = ?', [membershipType], (err, row: any) => {
+        if (err || !row?.label) return callback(membershipType);
+        callback(row.label);
+    });
+}
+
+function getDefaultMembershipType(callback: (err: Error | null, membershipTypeId: string | null) => void) {
+    db.get(
+        `SELECT id FROM membership_types
+         ORDER BY CASE WHEN id = 'basic' THEN 0 ELSE 1 END, label ASC
+         LIMIT 1`,
+        [],
+        (err, row: any) => {
+            if (err) return callback(err as any, null);
+            callback(null, row?.id || null);
+        }
+    );
+}
+
 router.get('/config/elections', authenticateToken, requireCommittee, (req, res) => {
     db.get('SELECT value FROM config WHERE key = ?', ['electionsOpen'], (err, row: any) => {
         if (err) return res.status(500).json({ error: 'Database error' });
@@ -86,24 +106,27 @@ router.post('/users/:id/approve', authenticateToken, requireCommittee, (req, res
     db.run('UPDATE users SET membershipStatus = ? WHERE id = ?', ['active', req.params.id], function (err) {
         if (err) return res.status(500).json({ error: 'Database error' });
 
-        // Upsert the 'basic' user_memberships row — create it if it doesn't exist
-        db.get('SELECT membershipYear FROM users WHERE id = ?', [req.params.id], (err2, userRow: any) => {
-            if (userRow) {
-                const userId = req.params.id;
-                const year = userRow.membershipYear;
-                db.get('SELECT id FROM user_memberships WHERE userId = ? AND membershipType = ? AND membershipYear = ?',
-                    [userId, 'basic', year],
-                    (err3, existing: any) => {
-                        if (existing) {
-                            db.run('UPDATE user_memberships SET status = ? WHERE id = ?', ['active', existing.id]);
-                        } else {
-                            const crypto = require('crypto');
-                            db.run('INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)',
-                                ['umem_' + crypto.randomUUID(), userId, 'basic', 'active', year]);
+        getDefaultMembershipType((typeErr, defaultMembershipType) => {
+            if (typeErr || !defaultMembershipType) return;
+
+            db.get('SELECT membershipYear FROM users WHERE id = ?', [req.params.id], (err2, userRow: any) => {
+                if (userRow) {
+                    const userId = req.params.id;
+                    const year = userRow.membershipYear;
+                    db.get('SELECT id FROM user_memberships WHERE userId = ? AND membershipType = ? AND membershipYear = ?',
+                        [userId, defaultMembershipType, year],
+                        (err3, existing: any) => {
+                            if (existing) {
+                                db.run('UPDATE user_memberships SET status = ? WHERE id = ?', ['active', existing.id]);
+                            } else {
+                                const crypto = require('crypto');
+                                db.run('INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)',
+                                    ['umem_' + crypto.randomUUID(), userId, defaultMembershipType, 'active', year]);
+                            }
                         }
-                    }
-                );
-            }
+                    );
+                }
+            });
         });
 
         // Notify user
@@ -127,12 +150,14 @@ router.post('/users/:id/reject', authenticateToken, requireCommittee, (req, res)
     db.run('UPDATE users SET membershipStatus = ? WHERE id = ?', ['rejected', req.params.id], function (err) {
         if (err) return res.status(500).json({ error: 'Database error' });
 
-        // Also update the 'basic' user_memberships row status
-        db.get('SELECT membershipYear FROM users WHERE id = ?', [req.params.id], (err2, userRow: any) => {
-            if (userRow) {
-                db.run('UPDATE user_memberships SET status = ? WHERE userId = ? AND membershipType = ? AND membershipYear = ?',
-                    ['rejected', req.params.id, 'basic', userRow.membershipYear]);
-            }
+        getDefaultMembershipType((typeErr, defaultMembershipType) => {
+            if (typeErr || !defaultMembershipType) return;
+            db.get('SELECT membershipYear FROM users WHERE id = ?', [req.params.id], (err2, userRow: any) => {
+                if (userRow) {
+                    db.run('UPDATE user_memberships SET status = ? WHERE userId = ? AND membershipType = ? AND membershipYear = ?',
+                        ['rejected', req.params.id, defaultMembershipType, userRow.membershipYear]);
+                }
+            });
         });
 
         // Notify user
@@ -243,13 +268,14 @@ router.post('/memberships/:id/approve', authenticateToken, requireCommittee, (re
             db.get('SELECT firstName, lastName, email FROM users WHERE id = ?', [row.userId], (e, user: any) => {
                 if (user) {
                     const displayName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
-                    const typeLabel: Record<string, string> = { basic: 'Basic', bouldering: 'Bouldering', comp_team: 'Competition Team' };
-                    sendEmail(
-                        user.email,
-                        'Membership Type Approved',
-                        `Hi ${displayName},\n\nYour ${typeLabel[row.membershipType] || row.membershipType} membership for ${row.membershipYear} has been approved.`,
-                        `<p>Hi ${displayName},</p><p>Your <strong>${typeLabel[row.membershipType] || row.membershipType}</strong> membership for ${row.membershipYear} has been approved.</p>`
-                    ).catch((e: any) => console.error('Failed to send membership approval email:', e));
+                    getMembershipLabel(row.membershipType, (typeLabel) => {
+                        sendEmail(
+                            user.email,
+                            'Membership Type Approved',
+                            `Hi ${displayName},\n\nYour ${typeLabel} membership for ${row.membershipYear} has been approved.`,
+                            `<p>Hi ${displayName},</p><p>Your <strong>${typeLabel}</strong> membership for ${row.membershipYear} has been approved.</p>`
+                        ).catch((e: any) => console.error('Failed to send membership approval email:', e));
+                    });
                 }
             });
 
@@ -276,13 +302,14 @@ router.post('/memberships/:id/reject', authenticateToken, requireCommittee, (req
             db.get('SELECT firstName, lastName, email FROM users WHERE id = ?', [row.userId], (e, user: any) => {
                 if (user) {
                     const displayName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
-                    const typeLabel: Record<string, string> = { basic: 'Basic', bouldering: 'Bouldering', comp_team: 'Competition Team' };
-                    sendEmail(
-                        user.email,
-                        'Membership Type Request Rejected',
-                        `Hi ${displayName},\n\nYour request for ${typeLabel[row.membershipType] || row.membershipType} membership for ${row.membershipYear} has been rejected.`,
-                        `<p>Hi ${displayName},</p><p>Your request for <strong>${typeLabel[row.membershipType] || row.membershipType}</strong> membership for ${row.membershipYear} has been rejected.</p>`
-                    ).catch((e: any) => console.error('Failed to send membership rejection email:', e));
+                    getMembershipLabel(row.membershipType, (typeLabel) => {
+                        sendEmail(
+                            user.email,
+                            'Membership Type Request Rejected',
+                            `Hi ${displayName},\n\nYour request for ${typeLabel} membership for ${row.membershipYear} has been rejected.`,
+                            `<p>Hi ${displayName},</p><p>Your request for <strong>${typeLabel}</strong> membership for ${row.membershipYear} has been rejected.</p>`
+                        ).catch((e: any) => console.error('Failed to send membership rejection email:', e));
+                    });
                 }
             });
 

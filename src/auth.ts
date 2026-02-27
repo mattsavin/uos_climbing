@@ -27,9 +27,14 @@ export interface User {
 export interface MembershipRow {
     id: string;
     userId: string;
-    membershipType: 'basic' | 'bouldering' | 'comp_team';
+    membershipType: string;
     status: 'pending' | 'active' | 'rejected';
     membershipYear: string;
+}
+
+export interface MembershipType {
+    id: string;
+    label: string;
 }
 
 export const MEMBERSHIP_TYPE_LABELS: Record<string, string> = {
@@ -63,7 +68,7 @@ export interface Session {
     date: string; // ISO 8601 Date String
     capacity: number;
     bookedSlots: number;
-    requiredMembership?: 'basic' | 'bouldering' | 'comp_team';
+    requiredMembership?: string;
     visibility?: 'all' | 'committee_only';
 }
 
@@ -475,6 +480,29 @@ export const adminApi = {
 
     async deleteSessionType(id: string): Promise<void> {
         return apiFetch(`/api/session-types/${id}`, { method: 'DELETE' });
+    },
+
+    // Membership Type Management API
+    async getMembershipTypes(): Promise<MembershipType[]> {
+        return apiFetch('/api/membership-types');
+    },
+
+    async addMembershipType(label: string, id?: string): Promise<MembershipType> {
+        return apiFetch('/api/membership-types', {
+            method: 'POST',
+            body: JSON.stringify({ label, id })
+        });
+    },
+
+    async updateMembershipType(id: string, label: string): Promise<MembershipType> {
+        return apiFetch(`/api/membership-types/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ label })
+        });
+    },
+
+    async deleteMembershipType(id: string): Promise<void> {
+        return apiFetch(`/api/membership-types/${id}`, { method: 'DELETE' });
     }
 };
 

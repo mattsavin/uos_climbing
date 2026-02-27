@@ -1,7 +1,6 @@
 import { adminApi, authState, type Session } from '../../auth';
 import { renderCalendarEvents } from '../../calendar';
 import { openSessionModal } from '../../components/sessionModal';
-import { config } from '../../config';
 
 let currentCalendarDate = new Date();
 let activeFilter: string = 'all';
@@ -95,7 +94,14 @@ export function initSessionHandlers() {
 
     const sessionReqMbSelect = document.getElementById('session-required-membership');
     if (sessionReqMbSelect) {
-        sessionReqMbSelect.innerHTML = config.membershipTypes.map((m: any) => `<option value="${m.id}">${m.label}</option>`).join('');
+        adminApi.getMembershipTypes().then((types) => {
+            const fallback = '<option value="basic">Basic Membership</option>';
+            sessionReqMbSelect.innerHTML = types.length
+                ? types.map((m: any) => `<option value="${m.id}">${m.label}</option>`).join('')
+                : fallback;
+        }).catch(() => {
+            sessionReqMbSelect.innerHTML = '<option value="basic">Basic Membership</option>';
+        });
     }
 
     const sessionVisibilitySelect = document.getElementById('session-visibility') as HTMLSelectElement | null;
@@ -105,12 +111,12 @@ export function initSessionHandlers() {
 
     const filtersContainer = document.getElementById('calendar-filters-container');
     if (filtersContainer) {
-        filtersContainer.innerHTML = config.calendarFilters.map((f: any) => `
-            <button id="filter-${f.id}" data-filter="${f.id}"
-                class="session-filter-btn whitespace-nowrap px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all duration-150 ${f.id === 'all' ? 'border-brand-gold bg-brand-gold/20 text-brand-gold' : 'border-slate-700 text-slate-400'}">
-                ${f.label}
+        filtersContainer.innerHTML = `
+            <button id="filter-all" data-filter="all"
+                class="session-filter-btn whitespace-nowrap px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all duration-150 border-brand-gold bg-brand-gold/20 text-brand-gold">
+                All
             </button>
-        `).join('');
+        `;
     }
 
     const prevMonthBtn = document.getElementById('prev-month-btn');
@@ -154,7 +160,7 @@ export function initSessionHandlers() {
             const type = (document.getElementById('session-type') as HTMLSelectElement).value as any;
             const dateStr = (document.getElementById('session-date') as HTMLInputElement).value;
             const capacity = parseInt((document.getElementById('session-capacity') as HTMLInputElement).value, 10);
-            const requiredMembership = ((document.getElementById('session-required-membership') as HTMLSelectElement)?.value || 'basic') as 'basic' | 'bouldering' | 'comp_team';
+            const requiredMembership = ((document.getElementById('session-required-membership') as HTMLSelectElement)?.value || 'basic');
             const visibility = ((document.getElementById('session-visibility') as HTMLSelectElement)?.value || 'all') as 'all' | 'committee_only';
 
             if (title && type && dateStr && !isNaN(capacity)) {
