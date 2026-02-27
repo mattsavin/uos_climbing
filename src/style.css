@@ -129,6 +129,68 @@
   .mobile-resource-link {
     @apply text-slate-400 hover:text-white transition-colors duration-300 text-lg font-medium;
   }
+
+  .qr-live-container {
+    @apply relative overflow-hidden;
+  }
+
+  .qr-live-container::after {
+    content: "";
+    @apply absolute inset-0 w-full h-1/2 bg-gradient-to-b from-transparent via-emerald-500/30 to-transparent pointer-events-none;
+    animation: qr-scan 1.5s linear infinite;
+    z-index: 10;
+  }
+
+  .qr-live-vibrant {
+    background: linear-gradient(-45deg, #059669, #10b981, #d49a0b, #fdb913);
+    background-size: 400% 400%;
+    animation: gradient-shift 3s ease infinite;
+  }
+
+  @keyframes gradient-shift {
+    0% {
+      background-position: 0% 50%;
+    }
+
+    50% {
+      background-position: 100% 50%;
+    }
+
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  @keyframes qr-scan {
+    0% {
+      transform: translateY(-100%);
+    }
+
+    100% {
+      transform: translateY(200%);
+    }
+  }
+
+  .word-of-the-day-badge {
+    @apply px-4 py-2 rounded-xl font-black text-center uppercase tracking-[0.2em] shadow-lg border border-white/10 overflow-hidden relative;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .word-of-the-day-badge::before {
+    content: "";
+    @apply absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent;
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+
+    100% {
+      transform: translateX(100%);
+    }
+  }
 }
 
 /* Custom Scrollbar */

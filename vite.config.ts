@@ -28,6 +28,7 @@ export default defineConfig({
         faq: resolve(__dirname, 'faq.html'),
         walls: resolve(__dirname, 'walls.html'),
         gallery: resolve(__dirname, 'gallery.html'),
+        verify: resolve(__dirname, 'verify.html'),
       },
     },
   },

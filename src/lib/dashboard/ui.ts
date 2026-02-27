@@ -1,6 +1,7 @@
 import { adminApi, authState, getCurrentAcademicYear, type MembershipType } from '../../auth';
 import { renderSessions } from './sessions';
-import { showToast } from '../../utils';
+import { getVerificationWord, showToast } from '../../utils';
+import QRCode from 'qrcode';
 
 async function copyTextWithFallback(text: string): Promise<boolean> {
     try {
@@ -309,6 +310,91 @@ export async function updateUI() {
                 if (cardName) cardName.textContent = displayName;
                 if (cardReg) cardReg.textContent = `ID: ${user.registrationNumber || '12345678'}`;
                 if (cardYear) cardYear.textContent = user.membershipYear || currentYearStr;
+
+                // Word of the Day
+                const wordOfTheDay = getVerificationWord();
+                const cardWordEl = document.getElementById('card-word-of-the-day');
+                const modalWordEl = document.getElementById('modal-word-of-the-day');
+                if (cardWordEl) cardWordEl.textContent = wordOfTheDay;
+                if (modalWordEl) modalWordEl.textContent = wordOfTheDay;
+
+                // Profile Photo Handling
+                const cardPhoto = document.getElementById('card-user-photo') as HTMLImageElement;
+                const cardPhotoPlaceholder = document.getElementById('card-photo-placeholder');
+                const modalPhoto = document.getElementById('modal-card-user-photo') as HTMLImageElement;
+                const modalPhotoPlaceholder = document.getElementById('modal-card-photo-placeholder');
+
+                if (user.profilePhoto) {
+                    if (cardPhoto) {
+                        cardPhoto.src = user.profilePhoto;
+                        cardPhoto.classList.remove('hidden');
+                    }
+                    if (cardPhotoPlaceholder) cardPhotoPlaceholder.classList.add('hidden');
+                    if (modalPhoto) {
+                        modalPhoto.src = user.profilePhoto;
+                        modalPhoto.classList.remove('hidden');
+                    }
+                    if (modalPhotoPlaceholder) modalPhotoPlaceholder.classList.add('hidden');
+                } else {
+                    cardPhoto?.classList.add('hidden');
+                    cardPhotoPlaceholder?.classList.remove('hidden');
+                    modalPhoto?.classList.add('hidden');
+                    modalPhotoPlaceholder?.classList.remove('hidden');
+                }
+
+                // Live Date Indicator
+                const modalLiveDate = document.getElementById('modal-live-date');
+                const today = new Date();
+                const dateStr = today.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                // Note: The card in dashboard has a static "LIVE" badge but we could add time if needed.
+                if (modalLiveDate) modalLiveDate.textContent = dateStr;
+
+                // QR Code Generation - Link to Public Verification Page
+                const qrContainer = document.getElementById('card-qr-container');
+                if (qrContainer) {
+                    // Public verification URL
+                    const verifyUrl = `${window.location.origin}/verify/${user.registrationNumber || user.id}`;
+
+                    QRCode.toString(verifyUrl, {
+                        type: 'svg',
+                        margin: 0,
+                        color: {
+                            dark: '#0f172a', // slate-900
+                            light: '#ffffff'
+                        }
+                    }, (err, svg) => {
+                        if (!err) {
+                            qrContainer.innerHTML = svg;
+                            // Also update the modal QR if it exists
+                            const modalQrContainer = document.getElementById('enlarged-qr-container');
+                            if (modalQrContainer) modalQrContainer.innerHTML = svg;
+                        }
+                    });
+                }
+
+                // Expiry Date Calculation
+                const expiryContainer = document.getElementById('card-expiry-container');
+                const expiryDateText = document.getElementById('card-expiry-date');
+                const modalExpiryText = document.getElementById('modal-card-expiry');
+
+                if (expiryContainer && expiryDateText) {
+                    // Logic: Academic year X/Y expires Aug 31st of year Y
+                    const parts = (user.membershipYear || currentYearStr).split('/');
+                    if (parts.length === 2) {
+                        const expiryYear = parts[1].length === 2 ? `20${parts[1]}` : parts[1];
+                        const expiryDateStr = `31 Aug ${expiryYear}`;
+                        expiryDateText.textContent = expiryDateStr;
+                        expiryContainer.classList.remove('hidden');
+                        if (modalExpiryText) modalExpiryText.textContent = expiryDateStr;
+                    }
+                }
+
+                // Update Modal Content
+                const modalName = document.getElementById('modal-card-user-name');
+                const modalReg = document.getElementById('modal-card-user-reg');
+                if (modalName) modalName.textContent = displayName;
+                if (modalReg) modalReg.textContent = `ID: ${user.registrationNumber || '12345678'}`;
+
             } else {
                 membershipCardContainer.classList.add('hidden');
             }
@@ -409,4 +495,26 @@ export function initGeneralHandlers() {
 
     attachIcalCopy(icalLinkAll as HTMLElement | null, 'all sessions');
     attachIcalCopy(icalLinkBooked as HTMLElement | null, 'booked sessions');
+
+    // QR Enlargement Handlers
+    const qrTrigger = document.getElementById('qr-code-trigger');
+    const qrOverlay = document.getElementById('membership-card-overlay');
+    const closeQrBtn = document.getElementById('close-membership-card-btn');
+
+    if (qrTrigger && qrOverlay) {
+        qrTrigger.addEventListener('click', () => {
+            qrOverlay.classList.remove('hidden');
+            document.body.style.overflow = 'hidden'; // Prevent scroll
+        });
+
+        const closeCard = () => {
+            qrOverlay.classList.add('hidden');
+            document.body.style.overflow = '';
+        };
+
+        closeQrBtn?.addEventListener('click', closeCard);
+        qrOverlay.addEventListener('click', (e) => {
+            if (e.target === qrOverlay) closeCard();
+        });
+    }
 }

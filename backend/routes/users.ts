@@ -3,6 +3,9 @@ import bcrypt from 'bcrypt';
 import { db } from '../db';
 import { authenticateToken } from '../middleware/auth';
 import crypto from 'crypto';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 
 const router = express.Router();
 
@@ -12,6 +15,36 @@ function getMembershipTypeIds(callback: (err: Error | null, ids: string[]) => vo
         callback(null, (rows || []).map((r: any) => r.id));
     });
 }
+
+// Configure multer for profile photo uploads
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = path.join(process.cwd(), 'uploads/profile-photos');
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, 'profile-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    fileFilter: (req, file, cb) => {
+        const filetypes = /jpeg|jpg|png|webp/;
+        const mimetype = filetypes.test(file.mimetype);
+        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+
+        if (mimetype && extname) {
+            return cb(null, true);
+        }
+        cb(new Error('Only images (jpeg, jpg, png, webp) are allowed!'));
+    }
+});
 
 /** Get current user's membership rows */
 router.get('/me/memberships', authenticateToken, (req: any, res) => {
@@ -23,10 +56,47 @@ router.get('/me/memberships', authenticateToken, (req: any, res) => {
 
 /** Get current user's full profile details */
 router.get('/me/profile', authenticateToken, (req: any, res) => {
-    db.get('SELECT firstName, lastName, emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements FROM users WHERE id = ?', [req.user.id], (err, user) => {
+    db.get('SELECT firstName, lastName, emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements, profilePhoto, registrationNumber, membershipStatus, membershipYear FROM users WHERE id = ?', [req.user.id], (err, user) => {
         if (err) return res.status(500).json({ error: 'Database error' });
         if (!user) return res.status(404).json({ error: 'User not found' });
         res.json(user);
+    });
+});
+
+/** POST /api/users/me/photo - Upload profile photo */
+router.post('/me/photo', authenticateToken, (req: any, res) => {
+    upload.single('photo')(req, res, (uploadErr: any) => {
+        if (uploadErr instanceof multer.MulterError && uploadErr.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({ error: 'Photo too large. Max size is 5MB.' });
+        }
+        if (uploadErr) {
+            return res.status(400).json({ error: uploadErr.message || 'Invalid image upload.' });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        const photoPath = `/uploads/profile-photos/${req.file.filename}`;
+
+        // Get old photo to delete it
+        db.get('SELECT profilePhoto FROM users WHERE id = ?', [req.user.id], (err, user: any) => {
+            if (!err && user && user.profilePhoto) {
+                const oldPath = path.join(process.cwd(), user.profilePhoto);
+                if (fs.existsSync(oldPath)) {
+                    try {
+                        fs.unlinkSync(oldPath);
+                    } catch (e) {
+                        console.error('Failed to delete old photo:', e);
+                    }
+                }
+            }
+
+            db.run('UPDATE users SET profilePhoto = ? WHERE id = ?', [photoPath, req.user.id], (err) => {
+                if (err) return res.status(500).json({ error: 'Database error' });
+                res.json({ success: true, photoPath });
+            });
+        });
     });
 });
 

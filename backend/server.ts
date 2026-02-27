@@ -11,6 +11,7 @@ import membershipTypeRoutes from './routes/membership-types';
 import votingRoutes from './routes/voting';
 import gearRoutes from './routes/gear';
 import committeeRoutes from './routes/committee';
+import verifyRoutes from './routes/verify';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import history from 'connect-history-api-fallback';
@@ -74,6 +75,7 @@ app.use('/api/membership-types', membershipTypeRoutes);
 app.use('/api/voting', votingRoutes);
 app.use('/api/gear', gearRoutes);
 app.use('/api/committee', committeeRoutes);
+app.use('/api/verify', verifyRoutes);
 
 // Shared route for iCal (also registered in sessions.ts but keeping here for backward compatibility if needed, 
 // though /api/sessions/ical/:userId is preferred now. The original was /api/ical/:userId)
@@ -103,7 +105,8 @@ if (process.env.NODE_ENV === 'production') {
             { from: /^\/gear$/, to: '/gear.html' },
             { from: /^\/login$/, to: '/login.html' },
             { from: /^\/elections$/, to: '/elections.html' },
-            { from: /^\/beta-gate$/, to: '/beta-gate.html' }
+            { from: /^\/beta-gate$/, to: '/beta-gate.html' },
+            { from: /^\/verify\/.*$/, to: '/verify.html' }
         ]
     }));
 

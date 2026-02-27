@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Membership | USCC</title>
+    <link rel="stylesheet" href="/src/style.css">
+    <link rel="icon" type="image/png" href="/climbing%20team%20logo.png">
+</head>
+
+<body class="bg-slate-950 text-slate-200 min-h-screen flex items-center justify-center p-4">
+    <div id="verify-card"
+        class="hidden w-full max-w-sm glass-card !p-8 shadow-2xl border border-white/5 animate-[fade-in-up_0.3s_ease-out] text-center">
+        <div class="mb-8">
+            <div class="flex items-center justify-center gap-3 mb-2">
+                <img src="/climbing%20team%20logo.png" alt="Logo" class="h-10 w-auto">
+                <span class="text-3xl font-black text-white tracking-tighter">USCC</span>
+            </div>
+            <p class="text-xs font-black uppercase tracking-[0.3em] text-emerald-500">Official Verification</p>
+        </div>
+
+        <div class="relative w-48 h-48 mx-auto mb-8">
+            <div
+                class="w-full h-full rounded-3xl bg-slate-900 overflow-hidden border-4 border-emerald-500/20 shadow-2xl relative z-10">
+                <img id="verify-photo" src="" alt="Member" class="hidden w-full h-full object-cover">
+                <div id="verify-photo-placeholder"
+                    class="w-full h-full flex items-center justify-center text-slate-700 font-bold text-4xl">?</div>
+            </div>
+            <!-- Decorative ring -->
+            <div class="absolute inset-[-10px] rounded-[40px] border border-emerald-500/10 animate-[pulse_3s_infinite]">
+            </div>
+        </div>
+
+        <div class="space-y-2 mb-8">
+            <h1 id="verify-name" class="text-3xl font-black text-white uppercase tracking-tight">Loading...</h1>
+            <p id="verify-reg" class="text-sm font-bold text-slate-500 tracking-widest uppercase"></p>
+        </div>
+
+        <div id="status-badge"
+            class="inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-lg mb-8 shadow-xl">
+            <span id="status-text">Checking...</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 p-4 bg-white/5 rounded-2xl border border-white/5">
+            <div class="text-left border-r border-white/10 pr-4">
+                <p class="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Academic Year</p>
+                <p id="verify-year" class="text-sm font-bold text-white">-</p>
+            </div>
+            <div class="text-left pl-4">
+                <p class="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Expiry Date</p>
+                <p id="verify-expiry" class="text-sm font-bold text-white">-</p>
+            </div>
+        </div>
+
+        <div class="mt-8 pt-8 border-t border-white/5">
+            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em] leading-relaxed">
+                University of Sheffield<br>Climbing Club
+            </p>
+        </div>
+    </div>
+
+    <!-- Error State -->
+    <div id="error-card" class="hidden w-full max-w-sm glass-card !p-8 text-center border border-red-500/20">
+        <div class="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </div>
+        <h2 class="text-xl font-bold text-white mb-2">Verification Failed</h2>
+        <p id="error-message" class="text-slate-400 text-sm mb-6">This member record could not be found or has expired.
+        </p>
+        <a href="/"
+            class="inline-block text-xs font-bold text-slate-500 uppercase tracking-widest hover:text-white transition-colors">Return
+            to Home</a>
+    </div>
+
+    <script type="module" src="/src/verify.ts"></script>
+</body>
+
+</html>

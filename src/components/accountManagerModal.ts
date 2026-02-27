@@ -34,6 +34,28 @@ export const accountManagerModalHtml = `
 
             <!-- Profile Form Tab -->
             <div id="account-profile-pane" class="p-6">
+                <!-- Photo Upload Section -->
+                <div class="flex items-center gap-6 mb-8 p-4 bg-slate-900/50 rounded-xl border border-white/5">
+                    <div class="relative group">
+                        <div class="w-20 h-20 rounded-2xl bg-slate-800 flex items-center justify-center overflow-hidden border-2 border-purple-500/30">
+                            <img id="profile-photo-preview" src="" alt="Profile" class="hidden w-full h-full object-cover">
+                            <div id="profile-photo-placeholder" class="text-slate-500 font-black text-xl">?</div>
+                        </div>
+                        <button id="trigger-photo-upload" class="absolute -bottom-2 -right-2 bg-purple-500 hover:bg-purple-400 text-white p-1.5 rounded-lg shadow-lg transition-transform hover:scale-110">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                        </button>
+                        <input type="file" id="member-photo-input" class="hidden" accept="image/*">
+                    </div>
+                    <div>
+                        <h4 class="text-white font-bold text-sm mb-1">Profile Photo</h4>
+                        <p class="text-slate-500 text-[10px] leading-relaxed max-w-[180px]">Add a photo to your membership card for visual verification at gyms.</p>
+                        <button id="upload-photo-status" class="hidden text-purple-400 text-[10px] font-bold mt-1 uppercase tracking-widest animate-pulse">Uploading...</button>
+                    </div>
+                </div>
+
                 <form id="profile-form" class="space-y-4">
                     <div class="grid grid-cols-2 gap-4">
                         <div>

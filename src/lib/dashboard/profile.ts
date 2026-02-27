@@ -109,6 +109,59 @@ export function initProfileHandlers() {
 }
 
 export function initAccountModalHandlers() {
+    const photoInput = document.getElementById('member-photo-input') as HTMLInputElement;
+    const triggerBtn = document.getElementById('trigger-photo-upload');
+    const photoPreview = document.getElementById('profile-photo-preview') as HTMLImageElement;
+    const photoPlaceholder = document.getElementById('profile-photo-placeholder');
+    const uploadStatus = document.getElementById('upload-photo-status');
+
+    if (triggerBtn && photoInput) {
+        triggerBtn.addEventListener('click', () => photoInput.click());
+
+        photoInput.addEventListener('change', async () => {
+            const file = photoInput.files?.[0];
+            if (!file) return;
+
+            // Local preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                if (photoPreview && e.target?.result) {
+                    photoPreview.src = e.target.result as string;
+                    photoPreview.classList.remove('hidden');
+                    photoPlaceholder?.classList.add('hidden');
+                }
+            };
+            reader.readAsDataURL(file);
+
+            // Upload
+            try {
+                if (uploadStatus) uploadStatus.classList.remove('hidden');
+
+                const formData = new FormData();
+                formData.append('photo', file);
+
+                const res = await fetch('/api/users/me/photo', {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: formData
+                });
+
+                const result = await res.json();
+                if (!res.ok) throw new Error(result.error || 'Upload failed');
+
+                showToast('Photo updated!', 'success');
+                // Update local auth state if needed, though ui.ts will refresh on next dashboardUpdate
+                if (authState.user) authState.user.profilePhoto = result.photoPath;
+                window.dispatchEvent(new CustomEvent('dashboardUpdate'));
+
+            } catch (err: any) {
+                showToast(err.message || 'Failed to upload photo', 'error');
+            } finally {
+                if (uploadStatus) uploadStatus.classList.add('hidden');
+            }
+        });
+    }
+
     const accountModal = document.getElementById('account-manager-modal');
     const accountBackdrop = document.getElementById('account-manager-backdrop');
     const closeAccountBtn = document.getElementById('close-account-modal-btn');
@@ -145,6 +198,8 @@ export function initAccountModalHandlers() {
             const dietEl = document.getElementById('profile-dietary') as HTMLInputElement;
             const emergNameEl = document.getElementById('profile-emergency-name') as HTMLInputElement;
             const emergMobileEl = document.getElementById('profile-emergency-mobile') as HTMLInputElement;
+            const photoPreview = document.getElementById('profile-photo-preview') as HTMLImageElement;
+            const photoPlaceholder = document.getElementById('profile-photo-placeholder');
 
             if (fnameEl) fnameEl.value = userProfile.firstName || '';
             if (snameEl) snameEl.value = userProfile.lastName || '';
@@ -152,6 +207,17 @@ export function initAccountModalHandlers() {
             if (dietEl) dietEl.value = userProfile.dietaryRequirements || '';
             if (emergNameEl) emergNameEl.value = userProfile.emergencyContactName || '';
             if (emergMobileEl) emergMobileEl.value = userProfile.emergencyContactMobile || '';
+
+            if (userProfile.profilePhoto) {
+                if (photoPreview) {
+                    photoPreview.src = userProfile.profilePhoto;
+                    photoPreview.classList.remove('hidden');
+                }
+                if (photoPlaceholder) photoPlaceholder.classList.add('hidden');
+            } else {
+                photoPreview?.classList.add('hidden');
+                photoPlaceholder?.classList.remove('hidden');
+            }
         } catch (e) {
             console.error('Failed to pre-populate profile:', e);
         }

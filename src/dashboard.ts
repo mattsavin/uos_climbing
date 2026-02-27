@@ -5,7 +5,7 @@ import { initSessionHandlers } from './lib/dashboard/sessions';
 import { initAdminConfirm } from './lib/dashboard/admin';
 import { initProfileHandlers, initAccountModalHandlers } from './lib/dashboard/profile';
 import { initCommitteeProfileHandlers } from './lib/dashboard/committee';
-import { membershipRenewalModalHtml, accountManagerModalHtml, adminConfirmModalHtml } from './components';
+import { membershipRenewalModalHtml, accountManagerModalHtml, adminConfirmModalHtml, membershipCardModalHtml } from './components';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Inject components
@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
         app.insertAdjacentHTML('beforeend', membershipRenewalModalHtml);
         app.insertAdjacentHTML('beforeend', accountManagerModalHtml);
         app.insertAdjacentHTML('beforeend', adminConfirmModalHtml);
+        app.insertAdjacentHTML('beforeend', membershipCardModalHtml);
     }
     // Listen for custom update events from modules
     window.addEventListener('dashboardUpdate', () => {
