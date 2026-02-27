@@ -101,6 +101,9 @@ if (process.env.NODE_ENV === 'production') {
             { from: /^\/beta-gate$/, to: '/beta-gate.html' }
         ]
     }));
+
+    // 3. Serve static files again AFTER history fallback has rewritten the URL
+    app.use(express.static(distPath));
 } else {
     // Also handle beta-gate in dev for testing
     app.get('/beta-gate', (req, res) => {
