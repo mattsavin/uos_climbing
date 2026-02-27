@@ -21,9 +21,26 @@ export const authenticateToken = (req: any, res: any, next: any) => {
 };
 
 export const requireCommittee = (req: any, res: any, next: any) => {
-    const isCommittee = req.user.role === 'committee' || !!req.user.committeeRole || (Array.isArray(req.user.committeeRoles) && req.user.committeeRoles.length > 0);
-    if (!isCommittee) return res.status(403).json({ error: 'Requires committee privileges' });
-    next();
+    const isCommitteeJWT = req.user.role === 'committee' || !!req.user.committeeRole || (Array.isArray(req.user.committeeRoles) && req.user.committeeRoles.length > 0);
+
+    if (isCommitteeJWT) {
+        return next();
+    }
+
+    // Fallback: check DB in case of stale token
+    db.get('SELECT id FROM users WHERE id = ? AND (role = "committee" OR committeeRole IS NOT NULL)', [req.user.id], (err, row) => {
+        if (!err && row) {
+            return next();
+        }
+
+        // Secondary fallback: check committee_roles junction table
+        db.get('SELECT userId FROM committee_roles WHERE userId = ? LIMIT 1', [req.user.id], (err2, row2) => {
+            if (!err2 && row2) {
+                return next();
+            }
+            res.status(403).json({ error: 'Requires committee privileges' });
+        });
+    });
 };
 
 export const requireKitSec = (req: any, res: any, next: any) => {

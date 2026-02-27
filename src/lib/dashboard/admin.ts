@@ -74,84 +74,96 @@ export async function renderAdminLists() {
     if (!pendingList || !activeList) return;
 
     try {
-        const membershipTypes = await adminApi.getMembershipTypes();
-        membershipTypeLabelMap = Object.fromEntries(membershipTypes.map((t: any) => [t.id, t.label]));
-    } catch {
-        membershipTypeLabelMap = {};
-    }
+        const [membershipTypes, allUsersRaw] = await Promise.all([
+            adminApi.getMembershipTypes().catch(e => { console.error('Failed to fetch membership types', e); return []; }),
+            adminApi.getAllUsersRaw()
+        ]);
 
-    // Fetch all users once and derive both lists from it
-    const allUsersRaw = await adminApi.getAllUsersRaw();
+        membershipTypeLabelMap = Object.fromEntries(
+            (Array.isArray(membershipTypes) ? membershipTypes : [])
+                .map((t: any) => [t.id, t.label])
+        );
 
-    // Flatten ALL pending membership rows (across all users, including already-active ones)
-    const pendingMemberships: any[] = [];
-    allUsersRaw.forEach(u => {
-        if (u.memberships) {
-            (u.memberships as any[]).forEach(m => {
-                if (m.status === 'pending') {
-                    pendingMemberships.push({ user: u, membership: m });
-                }
-            });
+        if (!Array.isArray(allUsersRaw)) {
+            console.error('allUsersRaw is not an array', allUsersRaw);
+            pendingList.innerHTML = '<p class="p-5 text-sm text-red-400 text-center">Failed to load member data.</p>';
+            activeList.innerHTML = '<p class="p-5 text-sm text-red-400 text-center">Failed to load member data.</p>';
+            return;
         }
-    });
 
-    pendingList.innerHTML = pendingMemberships.length
-        ? pendingMemberships.map(pm => createPendingMembershipRow(pm.user, pm.membership)).join('')
-        : '<p class="p-5 text-sm text-slate-500 text-center">No pending registrations.</p>';
+        // Flatten ALL pending membership rows (across all users)
+        const pendingMemberships: any[] = [];
+        allUsersRaw.forEach(u => {
+            if (u.memberships && Array.isArray(u.memberships)) {
+                (u.memberships as any[]).forEach(m => {
+                    if (m.status === 'pending') {
+                        pendingMemberships.push({ user: u, membership: m });
+                    }
+                });
+            }
+        });
 
-    // Render Active — committee members/role-holders + anyone with active membership data.
-    // We prefer membership rows, but also allow legacy top-level membershipStatus='active'
-    // so older records without rows still appear.
-    const allActive = allUsersRaw.filter((u: any) => {
-        const isCommittee = u.role === 'committee' || !!u.committeeRole || (Array.isArray(u.committeeRoles) && u.committeeRoles.length > 0);
-        if (isCommittee) return true;
-        const hasActiveMembershipRow = (u.memberships as any[] || []).some((m: any) => m.status === 'active');
-        return hasActiveMembershipRow || u.membershipStatus === 'active';
-    });
+        pendingList.innerHTML = pendingMemberships.length
+            ? pendingMemberships.map(pm => createPendingMembershipRow(pm.user, pm.membership)).join('')
+            : '<p class="p-5 text-sm text-slate-500 text-center">No pending registrations.</p>';
 
-    // Apply search filter if query exists
-    const filteredActive = allActive.filter(u => {
-        if (!currentSearchQuery) return true;
-        const q = currentSearchQuery.toLowerCase();
-        const nameMatch = `${u.firstName || ''} ${u.lastName || ''}`.toLowerCase().includes(q) || (u.name || '').toLowerCase().includes(q);
-        const emailMatch = u.email.toLowerCase().includes(q);
-        const regMatch = (u.registrationNumber || '').toLowerCase().includes(q);
-        return nameMatch || emailMatch || regMatch;
-    });
+        // Render Active — committee members/role-holders + anyone with active membership data.
+        const allActive = allUsersRaw.filter((u: any) => {
+            const isCommittee = u.role === 'committee' || !!u.committeeRole || (Array.isArray(u.committeeRoles) && u.committeeRoles.length > 0);
+            if (isCommittee) return true;
+            const hasActiveMembershipRow = (u.memberships as any[] || []).some((m: any) => m.status === 'active');
+            return hasActiveMembershipRow || u.membershipStatus === 'active';
+        });
 
-    const totalActive = filteredActive.length;
+        // Apply search filter if query exists
+        const filteredActive = allActive.filter(u => {
+            if (!currentSearchQuery) return true;
+            const q = currentSearchQuery.toLowerCase();
+            const displayName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.name || '';
+            const nameMatch = displayName.toLowerCase().includes(q);
+            const emailMatch = (u.email || '').toLowerCase().includes(q);
+            const regMatch = (u.registrationNumber || '').toLowerCase().includes(q);
+            return nameMatch || emailMatch || regMatch;
+        });
 
-    // Optional: Render search input
-    let searchHtml = `
-        <div class="px-5 py-3 border-b border-white/10 bg-slate-900/30">
-            <input type="text" id="roster-search-input" value="${escapeHTML(currentSearchQuery)}" placeholder="Search members by name, email, or reg no..." class="w-full bg-slate-800 text-sm text-white border border-slate-700 rounded-lg px-3 py-2 focus:border-brand-gold focus:ring-1 focus:ring-brand-gold outline-none">
-        </div>
-    `;
+        const totalActive = filteredActive.length;
 
-    // Pagination logic
-    const totalPages = Math.ceil(totalActive / ITEMS_PER_PAGE) || 1;
-    if (activeRosterPage > totalPages) activeRosterPage = totalPages;
-
-    const startIdx = (activeRosterPage - 1) * ITEMS_PER_PAGE;
-    const endIdx = startIdx + ITEMS_PER_PAGE;
-    const pagedActive = filteredActive.slice(startIdx, endIdx);
-
-    let activeHtml = searchHtml;
-    activeHtml += pagedActive.length ? pagedActive.map(u => createMemberRow(u, false)).join('') : '<p class="p-5 text-sm text-slate-500 text-center">No active members found.</p>';
-
-    if (totalActive > ITEMS_PER_PAGE) {
-        activeHtml += `
-            <div class="px-5 py-3 border-t border-slate-700 flex justify-between items-center text-xs text-slate-400">
-                <div>Showing ${startIdx + 1}-${Math.min(endIdx, totalActive)} of ${totalActive} Members</div>
-                <div class="flex gap-2">
-                    <button class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-50" ${activeRosterPage === 1 ? 'disabled' : ''} id="prev-member-page-btn">Prev</button>
-                    <button class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-50" ${activeRosterPage >= totalPages ? 'disabled' : ''} id="next-member-page-btn">Next</button>
-                </div>
+        // Optional: Render search input
+        let searchHtml = `
+            <div class="px-5 py-3 border-b border-white/10 bg-slate-900/30">
+                <input type="text" id="roster-search-input" value="${escapeHTML(currentSearchQuery)}" placeholder="Search members by name, email, or reg no..." class="w-full bg-slate-800 text-sm text-white border border-slate-700 rounded-lg px-3 py-2 focus:border-brand-gold focus:ring-1 focus:ring-brand-gold outline-none">
             </div>
         `;
-    }
 
-    activeList.innerHTML = activeHtml;
+        // Pagination logic
+        const totalPages = Math.ceil(totalActive / ITEMS_PER_PAGE) || 1;
+        if (activeRosterPage > totalPages) activeRosterPage = totalPages;
+
+        const startIdx = (activeRosterPage - 1) * ITEMS_PER_PAGE;
+        const endIdx = startIdx + ITEMS_PER_PAGE;
+        const pagedActive = filteredActive.slice(startIdx, endIdx);
+
+        let activeHtml = searchHtml;
+        activeHtml += pagedActive.length ? pagedActive.map(u => createMemberRow(u, false)).join('') : '<p class="p-5 text-sm text-slate-500 text-center">No active members found.</p>';
+
+        if (totalActive > ITEMS_PER_PAGE) {
+            activeHtml += `
+                <div class="px-5 py-3 border-t border-slate-700 flex justify-between items-center text-xs text-slate-400">
+                    <div>Showing ${startIdx + 1}-${Math.min(endIdx, totalActive)} of ${totalActive} Members</div>
+                    <div class="flex gap-2">
+                        <button class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-50" ${activeRosterPage === 1 ? 'disabled' : ''} id="prev-member-page-btn">Prev</button>
+                        <button class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-50" ${activeRosterPage >= totalPages ? 'disabled' : ''} id="next-member-page-btn">Next</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        activeList.innerHTML = activeHtml;
+    } catch (err: any) {
+        console.error('Failed to render admin lists:', err);
+        pendingList.innerHTML = '<p class="p-5 text-sm text-red-400 text-center">Failed to load member data.</p>';
+        activeList.innerHTML = '<p class="p-5 text-sm text-red-400 text-center">Failed to load member data.</p>';
+    }
 
     // Restore open state
     openRoleDropdowns.forEach(id => {

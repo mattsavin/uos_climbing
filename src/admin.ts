@@ -29,7 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
     authState.init().then(() => {
         const user = authState.getUser();
         const rootTestEmailBtn = document.getElementById('root-send-test-email-btn') as HTMLButtonElement | null;
-
         if (!user) {
             window.location.href = '/login.html';
             return;
@@ -43,13 +42,19 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const isRootAdmin = user.email === 'committee@sheffieldclimbing.org';
+        const userEmail = (user.email || '').toLowerCase().trim();
+        const isRootAdmin = userEmail === 'committee@sheffieldclimbing.org';
+
         if (isRootAdmin && rootTestEmailBtn) {
             rootTestEmailBtn.classList.remove('hidden');
-            rootTestEmailBtn.addEventListener('click', async () => {
-                rootTestEmailBtn.disabled = true;
-                const prevText = rootTestEmailBtn.textContent || 'Send Test Email';
-                rootTestEmailBtn.textContent = 'Sending...';
+            // Remove any existing listener before adding (though unlikely here)
+            const newBtn = rootTestEmailBtn.cloneNode(true) as HTMLButtonElement;
+            rootTestEmailBtn.parentNode?.replaceChild(newBtn, rootTestEmailBtn);
+
+            newBtn.addEventListener('click', async () => {
+                newBtn.disabled = true;
+                const prevText = newBtn.textContent || 'Send Test Email';
+                newBtn.textContent = 'Sending...';
                 try {
                     const result = await adminApi.sendTestEmail() as any;
                     if (result?.sent) {
@@ -60,8 +65,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 } catch (err: any) {
                     showToast(err.message || 'Failed to send test email', 'error');
                 } finally {
-                    rootTestEmailBtn.disabled = false;
-                    rootTestEmailBtn.textContent = prevText;
+                    newBtn.disabled = false;
+                    newBtn.textContent = prevText;
                 }
             });
         }

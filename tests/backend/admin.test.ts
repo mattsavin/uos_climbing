@@ -452,4 +452,44 @@ describe('Admin API', () => {
             expect(res.body).toHaveProperty('success', true);
         });
     });
+
+    describe('Non-Root Committee Visibility', () => {
+        let nonRootToken: string;
+
+        beforeAll(async () => {
+            const res = await request(app).post('/api/auth/register').send({
+                firstName: 'Non', lastName: 'Root', email: 'roster_test@example.com', password: 'pwd', passwordConfirm: 'pwd', registrationNumber: 'RT1'
+            });
+            const userId = res.body.user.id;
+            // Only assign role, don't "promote" to committee role='committee' to test fallback
+            await request(app).post(`/api/admin/users/${userId}/committee-role`)
+                .set('Authorization', `Bearer ${rootToken}`)
+                .send({ committeeRoles: ['Secretary'] });
+
+            const loginRes = await request(app).post('/api/auth/login').send({
+                email: 'roster_test@example.com', password: 'pwd'
+            });
+            const cookies = loginRes.headers['set-cookie'] as unknown as string[] | undefined;
+            const cookie = (cookies || []).find(c => c.startsWith('uscc_token='));
+            nonRootToken = cookie ? cookie.split(';')[0].split('=')[1] : '';
+        });
+
+        it('should allow non-root committee member to access user roster via DB fallback', async () => {
+            const res = await request(app)
+                .get('/api/admin/users')
+                .set('Authorization', `Bearer ${nonRootToken}`);
+
+            expect(res.status).toBe(200);
+            expect(Array.isArray(res.body)).toBe(true);
+        });
+
+        it('should include committee roles in the fetched roster for non-root members', async () => {
+            const res = await request(app)
+                .get('/api/admin/users')
+                .set('Authorization', `Bearer ${nonRootToken}`);
+
+            const me = res.body.find((u: any) => u.email === 'roster_test@example.com');
+            expect(me.committeeRoles).toContain('Secretary');
+        });
+    });
 });
