@@ -237,6 +237,7 @@ function renderSessionChip(
                 <span class="font-bold block min-w-0 truncate" title="${timeStr} - ${session.title}">${timeStr} - ${session.title}</span>
                 ${isBooked ? '<span class="text-current font-black text-sm" title="Booked">✓</span>' : ''}
             </div>
+            <div class="text-[11px] font-semibold leading-snug break-words">${session.title}</div>
             ${membBadge ? `<div>${membBadge}</div>` : ''}
             <div class="flex items-center justify-between gap-1 mt-auto pt-1 border-t border-current border-opacity-20 min-w-0">
                 <span class="font-bold text-[10px] uppercase tracking-wider opacity-90 shrink-0">${session.bookedSlots}/${session.capacity} Slots</span>
