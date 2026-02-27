@@ -242,8 +242,8 @@ function initializeDatabase() {
                 const membershipYear = currentMonth < 8 ? `${currentYear - 1}/${currentYear}` : `${currentYear}/${currentYear + 1}`;
 
                 db.run(
-                    'INSERT INTO users (id, firstName, lastName, email, passwordHash, role, membershipStatus, membershipYear, calendarToken, emailVerified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                    ['user_root', 'Root', 'Admin', 'sheffieldclimbing@gmail.com', rootHash, 'committee', 'active', membershipYear, crypto.randomUUID(), 1],
+                    'INSERT INTO users (id, firstName, lastName, name, email, passwordHash, role, membershipStatus, membershipYear, calendarToken, emailVerified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                    ['user_root', 'Root', 'Admin', 'Root Admin', 'sheffieldclimbing@gmail.com', rootHash, 'committee', 'active', membershipYear, crypto.randomUUID(), 1],
                     () => {
                         // Insert the active basic membership row for the root admin
                         db.run(

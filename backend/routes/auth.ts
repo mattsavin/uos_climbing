@@ -337,6 +337,7 @@ router.post('/logout', (req, res) => {
 router.get('/me', authenticateToken, (req: any, res) => {
     db.get('SELECT id, firstName, lastName, name, email, registrationNumber, role, committeeRole, membershipStatus, membershipYear, emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements, calendarToken FROM users WHERE id = ?', [req.user.id], (err, user: any) => {
         if (err || !user) return res.status(404).json({ error: 'User not found' });
+        user.name = user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
 
         db.all('SELECT role FROM committee_roles WHERE userId = ?', [req.user.id], (errRoles, rows: any[]) => {
             if (!errRoles && rows) {

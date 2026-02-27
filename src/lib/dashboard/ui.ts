@@ -7,6 +7,7 @@ export async function updateUI() {
     const user = authState.getUser();
 
     if (user) {
+        const displayName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.name || user.email;
         const dashboardContent = document.getElementById('dashboard-content');
         const userNameSpan = document.getElementById('user-name');
         const statusBadge = document.getElementById('status-badge');
@@ -60,7 +61,7 @@ export async function updateUI() {
             }, 50);
         }
 
-        if (userNameSpan) userNameSpan.textContent = user.name;
+        if (userNameSpan) userNameSpan.textContent = displayName;
         if (userRegNo) userRegNo.textContent = user.registrationNumber || 'N/A';
         if (userRole) userRole.textContent = user.role;
 

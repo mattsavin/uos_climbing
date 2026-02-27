@@ -34,7 +34,11 @@ export function initProfileHandlers() {
                 );
 
                 if (profileSuccess) profileSuccess.classList.remove('hidden');
-                if (userNameSpan) userNameSpan.textContent = authState.user?.name || '';
+                const updatedUser = authState.user;
+                const displayName = updatedUser
+                    ? `${updatedUser.firstName || ''} ${updatedUser.lastName || ''}`.trim() || updatedUser.name || updatedUser.email
+                    : '';
+                if (userNameSpan) userNameSpan.textContent = displayName;
             } catch (err: any) {
                 if (profileError) {
                     profileError.textContent = err.message || 'Failed to update profile setting.';
