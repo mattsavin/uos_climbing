@@ -13,7 +13,7 @@ function normalizeMembershipTypeId(input: string): string {
 }
 
 router.get('/', (req, res) => {
-    db.all('SELECT * FROM membership_types ORDER BY label ASC', [], (err, rows) => {
+    db.all('SELECT * FROM membership_types ORDER BY deprecated DESC, label ASC', [], (err, rows) => {
         if (err) return res.status(500).json({ error: 'Database error' });
         res.json(rows || []);
     });
@@ -44,15 +44,16 @@ router.post('/', authenticateToken, requireCommittee, (req, res) => {
 
 router.put('/:id', authenticateToken, requireCommittee, (req, res) => {
     const label = (req.body?.label || '').toString().trim();
+    const deprecated = req.body?.deprecated ? 1 : 0;
     if (!label) return res.status(400).json({ error: 'Label is required' });
 
     db.run(
-        'UPDATE membership_types SET label = ? WHERE id = ?',
-        [label, req.params.id],
+        'UPDATE membership_types SET label = ?, deprecated = ? WHERE id = ?',
+        [label, deprecated, req.params.id],
         function (err) {
             if (err) return res.status(500).json({ error: 'Database error' });
             if (this.changes === 0) return res.status(404).json({ error: 'Membership type not found' });
-            res.json({ id: req.params.id, label });
+            res.json({ id: req.params.id, label, deprecated });
         }
     );
 });

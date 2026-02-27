@@ -47,7 +47,7 @@ describe('Sessions API', () => {
 
         // Promote via root admin
         const adminLoginRes = await request(app).post('/api/auth/login').send({
-            email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!'
+            email: 'committee@sheffieldclimbing.org', password: 'SuperSecret123!'
         });
         const adminCookies = adminLoginRes.headers['set-cookie'];
         const adminCookieArray = Array.isArray(adminCookies) ? adminCookies : (adminCookies ? [adminCookies] : []);

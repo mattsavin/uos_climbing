@@ -242,7 +242,7 @@ export async function initLoginApp() {
             return;
         }
 
-        if (normalizedEmail !== 'sheffieldclimbing@gmail.com' && !normalizedEmail.endsWith('@sheffield.ac.uk')) {
+        if (normalizedEmail !== 'committee@sheffieldclimbing.org' && !normalizedEmail.endsWith('@sheffield.ac.uk')) {
             const msg = 'Please register with your @sheffield.ac.uk email address.';
             registerError.textContent = msg;
             registerError.classList.remove('hidden');

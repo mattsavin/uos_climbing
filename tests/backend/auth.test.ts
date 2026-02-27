@@ -74,7 +74,7 @@ describe('Authentication API', () => {
 
         // Delete the user using a verified admin token (we need to be root)
         const adminRes = await request(app).post('/api/auth/login').send({
-            email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!'
+            email: 'committee@sheffieldclimbing.org', password: 'SuperSecret123!'
         });
         const cookies = adminRes.headers['set-cookie'];
         const cookieArray = Array.isArray(cookies) ? cookies : (cookies ? [cookies] : []);

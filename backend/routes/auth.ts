@@ -80,7 +80,7 @@ router.post('/register', authLimiter, async (req, res) => {
             let role = 'member';
             let membershipStatus = 'pending';
             // Root admin email is pre-verified
-            const isRootAdmin = normalizedEmail === 'sheffieldclimbing@gmail.com';
+            const isRootAdmin = normalizedEmail === 'committee@sheffieldclimbing.org';
             if (!IS_TEST && !isRootAdmin && !normalizedEmail.endsWith('@sheffield.ac.uk')) {
                 return res.status(400).json({ error: 'Please register with your @sheffield.ac.uk email address.' });
             }

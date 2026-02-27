@@ -4,7 +4,7 @@ test.describe('Session Booking Flow', () => {
     test.beforeEach(async ({ page }) => {
         // Log in as admin — admin account is pre-verified so it bypasses email verification
         await page.goto('/login.html');
-        await page.fill('#login-email', 'sheffieldclimbing@gmail.com');
+        await page.fill('#login-email', 'committee@sheffieldclimbing.org');
         await page.fill('#login-password', 'SuperSecret123!');
         await page.click('#login-btn');
         await expect(page).toHaveURL(/.*dashboard.html/, { timeout: 10000 });

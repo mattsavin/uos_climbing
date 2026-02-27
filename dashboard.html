@@ -159,10 +159,10 @@
                                         training and rope sessions.</p>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <button id="manage-types-shortcut"
+                                    <!-- <button id="manage-types-shortcut"
                                         class="hidden text-[10px] font-bold text-slate-500 hover:text-brand-gold uppercase tracking-wider underline decoration-dashed underline-offset-4 transition-colors">
                                         Manage Types
-                                    </button>
+                                    </button> -->
                                     <button id="add-session-toggle-btn"
                                         class="hidden btn-outline !py-1.5 !px-3 !text-xs !border-brand-gold !text-brand-gold hover:!bg-brand-gold hover:!text-white flex items-center gap-1">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -216,7 +216,8 @@
                                         </select>
                                     </div>
                                     <div>
-                                        <label class="block text-xs font-bold text-slate-400 mb-1 uppercase">Who Can See This Event</label>
+                                        <label class="block text-xs font-bold text-slate-400 mb-1 uppercase">Who Can See
+                                            This Event</label>
                                         <select id="session-visibility"
                                             class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-gold">
                                             <option value="all">Everyone</option>
@@ -234,9 +235,9 @@
 
                             <!-- Calendar Controls -->
                             <div
-                                class="px-4 py-3 border-b border-white/10 bg-slate-800/80 grid grid-cols-3 items-center">
+                                class="px-4 py-3 border-b border-white/10 bg-slate-800/80 flex flex-col sm:grid sm:grid-cols-3 items-center gap-4">
                                 <!-- Left: Prev -->
-                                <div class="flex items-center">
+                                <div class="flex items-center justify-between w-full sm:w-auto">
                                     <button id="prev-month-btn"
                                         class="p-2 text-slate-400 hover:text-white transition-colors bg-white/5 rounded-lg hover:bg-white/10">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -244,25 +245,39 @@
                                                 d="M15 19l-7-7 7-7"></path>
                                         </svg>
                                     </button>
+                                    <!-- Mobile: Month title shown between buttons -->
+                                    <h4
+                                        class="calendar-month-mobile-display sm:hidden text-white font-bold text-lg select-none">
+                                        Month Year</h4>
+                                    <button id="next-month-btn-mobile"
+                                        class="p-2 text-slate-400 hover:text-white transition-colors bg-white/5 rounded-lg hover:bg-white/10 sm:hidden">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M9 5l7 7-7 7"></path>
+                                        </svg>
+                                    </button>
                                 </div>
-                                <!-- Centre: Month title -->
+                                <!-- Centre: Month title (Desktop) -->
                                 <h4 id="calendar-month-display"
-                                    class="text-white font-bold text-lg select-none text-center whitespace-nowrap">Month
+                                    class="hidden sm:block text-white font-bold text-lg select-none text-center whitespace-nowrap">
+                                    Month
                                     Year</h4>
                                 <!-- Right: iCal + Next -->
-                                <div class="flex items-center justify-end gap-2">
-                                    <a href="#" id="ical-link-all"
-                                        class="px-2 py-1 text-[10px] font-black uppercase tracking-widest text-brand-gold hover:text-white transition-colors bg-brand-gold/10 rounded-lg hover:bg-brand-gold/20"
-                                        title="Copy iCal Link for All Visible Sessions">
-                                        iCal All
-                                    </a>
-                                    <a href="#" id="ical-link-booked"
-                                        class="px-2 py-1 text-[10px] font-black uppercase tracking-widest text-cyan-300 hover:text-white transition-colors bg-cyan-500/10 rounded-lg hover:bg-cyan-500/20"
-                                        title="Copy iCal Link for Booked Sessions Only">
-                                        iCal Booked
-                                    </a>
+                                <div class="flex items-center justify-center sm:justify-end gap-2 w-full sm:w-auto">
+                                    <div class="flex items-center gap-2">
+                                        <a href="#" id="ical-link-all"
+                                            class="px-2 py-1.5 text-[10px] sm:text-[9px] font-black uppercase tracking-widest text-brand-gold hover:text-white transition-colors bg-brand-gold/10 rounded-lg border border-brand-gold/30 hover:bg-brand-gold/20"
+                                            title="Copy iCal Link for All Visible Sessions">
+                                            iCal All
+                                        </a>
+                                        <a href="#" id="ical-link-booked"
+                                            class="px-2 py-1.5 text-[10px] sm:text-[9px] font-black uppercase tracking-widest text-cyan-300 hover:text-white transition-colors bg-cyan-500/10 rounded-lg border border-cyan-500/30 hover:bg-cyan-500/20"
+                                            title="Copy iCal Link for Booked Sessions Only">
+                                            iCal Booked
+                                        </a>
+                                    </div>
                                     <button id="next-month-btn"
-                                        class="p-2 text-slate-400 hover:text-white transition-colors bg-white/5 rounded-lg hover:bg-white/10">
+                                        class="hidden sm:block p-2 text-slate-400 hover:text-white transition-colors bg-white/5 rounded-lg hover:bg-white/10">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                 d="M9 5l7 7-7 7"></path>

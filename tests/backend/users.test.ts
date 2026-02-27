@@ -16,7 +16,7 @@ describe('Users API', () => {
         const adminRes = await request(app)
             .post('/api/auth/login')
             .send({
-                email: 'sheffieldclimbing@gmail.com',
+                email: 'committee@sheffieldclimbing.org',
                 password: 'SuperSecret123!'
             });
         const cookies = adminRes.headers['set-cookie'];

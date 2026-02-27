@@ -4,7 +4,7 @@ test.describe('Authentication Flow', () => {
     test('should login as admin successfully', async ({ page }) => {
         await page.goto('/login.html');
 
-        await page.fill('#login-email', 'sheffieldclimbing@gmail.com');
+        await page.fill('#login-email', 'committee@sheffieldclimbing.org');
         await page.fill('#login-password', 'SuperSecret123!');
         await page.click('#login-btn');
 

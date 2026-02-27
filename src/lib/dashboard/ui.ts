@@ -84,7 +84,7 @@ export async function updateUI() {
         const confirmRenewalBtn = document.getElementById('confirm-renewal-btn');
         const renewalYearText = document.getElementById('renewal-year-text');
 
-        if (user.membershipYear !== currentYearStr && user.email !== 'sheffieldclimbing@gmail.com') {
+        if (user.membershipYear !== currentYearStr && user.email !== 'committee@sheffieldclimbing.org') {
             if (renewalOverlay && confirmRenewalBtn && renewalYearText) {
                 renewalYearText.textContent = currentYearStr;
                 renewalOverlay.classList.remove('hidden');

@@ -61,8 +61,11 @@ function initializeDatabase() {
         // Membership Types Table
         db.run(`CREATE TABLE IF NOT EXISTS membership_types (
             id TEXT PRIMARY KEY,
-            label TEXT NOT NULL
+            label TEXT NOT NULL,
+            deprecated INTEGER DEFAULT 0
         )`);
+
+        db.run('ALTER TABLE membership_types ADD COLUMN deprecated INTEGER DEFAULT 0', (err) => { });
 
         // User Memberships Table (many-to-many: one user can hold multiple membership types)
         db.run(`CREATE TABLE IF NOT EXISTS user_memberships (
@@ -242,7 +245,7 @@ function initializeDatabase() {
         )`);
 
         // Create root admin if not exists
-        db.get('SELECT id, membershipYear FROM users WHERE email = ?', ['sheffieldclimbing@gmail.com'], async (err, row: any) => {
+        db.get('SELECT id, membershipYear FROM users WHERE email = ?', ['committee@sheffieldclimbing.org'], async (err, row: any) => {
             if (!row) {
                 const rootHash = await bcrypt.hash('SuperSecret123!', 10);
                 const currentYear = new Date().getFullYear();
@@ -251,7 +254,7 @@ function initializeDatabase() {
 
                 db.run(
                     'INSERT INTO users (id, firstName, lastName, name, email, passwordHash, role, membershipStatus, membershipYear, calendarToken, emailVerified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                    ['user_root', 'Root', 'Admin', 'Root Admin', 'sheffieldclimbing@gmail.com', rootHash, 'committee', 'active', membershipYear, crypto.randomUUID(), 1],
+                    ['user_root', 'Root', 'Admin', 'Root Admin', 'committee@sheffieldclimbing.org', rootHash, 'committee', 'active', membershipYear, crypto.randomUUID(), 1],
                     () => {
                         // Insert the active basic membership row for the root admin
                         db.run(
@@ -263,7 +266,7 @@ function initializeDatabase() {
                 console.log('Root admin created.');
             } else {
                 // Ensure existing root admin is always marked as active + verified
-                db.run('UPDATE users SET emailVerified = 1, membershipStatus = ? WHERE email = ?', ['active', 'sheffieldclimbing@gmail.com']);
+                db.run('UPDATE users SET emailVerified = 1, membershipStatus = ? WHERE email = ?', ['active', 'committee@sheffieldclimbing.org']);
                 // Upgrade any existing basic memberships to active (avoids pending+active duplicates)
                 db.run(
                     'UPDATE user_memberships SET status = ? WHERE userId = ? AND membershipType = ?',

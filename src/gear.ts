@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    isKitSec = user.email === 'sheffieldclimbing@gmail.com' || user.committeeRole === 'Kit & Safety Sec';
+    isKitSec = user.email === 'committee@sheffieldclimbing.org' || user.committeeRole === 'Kit & Safety Sec';
 
     if (isKitSec) {
         document.getElementById('committee-panel')?.classList.remove('hidden');

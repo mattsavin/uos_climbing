@@ -35,6 +35,7 @@ export interface MembershipRow {
 export interface MembershipType {
     id: string;
     label: string;
+    deprecated?: number;
 }
 
 export const MEMBERSHIP_TYPE_LABELS: Record<string, string> = {
@@ -367,7 +368,7 @@ export const adminApi = {
 
     async getActiveMembers(): Promise<User[]> {
         const users = await apiFetch('/api/admin/users');
-        return users.filter((u: User) => u.membershipStatus === 'active' && u.email !== 'sheffieldclimbing@gmail.com');
+        return users.filter((u: User) => u.membershipStatus === 'active' && u.email !== 'committee@sheffieldclimbing.org');
     },
 
     async approveMember(id: string) {
@@ -459,6 +460,14 @@ export const adminApi = {
         return apiFetch(`/api/sessions/${id}/cancel`, { method: 'POST' });
     },
 
+    async getSessionAttendees(id: string): Promise<User[]> {
+        return apiFetch(`/api/sessions/${id}/attendees`);
+    },
+
+    async removeAttendee(sessionId: string, userId: string) {
+        return apiFetch(`/api/sessions/${sessionId}/attendees/${userId}`, { method: 'DELETE' });
+    },
+
     // Session Type Management API
     async getSessionTypes(): Promise<SessionType[]> {
         return apiFetch('/api/session-types');
@@ -494,10 +503,10 @@ export const adminApi = {
         });
     },
 
-    async updateMembershipType(id: string, label: string): Promise<MembershipType> {
+    async updateMembershipType(id: string, label: string, deprecated?: boolean): Promise<MembershipType> {
         return apiFetch(`/api/membership-types/${id}`, {
             method: 'PUT',
-            body: JSON.stringify({ label })
+            body: JSON.stringify({ label, deprecated })
         });
     },
 

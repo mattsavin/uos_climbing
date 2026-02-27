@@ -9,7 +9,12 @@ export async function renderSessions(isAdmin: boolean) {
     const calendarGrid = document.getElementById('calendar-grid');
     const calendarLegend = document.getElementById('calendar-legend');
     const calendarMonthDisplay = document.getElementById('calendar-month-display');
-    if (!calendarGrid || !calendarMonthDisplay) return;
+    const mobileDisplays = document.querySelectorAll('.calendar-month-mobile-display');
+    if (!calendarGrid) return;
+
+    const formattedDate = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(currentCalendarDate);
+    if (calendarMonthDisplay) calendarMonthDisplay.textContent = formattedDate;
+    mobileDisplays.forEach(el => el.textContent = formattedDate);
 
     const allSessions = await adminApi.getSessions();
     const sessionTypes = await adminApi.getSessionTypes();
@@ -96,8 +101,9 @@ export function initSessionHandlers() {
     if (sessionReqMbSelect) {
         adminApi.getMembershipTypes().then((types) => {
             const fallback = '<option value="basic">Basic Membership</option>';
-            sessionReqMbSelect.innerHTML = types.length
-                ? types.map((m: any) => `<option value="${m.id}">${m.label}</option>`).join('')
+            const activeTypes = types.filter(t => !t.deprecated || t.id === 'basic');
+            sessionReqMbSelect.innerHTML = activeTypes.length
+                ? activeTypes.map((m: any) => `<option value="${m.id}">${m.label}</option>`).join('')
                 : fallback;
         }).catch(() => {
             sessionReqMbSelect.innerHTML = '<option value="basic">Basic Membership</option>';
@@ -132,13 +138,22 @@ export function initSessionHandlers() {
         return u.role === 'committee' || !!u.committeeRole || (Array.isArray(u.committeeRoles) && u.committeeRoles.length > 0);
     };
 
+    const nextMonthBtnMobile = document.getElementById('next-month-btn-mobile');
+    const updateBothMonths = async () => {
+        await renderSessions(getIsCommittee());
+    };
+
     if (prevMonthBtn) prevMonthBtn.addEventListener('click', async () => {
         currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
-        await renderSessions(getIsCommittee());
+        await updateBothMonths();
     });
     if (nextMonthBtn) nextMonthBtn.addEventListener('click', async () => {
         currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
-        await renderSessions(getIsCommittee());
+        await updateBothMonths();
+    });
+    if (nextMonthBtnMobile) nextMonthBtnMobile.addEventListener('click', async () => {
+        currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+        await updateBothMonths();
     });
 
     if (addSessionToggleBtn && addSessionFormContainer) {

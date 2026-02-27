@@ -84,7 +84,7 @@ describe('Voting API', () => {
         const { token } = await createVoterUser('apply_open');
 
         // Admin opens elections
-        const adminRes = await request(app).post('/api/auth/login').send({ email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!' });
+        const adminRes = await request(app).post('/api/auth/login').send({ email: 'committee@sheffieldclimbing.org', password: 'SuperSecret123!' });
         await request(app).post('/api/admin/config/elections').set('Authorization', `Bearer ${adminRes.body.token}`).send({ open: true });
 
         const res = await request(app)
@@ -100,7 +100,7 @@ describe('Voting API', () => {
         const { token } = await createVoterUser('apply_double');
 
         // Ensure open
-        const adminRes = await request(app).post('/api/auth/login').send({ email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!' });
+        const adminRes = await request(app).post('/api/auth/login').send({ email: 'committee@sheffieldclimbing.org', password: 'SuperSecret123!' });
         await request(app).post('/api/admin/config/elections').set('Authorization', `Bearer ${adminRes.body.token}`).send({ open: true });
 
         // First apply
@@ -121,7 +121,7 @@ describe('Voting API', () => {
         const candidate = await createVoterUser('real_candidate');
 
         // Open elections
-        const adminRes = await request(app).post('/api/auth/login').send({ email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!' });
+        const adminRes = await request(app).post('/api/auth/login').send({ email: 'committee@sheffieldclimbing.org', password: 'SuperSecret123!' });
         await request(app).post('/api/admin/config/elections').set('Authorization', `Bearer ${adminRes.body.token}`).send({ open: true });
 
         // Apply as candidate
@@ -140,7 +140,7 @@ describe('Voting API', () => {
         const voter = await createVoterUser('double_voter');
         const candidate = await createVoterUser('double_candidate');
 
-        const adminRes = await request(app).post('/api/auth/login').send({ email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!' });
+        const adminRes = await request(app).post('/api/auth/login').send({ email: 'committee@sheffieldclimbing.org', password: 'SuperSecret123!' });
         await request(app).post('/api/admin/config/elections').set('Authorization', `Bearer ${adminRes.body.token}`).send({ open: true });
 
         await request(app).post('/api/voting/apply').set('Authorization', `Bearer ${candidate.token}`).send({ manifesto: 'A', role: 'President' });
@@ -161,7 +161,7 @@ describe('Voting API', () => {
     it('should allow withdrawal of candidacy', async () => {
         const candidate = await createVoterUser('withdraw_candidate');
 
-        const adminRes = await request(app).post('/api/auth/login').send({ email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!' });
+        const adminRes = await request(app).post('/api/auth/login').send({ email: 'committee@sheffieldclimbing.org', password: 'SuperSecret123!' });
         await request(app).post('/api/admin/config/elections').set('Authorization', `Bearer ${adminRes.body.token}`).send({ open: true });
 
         // Apply
@@ -185,7 +185,7 @@ describe('Voting API', () => {
     let referendumId: string;
 
     it('should allow committee to create a referendum', async () => {
-        const adminRes = await request(app).post('/api/auth/login').send({ email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!' });
+        const adminRes = await request(app).post('/api/auth/login').send({ email: 'committee@sheffieldclimbing.org', password: 'SuperSecret123!' });
 
         const res = await request(app)
             .post('/api/voting/referendums')
@@ -216,7 +216,7 @@ describe('Voting API', () => {
         const { token } = await createVoterUser('ref_vote_user');
 
         // Ensure open
-        const adminRes = await request(app).post('/api/auth/login').send({ email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!' });
+        const adminRes = await request(app).post('/api/auth/login').send({ email: 'committee@sheffieldclimbing.org', password: 'SuperSecret123!' });
         await request(app).post('/api/admin/config/elections').set('Authorization', `Bearer ${adminRes.body.token}`).send({ open: true });
 
         const res = await request(app)
@@ -252,7 +252,7 @@ describe('Voting API', () => {
     });
 
     it('should allow committee to reset elections', async () => {
-        const adminRes = await request(app).post('/api/auth/login').send({ email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!' });
+        const adminRes = await request(app).post('/api/auth/login').send({ email: 'committee@sheffieldclimbing.org', password: 'SuperSecret123!' });
 
         const res = await request(app)
             .post('/api/voting/reset')
@@ -274,7 +274,7 @@ describe('Voting API', () => {
 
     it('should handle withdraw candidate DB errors', async () => {
         const candidate = await createVoterUser('db_withdraw');
-        const adminRes = await request(app).post('/api/auth/login').send({ email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!' });
+        const adminRes = await request(app).post('/api/auth/login').send({ email: 'committee@sheffieldclimbing.org', password: 'SuperSecret123!' });
         await request(app).post('/api/admin/config/elections').set('Authorization', `Bearer ${adminRes.body.token}`).send({ open: true });
         await request(app).post('/api/voting/apply').set('Authorization', `Bearer ${candidate.token}`).send({ manifesto: 'A', role: 'President' });
 
@@ -295,7 +295,7 @@ describe('Voting API', () => {
 
     it('should handle invalid referendum vote choice', async () => {
         const voter = await createVoterUser('ref_invalid_choice');
-        const adminRes = await request(app).post('/api/auth/login').send({ email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!' });
+        const adminRes = await request(app).post('/api/auth/login').send({ email: 'committee@sheffieldclimbing.org', password: 'SuperSecret123!' });
         await request(app).post('/api/admin/config/elections').set('Authorization', `Bearer ${adminRes.body.token}`).send({ open: true });
 
         const refRes = await request(app).post('/api/voting/referendums').set('Authorization', `Bearer ${adminRes.body.token}`).send({ title: 'T', description: 'D' });
@@ -312,7 +312,7 @@ describe('Voting API', () => {
 
     it('should reject referendum vote when elections are closed', async () => {
         const voter = await createVoterUser('ref_closed_vote');
-        const adminRes = await request(app).post('/api/auth/login').send({ email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!' });
+        const adminRes = await request(app).post('/api/auth/login').send({ email: 'committee@sheffieldclimbing.org', password: 'SuperSecret123!' });
         const refRes = await request(app).post('/api/voting/referendums').set('Authorization', `Bearer ${adminRes.body.token}`).send({ title: 'T', description: 'D' });
         const refId = refRes.body.id;
 
@@ -329,7 +329,7 @@ describe('Voting API', () => {
 
     it('should handle referendum vote DB error', async () => {
         const voter = await createVoterUser('ref_db_err');
-        const adminRes = await request(app).post('/api/auth/login').send({ email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!' });
+        const adminRes = await request(app).post('/api/auth/login').send({ email: 'committee@sheffieldclimbing.org', password: 'SuperSecret123!' });
         await request(app).post('/api/admin/config/elections').set('Authorization', `Bearer ${adminRes.body.token}`).send({ open: true });
 
         const refRes = await request(app).post('/api/voting/referendums').set('Authorization', `Bearer ${adminRes.body.token}`).send({ title: 'T', description: 'D' });
@@ -355,7 +355,7 @@ describe('Voting API', () => {
     });
 
     it('should allow committee to delete a referendum', async () => {
-        const adminRes = await request(app).post('/api/auth/login').send({ email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!' });
+        const adminRes = await request(app).post('/api/auth/login').send({ email: 'committee@sheffieldclimbing.org', password: 'SuperSecret123!' });
         const refRes = await request(app).post('/api/voting/referendums').set('Authorization', `Bearer ${adminRes.body.token}`).send({ title: 'Delete Me', description: 'Desc' });
         const refId = refRes.body.id;
 
@@ -373,7 +373,7 @@ describe('Voting API', () => {
     });
 
     it('should handle reset rollback correctly', async () => {
-        const adminRes = await request(app).post('/api/auth/login').send({ email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!' });
+        const adminRes = await request(app).post('/api/auth/login').send({ email: 'committee@sheffieldclimbing.org', password: 'SuperSecret123!' });
 
         // We need to force an error in the synchronize block. 
         // Since the code uses try/catch around db.run (which is async), we can mock db.run to throw synchronously.

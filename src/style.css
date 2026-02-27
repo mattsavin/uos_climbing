@@ -41,7 +41,8 @@
 
   /* Buttons */
   .btn-primary {
-    @apply inline-flex items-center justify-center px-8 py-4 text-base font-bold text-brand-darker bg-gradient-to-r from-brand-gold to-brand-gold-muted rounded-full transition-all duration-300 transform hover:-translate-y-1 uppercase tracking-widest border border-transparent;
+    @apply inline-flex items-center justify-center px-8 py-4 text-base font-bold text-brand-darker bg-gradient-to-r from-brand-gold to-brand-gold-muted rounded-full transition-all duration-300 transform uppercase tracking-widest border border-transparent;
+    will-change: transform, box-shadow;
   }
 
   .btn-primary:hover {
@@ -54,7 +55,8 @@
 
   /* Cards */
   .glass-card {
-    @apply bg-brand-dark/50 backdrop-blur-md border border-slate-800 rounded-2xl p-8 hover:border-brand-gold/50 transition-all duration-500 hover:-translate-y-2;
+    @apply bg-brand-dark/50 backdrop-blur-md border border-slate-800 rounded-2xl p-8 transition-all duration-500;
+    will-change: transform, border-color, box-shadow;
   }
 
   .glass-card:hover {
