@@ -42,8 +42,9 @@ const VALID_MEMBERSHIP_TYPES = ['basic', 'bouldering', 'comp_team'];
 
 router.post('/register', authLimiter, async (req, res) => {
     const { firstName, lastName, email, registrationNumber, password, passwordConfirm, membershipTypes } = req.body;
+    const normalizedEmail = (email || '').toString().trim().toLowerCase();
 
-    if (!firstName || !lastName || !email || !password || !passwordConfirm || !registrationNumber) {
+    if (!firstName || !lastName || !normalizedEmail || !password || !passwordConfirm || !registrationNumber) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -64,7 +65,10 @@ router.post('/register', authLimiter, async (req, res) => {
         let role = 'member';
         let membershipStatus = 'pending';
         // Root admin email is pre-verified
-        const isRootAdmin = email === 'sheffieldclimbing@gmail.com';
+        const isRootAdmin = normalizedEmail === 'sheffieldclimbing@gmail.com';
+        if (!IS_TEST && !isRootAdmin && !normalizedEmail.endsWith('@sheffield.ac.uk')) {
+            return res.status(400).json({ error: 'Please register with your @sheffield.ac.uk email address.' });
+        }
         if (isRootAdmin) {
             role = 'committee';
             membershipStatus = 'active';
@@ -80,7 +84,7 @@ router.post('/register', authLimiter, async (req, res) => {
 
         db.run(
             'INSERT INTO users (id, firstName, lastName, name, email, passwordHash, registrationNumber, role, membershipStatus, membershipYear, calendarToken, emailVerified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [id, firstName, lastName, `${firstName} ${lastName}`, email, passwordHash, registrationNumber, role, membershipStatus, membershipYear, calendarToken, emailVerified],
+            [id, firstName, lastName, `${firstName} ${lastName}`, normalizedEmail, passwordHash, registrationNumber, role, membershipStatus, membershipYear, calendarToken, emailVerified],
             function (err) {
                 if (err) {
                     if (err.message.includes('UNIQUE constraint failed')) {
@@ -97,7 +101,7 @@ router.post('/register', authLimiter, async (req, res) => {
                 });
                 stmt.finalize();
 
-                const user = { id, firstName, lastName, email, registrationNumber, role, committeeRole: null, membershipStatus, membershipYear, calendarToken };
+                const user = { id, firstName, lastName, email: normalizedEmail, registrationNumber, role, committeeRole: null, membershipStatus, membershipYear, calendarToken };
 
                 if (IS_TEST || isRootAdmin) {
                     // In test environment or for root admin: skip email verification, return token immediately
@@ -120,7 +124,7 @@ router.post('/register', authLimiter, async (req, res) => {
 
                         // Send verification email (fire-and-forget)
                         sendEmail(
-                            email,
+                            normalizedEmail,
                             'Verify your USCC email address',
                             `Hi ${firstName},\n\nYour verification code is: ${otp}\n\nThis code expires in 15 minutes.\n\nIf you did not register for the University of Sheffield Climbing Club, please ignore this email.`,
                             `<p>Hi ${firstName},</p><p>Your verification code is:</p><h2 style="letter-spacing:8px;font-size:32px;">${otp}</h2><p>This code expires in 15 minutes.</p><p style="color:#999;font-size:12px;">If you did not register for the University of Sheffield Climbing Club, please ignore this email.</p>`
@@ -279,7 +283,14 @@ router.post('/forgot-password', authLimiter, (req, res) => {
             (dbErr) => {
                 if (dbErr) return;
 
-                const baseUrl = process.env.APP_URL || 'http://localhost:5173';
+                const forwardedProtoRaw = req.headers['x-forwarded-proto'];
+                const forwardedProto = typeof forwardedProtoRaw === 'string'
+                    ? forwardedProtoRaw.split(',')[0].trim()
+                    : '';
+                const inferredProto = forwardedProto || req.protocol || 'http';
+                const inferredHost = req.get('host') || '';
+                const inferredBaseUrl = inferredHost ? `${inferredProto}://${inferredHost}` : '';
+                const baseUrl = process.env.APP_URL || inferredBaseUrl || 'http://localhost:5173';
                 const resetLink = `${baseUrl}/login.html?reset_token=${token}`;
 
                 sendEmail(

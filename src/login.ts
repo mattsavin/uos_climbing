@@ -1,5 +1,6 @@
 import './style.css';
 import { authState } from './auth';
+import { showToast } from './utils';
 
 export async function initLoginApp() {
     // If the user happens to hit this page while already logged in, redirect them
@@ -166,6 +167,7 @@ export async function initLoginApp() {
         const registrationNumber = (document.getElementById('reg-regnum') as HTMLInputElement).value;
         const password = (document.getElementById('reg-password') as HTMLInputElement).value;
         const passwordConfirm = (document.getElementById('reg-password-confirm') as HTMLInputElement).value;
+        const normalizedEmail = email.trim().toLowerCase();
 
         // Collect checked membership types
         const membershipTypes: string[] = [];
@@ -182,11 +184,21 @@ export async function initLoginApp() {
             return;
         }
 
+        if (normalizedEmail !== 'sheffieldclimbing@gmail.com' && !normalizedEmail.endsWith('@sheffield.ac.uk')) {
+            const msg = 'Please register with your @sheffield.ac.uk email address.';
+            registerError.textContent = msg;
+            registerError.classList.remove('hidden');
+            showToast(msg, 'error');
+            registerBtn.disabled = false;
+            registerBtn.textContent = 'Create Account';
+            return;
+        }
+
         try {
             const data = await authState.register(
                 firstName,
                 lastName,
-                email,
+                normalizedEmail,
                 password,
                 passwordConfirm,
                 registrationNumber,
