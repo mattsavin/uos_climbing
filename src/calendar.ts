@@ -46,7 +46,7 @@ function renderCalendarLegend(
 
     legendContainer.classList.remove('hidden');
     legendContainer.innerHTML = `
-        <div class="mt-6 mb-3 flex flex-wrap gap-4 items-center text-xs text-slate-300 backdrop-blur-sm bg-brand-dark/30 p-4 rounded-xl border border-white/5 shadow-lg mx-auto w-fit max-w-full">
+        <div class="mt-6 flex flex-wrap gap-4 items-center text-xs text-slate-300 backdrop-blur-sm bg-brand-dark/30 p-4 rounded-xl border border-white/5 shadow-lg mx-auto w-fit max-w-full">
             ${uniqueLegendTypes.map(type => {
                 const style = colorMap[type] || SESSION_COLOR_PALETTE[0];
                 return `
@@ -233,15 +233,15 @@ function renderSessionChip(
 
     return `
         <div class="session-chip mt-1 border rounded p-2 text-xs font-medium leading-tight w-full overflow-hidden ${isClickable ? 'cursor-pointer hover:opacity-80 transition-opacity' : 'cursor-default'} flex flex-col gap-1 ${bg}" data-id="${session.id}">
-            <div class="w-full flex items-center justify-between gap-2">
-                <span class="font-bold text-[11px] tracking-wide">${timeStr}</span>
+            <div class="w-full flex items-center justify-between gap-2 min-w-0">
+                <span class="font-bold block min-w-0 truncate" title="${timeStr} - ${session.title}">${timeStr} - ${session.title}</span>
                 ${isBooked ? '<span class="text-current font-black text-sm" title="Booked">✓</span>' : ''}
             </div>
             <div class="text-[11px] font-semibold leading-snug break-words">${session.title}</div>
             ${membBadge ? `<div>${membBadge}</div>` : ''}
-            <div class="mt-auto pt-1 border-t border-current border-opacity-20">
-                <div class="font-bold text-[10px] uppercase tracking-wider opacity-90">${session.bookedSlots}/${session.capacity} Slots</div>
-                <div class="text-[8px] uppercase tracking-widest opacity-75 leading-tight pt-0.5 break-words">${session.type}</div>
+            <div class="flex items-center justify-between gap-1 mt-auto pt-1 border-t border-current border-opacity-20 min-w-0">
+                <span class="font-bold text-[10px] uppercase tracking-wider opacity-90 shrink-0">${session.bookedSlots}/${session.capacity} Slots</span>
+                <span class="text-[8px] uppercase tracking-widest opacity-75 truncate max-w-[55%]" title="${session.type}">${session.type}</span>
             </div>
         </div>
     `;
