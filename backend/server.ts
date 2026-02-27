@@ -104,7 +104,7 @@ if (process.env.NODE_ENV === 'production') {
 } else {
     // Also handle beta-gate in dev for testing
     app.get('/beta-gate', (req, res) => {
-        res.sendFile(path.join(__dirname, '../beta-gate.html'));
+        res.sendFile(path.join(__dirname, '../public/beta-gate.html'));
     });
 }
 
