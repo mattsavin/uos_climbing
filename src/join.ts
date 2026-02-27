@@ -19,6 +19,7 @@ export async function initJoinApp() {
 
     // 2. Fetch Sessions
     const sessionsGrid = document.getElementById('calendar-grid');
+    const calendarLegend = document.getElementById('calendar-legend');
     const monthDisplay = document.getElementById('calendar-month-display');
     const prevMonthBtn = document.getElementById('prev-month-btn');
     const nextMonthBtn = document.getElementById('next-month-btn');
@@ -36,6 +37,11 @@ export async function initJoinApp() {
             if (!res.ok) throw new Error("Failed to load sessions");
             const sessions = await res.json();
 
+            const sessionTypesRes = await fetch('/api/session-types');
+            if (!sessionTypesRes.ok) throw new Error('Failed to load session types');
+            const sessionTypes = await sessionTypesRes.json();
+            const availableSessionTypes = sessionTypes.map((type: { label: string }) => type.label);
+
             // Render read-only calendar (empty bookings array, isAdmin=false, no click handler)
             renderCalendarEvents(
                 sessionsGrid,
@@ -50,7 +56,9 @@ export async function initJoinApp() {
                         isBooked: false,
                         user: null
                     });
-                }
+                },
+                calendarLegend,
+                availableSessionTypes
             );
         } catch (error) {
             console.error("Error loading sessions:", error);

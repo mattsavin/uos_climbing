@@ -8,6 +8,7 @@ let activeFilter: string = 'all';
 
 export async function renderSessions(isAdmin: boolean) {
     const calendarGrid = document.getElementById('calendar-grid');
+    const calendarLegend = document.getElementById('calendar-legend');
     const calendarMonthDisplay = document.getElementById('calendar-month-display');
     if (!calendarGrid || !calendarMonthDisplay) return;
 
@@ -73,7 +74,9 @@ export async function renderSessions(isAdmin: boolean) {
                     await renderSessions(isAdmin);
                 }
             });
-        }
+        },
+        calendarLegend,
+        sessionTypes.map(type => type.label)
     );
 }
 

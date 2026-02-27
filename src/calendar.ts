@@ -1,5 +1,65 @@
 import type { Session } from './auth';
 
+interface SessionColorStyle {
+    chip: string;
+    dot: string;
+}
+
+const SESSION_COLOR_PALETTE: SessionColorStyle[] = [
+    { chip: 'bg-brand-gold/20 text-brand-gold border-brand-gold/35', dot: 'bg-brand-gold' },
+    { chip: 'bg-blue-500/20 text-blue-300 border-blue-500/35', dot: 'bg-blue-400' },
+    { chip: 'bg-purple-500/20 text-purple-300 border-purple-500/35', dot: 'bg-purple-400' },
+    { chip: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/35', dot: 'bg-emerald-400' },
+    { chip: 'bg-rose-500/20 text-rose-300 border-rose-500/35', dot: 'bg-rose-400' },
+    { chip: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/35', dot: 'bg-cyan-400' },
+    { chip: 'bg-amber-500/20 text-amber-300 border-amber-500/35', dot: 'bg-amber-400' },
+    { chip: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/35', dot: 'bg-indigo-400' }
+];
+
+function hashText(value: string): number {
+    return Array.from(value).reduce((acc, char) => ((acc * 31) + char.charCodeAt(0)) >>> 0, 0);
+}
+
+function getSessionTypeColorMap(typeIds: string[]): Record<string, SessionColorStyle> {
+    const uniqueTypeIds = Array.from(new Set(typeIds.filter(Boolean)));
+
+    return uniqueTypeIds.reduce<Record<string, SessionColorStyle>>((map, typeId) => {
+        const index = hashText(typeId.toLowerCase()) % SESSION_COLOR_PALETTE.length;
+        map[typeId] = SESSION_COLOR_PALETTE[index];
+        return map;
+    }, {});
+}
+
+function renderCalendarLegend(
+    legendContainer: HTMLElement | null,
+    legendTypes: string[],
+    colorMap: Record<string, SessionColorStyle>
+) {
+    if (!legendContainer) return;
+    const uniqueLegendTypes = Array.from(new Set(legendTypes.filter(Boolean))).sort((a, b) => a.localeCompare(b));
+
+    if (!uniqueLegendTypes.length) {
+        legendContainer.innerHTML = '';
+        legendContainer.classList.add('hidden');
+        return;
+    }
+
+    legendContainer.classList.remove('hidden');
+    legendContainer.innerHTML = `
+        <div class="mt-6 flex flex-wrap gap-4 items-center text-xs text-slate-300 backdrop-blur-sm bg-brand-dark/30 p-4 rounded-xl border border-white/5 shadow-lg mx-auto w-fit max-w-full">
+            ${uniqueLegendTypes.map(type => {
+                const style = colorMap[type] || SESSION_COLOR_PALETTE[0];
+                return `
+                    <div class="flex items-center gap-2 min-w-0">
+                        <span class="w-2.5 h-2.5 rounded-full ${style.dot} shrink-0"></span>
+                        <span class="truncate max-w-[170px]">${type}</span>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
 export function renderCalendarEvents(
     container: HTMLElement,
     monthDisplay: HTMLElement | null,
@@ -7,7 +67,9 @@ export function renderCalendarEvents(
     sessions: Session[],
     myBookings: string[],
     _isAdmin: boolean = false,
-    onSessionClick?: (session: Session, isBooked: boolean) => void
+    onSessionClick?: (session: Session, isBooked: boolean) => void,
+    legendContainer?: HTMLElement | null,
+    availableSessionTypes: string[] = []
 ) {
     if (!container) return;
 
@@ -19,6 +81,7 @@ export function renderCalendarEvents(
     }
 
     const isMobile = window.innerWidth < 768;
+    const colorMap = getSessionTypeColorMap([...availableSessionTypes, ...sessions.map(s => s.type)]);
     let html = '';
 
     if (isMobile) {
@@ -69,7 +132,7 @@ export function renderCalendarEvents(
                             <span class="text-slate-400 font-bold uppercase tracking-widest text-sm">${dayName}</span>
                         </div>
                         <div class="flex flex-col gap-3">
-                            ${daySessions.map(session => renderSessionChip(session, myBookings, !!onSessionClick)).join('')}
+                            ${daySessions.map(session => renderSessionChip(session, myBookings, !!onSessionClick, colorMap)).join('')}
                         </div>
                     </div>
                 `;
@@ -112,7 +175,7 @@ export function renderCalendarEvents(
                         <span class="${dayClass}">${day}</span>
                     </div>
                     <div class="flex-1 flex flex-col gap-1 w-full overflow-hidden">
-                        ${daySessions.map(session => renderSessionChip(session, myBookings, !!onSessionClick)).join('')}
+                        ${daySessions.map(session => renderSessionChip(session, myBookings, !!onSessionClick, colorMap)).join('')}
                     </div>
                 </div>
             `;
@@ -142,18 +205,20 @@ export function renderCalendarEvents(
             });
         });
     }
+
+    renderCalendarLegend(legendContainer || null, availableSessionTypes, colorMap);
 }
 
-function renderSessionChip(session: Session, myBookings: string[], isClickable: boolean): string {
+function renderSessionChip(
+    session: Session,
+    myBookings: string[],
+    isClickable: boolean,
+    colorMap: Record<string, SessionColorStyle>
+): string {
     const isBooked = myBookings.includes(session.id);
     const timeStr = new Date(session.date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
-    let bg = 'bg-slate-600/50 text-slate-300 border-slate-600/30';
-    if (session.type === 'Competition') bg = 'bg-red-500/20 text-red-500 border-red-500/30';
-    if (session.type === 'Social') bg = 'bg-brand-gold-muted/20 text-brand-gold-muted border-brand-gold-muted/30';
-    if (session.type === 'Training Session (Bouldering)') bg = 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-    if (session.type === 'Training Session (Roped)') bg = 'bg-purple-500/20 text-purple-400 border-purple-500/30';
-    if (session.type === 'Meeting') bg = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+    let bg = colorMap[session.type]?.chip || 'bg-slate-600/50 text-slate-300 border-slate-600/30';
 
     if (isBooked) {
         bg = 'bg-brand-gold text-brand-darker border-brand-gold font-bold shadow-[0_0_15px_rgba(253,185,19,0.3)]';
@@ -167,15 +232,15 @@ function renderSessionChip(session: Session, myBookings: string[], isClickable: 
             : '';
 
     return `
-        <div class="session-chip mt-1 border rounded p-2 text-xs font-medium leading-tight w-full ${isClickable ? 'cursor-pointer hover:opacity-80 transition-opacity' : 'cursor-default'} flex flex-col gap-1 ${bg}" data-id="${session.id}">
-            <div class="w-full flex items-center justify-between">
-                <span class="font-bold whitespace-nowrap">${timeStr} - ${session.title}</span>
+        <div class="session-chip mt-1 border rounded p-2 text-xs font-medium leading-tight w-full overflow-hidden ${isClickable ? 'cursor-pointer hover:opacity-80 transition-opacity' : 'cursor-default'} flex flex-col gap-1 ${bg}" data-id="${session.id}">
+            <div class="w-full flex items-center justify-between gap-2 min-w-0">
+                <span class="font-bold block min-w-0 truncate" title="${timeStr} - ${session.title}">${timeStr} - ${session.title}</span>
                 ${isBooked ? '<span class="text-current font-black text-sm" title="Booked">✓</span>' : ''}
             </div>
             ${membBadge ? `<div>${membBadge}</div>` : ''}
-            <div class="flex items-center justify-between gap-0.5 mt-auto pt-1 border-t border-current border-opacity-20">
-                <span class="font-bold text-[10px] uppercase tracking-wider opacity-90 whitespace-nowrap">${session.bookedSlots}/${session.capacity} Slots</span>
-                <span class="text-[8px] uppercase tracking-widest opacity-75">${session.type}</span>
+            <div class="flex items-center justify-between gap-1 mt-auto pt-1 border-t border-current border-opacity-20 min-w-0">
+                <span class="font-bold text-[10px] uppercase tracking-wider opacity-90 shrink-0">${session.bookedSlots}/${session.capacity} Slots</span>
+                <span class="text-[8px] uppercase tracking-widest opacity-75 truncate max-w-[55%]" title="${session.type}">${session.type}</span>
             </div>
         </div>
     `;
