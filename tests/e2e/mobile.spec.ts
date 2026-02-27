@@ -8,7 +8,7 @@ test.describe('Mobile Viewport Experiences', () => {
         await page.goto('/');
 
         // Desktop nav links should not be visible
-        const desktopNavHome = page.locator('.hidden.md\\:flex .nav-link').first();
+        const desktopNavHome = page.locator('.hidden.lg\\:flex .nav-link').first();
         await expect(desktopNavHome).not.toBeVisible();
 
         // Mobile menu button should be visible
@@ -26,8 +26,11 @@ test.describe('Mobile Viewport Experiences', () => {
         await expect(mobileMenu).toBeVisible();
 
         // Check if a link exists in the mobile menu and is visible
-        const mobileHomeLink = mobileMenu.locator('a', { hasText: 'Home' }).first();
-        await expect(mobileHomeLink).toBeVisible();
+        await expect(mobileMenu.locator('a', { hasText: 'Home' }).first()).toBeVisible();
+        await expect(mobileMenu.locator('a', { hasText: 'About' }).first()).toBeVisible();
+        await expect(mobileMenu.locator('a', { hasText: 'Competitions' }).first()).toBeVisible();
+        await expect(mobileMenu.locator('a', { hasText: 'Gallery' }).first()).toBeVisible();
+        await expect(mobileMenu.locator('a', { hasText: 'Join Us' }).first()).toBeVisible();
 
         // Click the hamburger menu again to close it
         await mobileMenuBtn.click();

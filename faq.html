@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/climbing%20team%20logo.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <title>FAQ | USCC</title>
+</head>
+
+<body>
+    <div id="app">
+        <main>
+            <!-- Page Header -->
+            <section
+                class="pt-32 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center border-b border-white/5 relative overflow-hidden">
+                <div
+                    class="absolute top-0 right-1/2 translate-x-1/2 w-[600px] h-[300px] bg-brand-gold/10 blur-[100px] pointer-events-none rounded-full">
+                </div>
+                <h1 class="heading-xl mb-6 relative z-10">Got <span class="text-brand-gold">Questions?</span></h1>
+                <p class="text-xl text-slate-400 max-w-2xl mx-auto font-light relative z-10">All your climbing,
+                    membership, and competition queries answered in one place.</p>
+            </section>
+
+            <!-- FAQ Section -->
+            <section class="py-20 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
+                <div id="faq-container" class="space-y-6">
+                    <!-- Injected via faq.ts -->
+                    <div class="text-center py-12 text-slate-500">Loading FAQs...</div>
+                </div>
+
+                <div class="mt-20 p-8 glass-card border border-white/10 text-center">
+                    <h3 class="text-xl font-bold text-white mb-2">Still can't find what you're looking for?</h3>
+                    <p class="text-slate-400 mb-6">Drop us a DM on Instagram or send an email to our committee.</p>
+                    <div class="flex flex-col sm:flex-row justify-center gap-4">
+                        <a href="mailto:committee@sheffieldclimbing.org" class="btn-outline">Email Us</a>
+                        <a href="https://instagram.com/uos_climb" class="btn-outline">Instagram DM</a>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script type="module" src="/src/faq.ts"></script>
+</body>
+
+</html>

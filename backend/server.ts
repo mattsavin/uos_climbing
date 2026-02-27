@@ -14,6 +14,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import history from 'connect-history-api-fallback';
 import cookieParser from 'cookie-parser';
+import { betaGate } from './middleware/beta-gate';
+import jwt from 'jsonwebtoken';
 
 // ESM dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
@@ -28,6 +30,35 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+
+// Beta Gate Middleware
+app.use(betaGate);
+
+// Beta Auth Route
+app.post('/api/beta-auth', (req, res) => {
+    const { passcode } = req.body;
+    const correctPasscode = process.env.BETA_PASSCODE;
+
+    if (!correctPasscode) {
+        return res.status(500).json({ success: false, message: 'BETA_PASSCODE not configured' });
+    }
+
+    if (passcode === correctPasscode) {
+        const secret = process.env.BETA_ACCESS_SECRET || 'default_beta_secret';
+        const token = jwt.sign({ access: true }, secret, { expiresIn: '7d' });
+
+        res.cookie('BETA_ACCESS_TOKEN', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        });
+
+        return res.json({ success: true });
+    }
+
+    return res.status(401).json({ success: false, message: 'Invalid passcode' });
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -66,9 +97,15 @@ if (process.env.NODE_ENV === 'production') {
             { from: /^\/competitions$/, to: '/competitions.html' },
             { from: /^\/gear$/, to: '/gear.html' },
             { from: /^\/login$/, to: '/login.html' },
-            { from: /^\/elections$/, to: '/elections.html' }
+            { from: /^\/elections$/, to: '/elections.html' },
+            { from: /^\/beta-gate$/, to: '/beta-gate.html' }
         ]
     }));
+} else {
+    // Also handle beta-gate in dev for testing
+    app.get('/beta-gate', (req, res) => {
+        res.sendFile(path.join(__dirname, '../beta-gate.html'));
+    });
 }
 
 export { app };

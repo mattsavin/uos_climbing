@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/climbing%20team%20logo.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <title>Local Walls | USCC</title>
+</head>
+
+<body>
+    <div id="app">
+        <main>
+            <!-- Page Header -->
+            <section
+                class="pt-32 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center border-b border-white/5 relative overflow-hidden">
+                <div
+                    class="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-cyan-500/10 blur-[100px] pointer-events-none rounded-full">
+                </div>
+                <h1 class="heading-xl mb-6 relative z-10">Sheffield <span class="text-cyan-400">Walls.</span></h1>
+                <p class="text-xl text-slate-400 max-w-2xl mx-auto font-light relative z-10">Known as the 'Climbing
+                    Capital' of the UK, Sheffield has some of the best indoor facilities in the world. Here's where we
+                    climb.</p>
+            </section>
+
+            <!-- Walls List -->
+            <section class="py-20 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
+                <div id="walls-grid" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Injected via walls.ts -->
+                    <div class="text-center py-12 text-slate-500 col-span-2">Loading local walls...</div>
+                </div>
+
+                <div
+                    class="mt-20 p-8 glass-card border border-cyan-500/20 bg-cyan-500/5 text-center relative overflow-hidden">
+                    <div class="absolute -right-10 -bottom-10 opacity-10">
+                        <svg class="w-64 h-64 text-cyan-400" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2L2 22h20L12 2zm0 4l6.5 13h-13L12 6z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-4 relative z-10">Prefer the great outdoors?</h3>
+                    <p class="text-slate-400 mb-8 max-w-2xl mx-auto relative z-10">We're only 20 minutes from the Peak
+                        District. During the warmer months, we organize regular evening and weekend trips to world-class
+                        gritstone crags like Stanage, Burbage, and Bamford.</p>
+                    <a href="/join.html" class="btn-primary relative z-10">Check Upcoming Trips</a>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script type="module" src="/src/walls.ts"></script>
+</body>
+
+</html>

@@ -83,3 +83,49 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           COOKIE_SECURE: ${{ secrets.COOKIE_SECURE }}
+
+  deploy-beta:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/dev'
+    steps:
+      - name: Deploy Beta via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: JWT_SECRET,EMAIL_USER,EMAIL_CLIENT_ID,EMAIL_CLIENT_SECRET,EMAIL_REFRESH_TOKEN,RESEND_API_KEY,EMAIL_FROM,COOKIE_SECURE,BETA_PASSCODE,BETA_ACCESS_SECRET
+          script: |
+            cd ~/uos_climbing_beta || git clone https://github.com/mattsavin/uos_climbing.git ~/uos_climbing_beta
+            cd ~/uos_climbing_beta
+            git pull origin dev
+            docker build -t uos_climbing_beta .
+            docker stop uos_climbing_beta || true
+            docker rm uos_climbing_beta || true
+            docker run -d --name uos_climbing_beta \
+              -p 3001:3000 \
+              -v ~/data_beta:/data \
+              -e IS_BETA=true \
+              -e BETA_PASSCODE="$BETA_PASSCODE" \
+              -e BETA_ACCESS_SECRET="$BETA_ACCESS_SECRET" \
+              -e JWT_SECRET="$JWT_SECRET" \
+              -e EMAIL_USER="$EMAIL_USER" \
+              -e EMAIL_CLIENT_ID="$EMAIL_CLIENT_ID" \
+              -e EMAIL_CLIENT_SECRET="$EMAIL_CLIENT_SECRET" \
+              -e EMAIL_REFRESH_TOKEN="$EMAIL_REFRESH_TOKEN" \
+              -e RESEND_API_KEY="$RESEND_API_KEY" \
+              -e EMAIL_FROM="$EMAIL_FROM" \
+              -e COOKIE_SECURE="$COOKIE_SECURE" \
+              uos_climbing_beta
+        env:
+          BETA_PASSCODE: ${{ secrets.BETA_PASSCODE }}
+          BETA_ACCESS_SECRET: ${{ secrets.BETA_ACCESS_SECRET }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_CLIENT_ID: ${{ secrets.EMAIL_CLIENT_ID }}
+          EMAIL_CLIENT_SECRET: ${{ secrets.EMAIL_CLIENT_SECRET }}
+          EMAIL_REFRESH_TOKEN: ${{ secrets.EMAIL_REFRESH_TOKEN }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          COOKIE_SECURE: ${{ secrets.COOKIE_SECURE }}
