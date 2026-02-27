@@ -31,7 +31,7 @@ describe('Admin API', () => {
         const adminRes = await request(app)
             .post('/api/auth/login')
             .send({
-                email: 'sheffieldclimbing@gmail.com',
+                email: 'committee@sheffieldclimbing.org',
                 password: 'SuperSecret123!'
             });
         const cookies = adminRes.headers['set-cookie'];
@@ -43,7 +43,7 @@ describe('Admin API', () => {
         const committeeRes = await request(app)
             .post('/api/auth/login')
             .send({
-                email: 'sheffieldclimbing@gmail.com',
+                email: 'committee@sheffieldclimbing.org',
                 password: 'SuperSecret123!'
             });
         const committeeCookies = committeeRes.headers['set-cookie'];
@@ -168,7 +168,7 @@ describe('Admin API', () => {
 
         expect(res.status).toBe(200);
         expect(res.body).toHaveProperty('success', true);
-        expect(res.body).toHaveProperty('target', 'sheffieldclimbing@gmail.com');
+        expect(res.body).toHaveProperty('target', 'committee@sheffieldclimbing.org');
         expect(typeof res.body.sent).toBe('boolean');
     });
 
@@ -194,7 +194,7 @@ describe('Admin API', () => {
 
     it('should reject invalid committee role', async () => {
         const targetRes = await request(app).post('/api/auth/register').send({
-            firstName: 'Role', lastName: 'Test', email: 'role@ex.com', password: 'pwd', passwordConfirm: 'pwd', registrationNumber: 'R1'
+            firstName: 'Role', lastName: 'Test', email: 'role@example.com', password: 'pwd', passwordConfirm: 'pwd', registrationNumber: 'R1'
         });
         const res = await request(app)
             .post(`/api/admin/users/${targetRes.body.user.id}/committee-role`)
@@ -207,7 +207,7 @@ describe('Admin API', () => {
 
     it('should clear committee role if none provided', async () => {
         const targetRes = await request(app).post('/api/auth/register').send({
-            firstName: 'Role', lastName: 'Clear', email: 'clear@ex.com', password: 'pwd', passwordConfirm: 'pwd', registrationNumber: 'RC1'
+            firstName: 'Role', lastName: 'Clear', email: 'clear@example.com', password: 'pwd', passwordConfirm: 'pwd', registrationNumber: 'RC1'
         });
         const res = await request(app)
             .post(`/api/admin/users/${targetRes.body.user.id}/committee-role`)
@@ -433,7 +433,7 @@ describe('Admin API', () => {
         it('should prevent demoting the root admin', async () => {
             // Get root admin ID
             const usersRes = await request(app).get('/api/admin/users').set('Authorization', `Bearer ${rootToken}`);
-            const rootAdmin = usersRes.body.find((u: any) => u.email === 'sheffieldclimbing@gmail.com');
+            const rootAdmin = usersRes.body.find((u: any) => u.email === 'committee@sheffieldclimbing.org');
             const res = await request(app).post(`/api/admin/users/${rootAdmin.id}/demote`).set('Authorization', `Bearer ${rootToken}`);
 
             expect(res.status).toBe(403);

@@ -38,12 +38,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const isCommittee = user.role === 'committee' || !!user.committeeRole || (Array.isArray(user.committeeRoles) && user.committeeRoles.length > 0);
 
         // Boot non-committee users back to dashboard
-        if (!isCommittee && user.email !== 'sheffieldclimbing@gmail.com') {
+        if (!isCommittee && user.email !== 'committee@sheffieldclimbing.org') {
             window.location.href = '/dashboard.html';
             return;
         }
 
-        const isRootAdmin = user.email === 'sheffieldclimbing@gmail.com';
+        const isRootAdmin = user.email === 'committee@sheffieldclimbing.org';
         if (isRootAdmin && rootTestEmailBtn) {
             rootTestEmailBtn.classList.remove('hidden');
             rootTestEmailBtn.addEventListener('click', async () => {

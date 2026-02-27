@@ -32,7 +32,7 @@ export const requireKitSec = (req: any, res: any, next: any) => {
         if (err || !user) return res.status(403).json({ error: 'Unauthorized' });
 
         // Root admin or Kit & Safety Sec can pass
-        if (user.email === 'sheffieldclimbing@gmail.com' || user.committeeRole === 'Kit & Safety Sec') {
+        if (user.email === 'committee@sheffieldclimbing.org' || user.committeeRole === 'Kit & Safety Sec') {
             next();
         } else {
             return res.status(403).json({ error: 'Requires Kit & Safety Sec privileges' });

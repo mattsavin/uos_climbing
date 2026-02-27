@@ -48,7 +48,7 @@ describe('Middleware Auth API', () => {
 
         // Login Admin
         const adminRes = await request(app).post('/api/auth/login').send({
-            email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!'
+            email: 'committee@sheffieldclimbing.org', password: 'SuperSecret123!'
         });
         const adminCookies = adminRes.headers['set-cookie'];
         const adminCookieArray = Array.isArray(adminCookies) ? adminCookies : (adminCookies ? [adminCookies] : []);
@@ -75,7 +75,7 @@ describe('Middleware Auth API', () => {
 
     const getAdminToken = async () => {
         const adminRes = await request(app).post('/api/auth/login').send({
-            email: 'sheffieldclimbing@gmail.com', password: 'SuperSecret123!'
+            email: 'committee@sheffieldclimbing.org', password: 'SuperSecret123!'
         });
         const adminCookies = adminRes.headers['set-cookie'];
         const adminCookieArray = Array.isArray(adminCookies) ? adminCookies : (adminCookies ? [adminCookies] : []);

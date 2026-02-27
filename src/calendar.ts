@@ -48,14 +48,14 @@ function renderCalendarLegend(
     legendContainer.innerHTML = `
         <div class="mt-6 mb-4 flex flex-wrap gap-4 items-center text-xs text-slate-300 backdrop-blur-sm bg-brand-dark/30 p-4 rounded-xl border border-white/5 shadow-lg mx-auto w-fit max-w-full">
             ${uniqueLegendTypes.map(type => {
-                const style = colorMap[type] || SESSION_COLOR_PALETTE[0];
-                return `
+        const style = colorMap[type] || SESSION_COLOR_PALETTE[0];
+        return `
                     <div class="flex items-center gap-2 min-w-0">
                         <span class="w-2.5 h-2.5 rounded-full ${style.dot} shrink-0"></span>
                         <span class="truncate max-w-42.5">${type}</span>
                     </div>
                 `;
-            }).join('')}
+    }).join('')}
         </div>
     `;
 }
@@ -215,14 +215,20 @@ function renderSessionChip(
     isClickable: boolean,
     colorMap: Record<string, SessionColorStyle>
 ): string {
+    const sessionDate = new Date(session.date);
+    const isPast = sessionDate < new Date();
     const isBooked = myBookings.includes(session.id);
-    const timeStr = new Date(session.date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    const timeStr = sessionDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
     let bg = colorMap[session.type]?.chip || 'bg-slate-600/50 text-slate-300 border-slate-600/30';
 
     if (isBooked) {
         bg = 'bg-brand-gold text-brand-darker border-brand-gold font-bold shadow-[0_0_15px_rgba(253,185,19,0.3)]';
+    } else if (isPast) {
+        bg = 'bg-slate-800/40 text-slate-500 border-slate-700/50 grayscale-[0.5] opacity-60';
     }
+
+    const clickable = isClickable && !isPast;
 
     const reqMemb = (session as any).requiredMembership || 'basic';
     const membBadge = reqMemb === 'comp_team'
@@ -236,10 +242,10 @@ function renderSessionChip(
     const badges = [visibilityBadge, membBadge].filter(Boolean).join('');
 
     return `
-        <div class="session-chip mt-1 border rounded p-2 text-xs font-medium leading-tight w-full overflow-hidden ${isClickable ? 'cursor-pointer hover:opacity-80 transition-opacity' : 'cursor-default'} flex flex-col gap-1 ${bg}" data-id="${session.id}">
+        <div class="session-chip mt-1 border rounded p-2 text-xs font-medium leading-tight w-full overflow-hidden ${clickable ? 'cursor-pointer hover:opacity-80 transition-opacity' : 'cursor-default'} flex flex-col gap-1 ${bg}" data-id="${session.id}">
             <div class="w-full flex items-center justify-between gap-2 min-w-0">
                 <span class="font-bold block min-w-0 truncate" title="${timeStr}">${timeStr}</span>
-                ${isBooked ? '<span class="text-current font-black text-sm" title="Booked">✓</span>' : ''}
+                ${isBooked ? '<span class="text-current font-black text-sm" title="Booked">✓</span>' : (isPast ? '<span class="text-[9px] uppercase tracking-tighter opacity-70">Expired</span>' : '')}
             </div>
             <div class="text-[11px] font-semibold leading-snug wrap-break-word">${session.title}</div>
             ${badges ? `<div class="flex items-center gap-1 flex-wrap">${badges}</div>` : ''}

@@ -36,7 +36,7 @@ describe('Gear API', () => {
         const adminRes = await request(app)
             .post('/api/auth/login')
             .send({
-                email: 'sheffieldclimbing@gmail.com',
+                email: 'committee@sheffieldclimbing.org',
                 password: 'SuperSecret123!'
             });
         const cookies = adminRes.headers['set-cookie'];
@@ -306,7 +306,7 @@ describe('Gear API', () => {
                 if (typeof query === 'string' && query.includes('FROM gear_requests')) {
                     cb(null, { status: 'pending', email: 't@t.com', name: 'T' });
                 } else if (typeof query === 'string' && query.includes('FROM users')) {
-                    cb(null, { email: 'sheffieldclimbing@gmail.com', committeeRole: 'Kit & Safety Sec' });
+                    cb(null, { email: 'committee@sheffieldclimbing.org', committeeRole: 'Kit & Safety Sec' });
                 }
             });
             const spyRun2 = vi.spyOn(db, 'run').mockImplementationOnce((query, params, cb) => {

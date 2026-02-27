@@ -332,7 +332,7 @@ function createMemberRow(user: User, isPending: boolean) {
 
     if (!isPending) {
         const isCommittee = user.role === 'committee' || !!user.committeeRole || (Array.isArray(user.committeeRoles) && user.committeeRoles.length > 0);
-        const isRootAdmin = authState.user?.email === 'sheffieldclimbing@gmail.com';
+        const isRootAdmin = authState.user?.email === 'committee@sheffieldclimbing.org';
 
         if (isCommittee) {
             const ROLES = [
@@ -373,7 +373,7 @@ function createMemberRow(user: User, isPending: boolean) {
                 </div>
             `;
 
-            if (isRootAdmin && user.email !== 'sheffieldclimbing@gmail.com') {
+            if (isRootAdmin && user.email !== 'committee@sheffieldclimbing.org') {
                 actions = `
                     <button class="admin-action-btn text-xs font-bold px-3 py-1 bg-amber-500/10 text-amber-500 border border-amber-500/30 rounded hover:bg-amber-500/20" data-action="demote" data-id="${user.id}" data-name="${safeName}">
                         Remove Admin

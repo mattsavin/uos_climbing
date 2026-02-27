@@ -20,10 +20,14 @@
           <!-- Simulated background image with overlay -->
           <div class="absolute inset-0 bg-brand-darker/70 z-10"></div>
           <img src="/src/assets/NUBS_Finals_015.jpg" alt="Climbing" class="w-full h-full object-cover"
+            fetchpriority="high"
             onerror="this.src='https://images.unsplash.com/photo-1522163182402-834f871fd851?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80'" />
+          <!-- Decorative bottom gradient -->
+          <div class="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-brand-darker to-transparent z-20">
+          </div>
         </div>
 
-        <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mt-16">
+        <div class="relative z-30 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mt-16">
           <span
             class="inline-block py-1 px-3 rounded-full bg-brand-gold/20 text-brand-gold border border-brand-gold/30 text-sm font-bold uppercase tracking-widest mb-6 animate-pulse">New
             Era • New Club</span>
@@ -45,8 +49,6 @@
           </div>
         </div>
 
-        <!-- Decorative element -->
-        <div class="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-brand-darker to-transparent z-10"></div>
       </section>
 
       <!-- Highlights Section -->

@@ -51,6 +51,17 @@ export function openSessionModal(options: SessionModalOptions) {
                     
                     <div id="usm-actions" class="flex flex-col gap-3"></div>
 
+                    <!-- Committee Attendee List -->
+                    <div id="usm-attendee-pane" class="hidden mt-6 pt-6 border-t border-white/10">
+                        <h4 class="text-sm font-bold text-cyan-400 uppercase flex items-center gap-2 mb-4 tracking-wider">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                            Attendees (<span id="usm-attendee-count">0</span>)
+                        </h4>
+                        <div id="usm-attendee-list" class="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                            <div class="text-center py-4 text-slate-500 text-xs italic">Loading attendees...</div>
+                        </div>
+                    </div>
+
                     <!-- Committee Edit Pane -->
                     <div id="usm-edit-pane" class="hidden mt-6 pt-6 border-t border-white/10">
                         <h4 class="text-sm font-bold text-amber-500 uppercase flex items-center gap-2 mb-4 tracking-wider">
@@ -181,8 +192,13 @@ export function openSessionModal(options: SessionModalOptions) {
     errorEl.textContent = '';
 
     // Clear old actions
+    const attendeePaneEl = document.getElementById('usm-attendee-pane')!;
+    const attendeeListEl = document.getElementById('usm-attendee-list')!;
+    const attendeeCountEl = document.getElementById('usm-attendee-count')!;
+
     actionsEl.innerHTML = '';
     editPaneEl.classList.add('hidden');
+    attendeePaneEl.classList.add('hidden');
     deleteBtnEl.classList.add('hidden');
 
     titleEl.textContent = session.title;
@@ -326,10 +342,57 @@ export function openSessionModal(options: SessionModalOptions) {
                 requiredMembershipSelect.value = (session as any).requiredMembership || 'basic';
             });
             (document.getElementById('usm-edit-visibility') as HTMLSelectElement).value = (session as any).visibility || 'all';
+
+            // Load Attendees
+            attendeePaneEl.classList.remove('hidden');
+            renderAttendees(session.id, attendeeListEl, attendeeCountEl, onEditSuccess);
         }
     }
 
     modal!.classList.remove('hidden');
+}
+
+async function renderAttendees(sessionId: string, container: HTMLElement, countEl: HTMLElement, onUpdate?: () => void) {
+    try {
+        const attendees = await adminApi.getSessionAttendees(sessionId);
+        countEl.textContent = attendees.length.toString();
+
+        if (attendees.length === 0) {
+            container.innerHTML = '<div class="text-center py-4 text-slate-500 text-xs italic">No attendees yet.</div>';
+            return;
+        }
+
+        container.innerHTML = attendees.map(u => `
+            <div class="flex items-center justify-between p-2 rounded bg-white/5 border border-white/5">
+                <div class="min-w-0">
+                    <p class="text-xs font-bold text-white truncate">${u.firstName} ${u.lastName}</p>
+                    <p class="text-[9px] text-slate-500 truncate">${u.email}</p>
+                </div>
+                <button class="remove-attendee-btn p-1.5 text-slate-500 hover:text-red-400 transition-colors" data-user-id="${u.id}" title="Remove Attendee">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+        `).join('');
+
+        container.querySelectorAll('.remove-attendee-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const userId = (e.currentTarget as HTMLElement).dataset.userId!;
+                const confirmed = await showConfirmModal('Remove this attendee from the session?');
+                if (confirmed) {
+                    try {
+                        await adminApi.removeAttendee(sessionId, userId);
+                        renderAttendees(sessionId, container, countEl, onUpdate);
+                        if (onUpdate) onUpdate();
+                    } catch (err: any) {
+                        alert(err.message || 'Failed to remove attendee');
+                    }
+                }
+            });
+        });
+
+    } catch (err: any) {
+        container.innerHTML = `<div class="text-center py-4 text-red-400 text-xs">Error: ${err.message}</div>`;
+    }
 }
 
 function close() {

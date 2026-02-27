@@ -14,12 +14,25 @@ export async function renderMembershipTypes() {
         }
 
         listContainer.innerHTML = types.map(t => `
-            <div class="flex items-center justify-between p-4 bg-slate-800/20 hover:bg-slate-800/40 transition-colors border-b border-white/5 last:border-0">
+            <div class="flex items-center justify-between p-4 bg-slate-800/20 hover:bg-slate-800/40 transition-colors border-b border-white/5 last:border-0 ${t.deprecated ? 'opacity-70' : ''}">
                 <div>
-                    <span class="text-sm font-bold text-white">${t.label}</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-bold text-white">${t.label}</span>
+                        ${t.deprecated ? '<span class="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 text-[8px] font-black uppercase tracking-tighter">Deprecated</span>' : ''}
+                    </div>
                     <p class="text-[10px] text-slate-500 uppercase tracking-wider mt-0.5">${t.id}</p>
                 </div>
                 <div class="flex gap-2">
+                    <button class="deprecate-membership-type-btn p-2 transition-colors ${t.id === 'basic' ? 'text-slate-700 cursor-not-allowed opacity-50' : 'text-slate-500 hover:text-amber-400'}"
+                            data-id="${t.id}"
+                            data-label="${t.label}"
+                            data-deprecated="${t.deprecated ? 'true' : 'false'}"
+                            title="${t.deprecated ? 'Restore Type' : 'Mark as Deprecated'}"
+                            ${t.id === 'basic' ? 'disabled' : ''}>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
+                        </svg>
+                    </button>
                     <button class="edit-membership-type-btn p-2 text-slate-500 hover:text-cyan-300 transition-colors"
                             data-id="${t.id}"
                             data-label="${t.label}"
@@ -40,6 +53,28 @@ export async function renderMembershipTypes() {
                 </div>
             </div>
         `).join('');
+
+        listContainer.querySelectorAll('.deprecate-membership-type-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const target = e.currentTarget as HTMLElement;
+                const id = target.dataset.id!;
+                const label = target.dataset.label!;
+                const isDeprecated = target.dataset.deprecated === 'true';
+
+                const nextAction = isDeprecated ? 'Restore' : 'Deprecate';
+                const confirmed = await showConfirmModal(`${nextAction} the "${label}" membership type? ${isDeprecated ? 'It will be visible again for new sessions.' : 'It will be hidden from new session creation but preserved for existing records.'}`);
+                if (!confirmed) return;
+
+                try {
+                    await adminApi.updateMembershipType(id, label, !isDeprecated);
+                    showToast(`Membership type ${isDeprecated ? 'restored' : 'deprecated'}`, 'success');
+                    await renderMembershipTypes();
+                    window.dispatchEvent(new CustomEvent('dashboardUpdate'));
+                } catch (err: any) {
+                    showToast(err.message || 'Failed to update membership type', 'error');
+                }
+            });
+        });
 
         listContainer.querySelectorAll('.edit-membership-type-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {

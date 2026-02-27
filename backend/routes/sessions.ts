@@ -199,8 +199,14 @@ router.post('/:id/book', authenticateToken, (req: any, res) => {
     db.get('SELECT * FROM bookings WHERE userId = ? AND sessionId = ?', [userId, sessionId], (err, booking) => {
         if (booking) return res.status(400).json({ error: 'Already booked this session' });
 
-        db.get('SELECT capacity, bookedSlots, requiredMembership, visibility FROM sessions WHERE id = ?', [sessionId], (err, session: any) => {
+        db.get('SELECT capacity, bookedSlots, requiredMembership, visibility, date FROM sessions WHERE id = ?', [sessionId], (err, session: any) => {
             if (err || !session) return res.status(404).json({ error: 'Session not found' });
+
+            const sessionDate = new Date(session.date);
+            if (sessionDate < new Date()) {
+                return res.status(400).json({ error: 'Cannot book a past session.' });
+            }
+
             if (session.bookedSlots >= session.capacity) return res.status(400).json({ error: 'Session is full' });
 
             const isCommittee = req.user.role === 'committee'
@@ -216,7 +222,7 @@ router.post('/:id/book', authenticateToken, (req: any, res) => {
             db.get('SELECT * FROM user_memberships WHERE userId = ? AND membershipType = ? AND status = "active"', [userId, reqMemb], (err2, userMemb) => {
                 if (err2) return res.status(500).json({ error: 'Database error checking membership' });
                 // Enforce requirement unless they are root admin testing it
-                if (!isCommitteeOnly && !userMemb && req.user.email !== 'sheffieldclimbing@gmail.com') {
+                if (!isCommitteeOnly && !userMemb && req.user.email !== 'committee@sheffieldclimbing.org') {
                     return getMembershipTypeLabel(reqMemb, (typeLabel) => {
                         return res.status(403).json({ error: `This session requires an active ${typeLabel} membership.` });
                     });
@@ -271,9 +277,49 @@ router.post('/:id/cancel', authenticateToken, (req: any, res) => {
     });
 });
 
+router.get('/:id/attendees', authenticateToken, requireCommittee, (req, res) => {
+    db.all(`
+        SELECT u.id, u.firstName, u.lastName, u.name, u.email, u.registrationNumber 
+        FROM users u
+        JOIN bookings b ON u.id = b.userId
+        WHERE b.sessionId = ?
+    `, [req.params.id], (err, rows) => {
+        if (err) return res.status(500).json({ error: 'Database error' });
+        res.json(rows);
+    });
+});
+
+router.delete('/:id/attendees/:userId', authenticateToken, requireCommittee, (req, res) => {
+    const sessionId = req.params.id;
+    const userId = req.params.userId;
+
+    db.serialize(() => {
+        db.run('BEGIN TRANSACTION');
+        db.run('DELETE FROM bookings WHERE userId = ? AND sessionId = ?', [userId, sessionId], function (err) {
+            if (err) {
+                db.run('ROLLBACK');
+                return res.status(500).json({ error: 'Database error' });
+            }
+            if (this.changes === 0) {
+                db.run('ROLLBACK');
+                return res.status(404).json({ error: 'Booking not found' });
+            }
+            db.run('UPDATE sessions SET bookedSlots = bookedSlots - 1 WHERE id = ?', [sessionId], function (err) {
+                if (err) {
+                    db.run('ROLLBACK');
+                    return res.status(500).json({ error: 'Database error' });
+                }
+                db.run('COMMIT');
+                res.json({ success: true });
+            });
+        });
+    });
+});
+
 router.delete('/:id', authenticateToken, requireCommittee, (req, res) => {
     db.run('DELETE FROM sessions WHERE id = ?', [req.params.id], function (err) {
         if (err) return res.status(500).json({ error: 'Database error' });
+        if (this.changes === 0) return res.status(404).json({ error: 'Session not found' });
         res.json({ success: true });
     });
 });

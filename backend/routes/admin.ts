@@ -42,7 +42,7 @@ router.post('/config/elections', authenticateToken, requireCommittee, (req, res)
 
 /** Send a test email (root admin only) */
 router.post('/test-email', authenticateToken, requireCommittee, async (req: any, res) => {
-    if (req.user.email !== 'sheffieldclimbing@gmail.com') {
+    if (req.user.email !== 'committee@sheffieldclimbing.org') {
         return res.status(403).json({ error: 'Only Root Admin can perform this action' });
     }
 
@@ -186,14 +186,14 @@ router.post('/users/:id/promote', authenticateToken, requireCommittee, (req, res
 
 router.post('/users/:id/demote', authenticateToken, requireCommittee, (req: any, res) => {
     // Only root admin can demote
-    if (req.user.email !== 'sheffieldclimbing@gmail.com') {
+    if (req.user.email !== 'committee@sheffieldclimbing.org') {
         return res.status(403).json({ error: 'Only Root Admin can perform this action' });
     }
 
     // Cannot demote root admin
     db.get('SELECT email FROM users WHERE id = ?', [req.params.id], (err, user: any) => {
         if (err) return res.status(500).json({ error: 'Database error' });
-        if (user && user.email === 'sheffieldclimbing@gmail.com') {
+        if (user && user.email === 'committee@sheffieldclimbing.org') {
             return res.status(403).json({ error: 'Cannot demote the Root Admin' });
         }
 
