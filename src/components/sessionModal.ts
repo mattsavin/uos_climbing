@@ -41,6 +41,10 @@ export function openSessionModal(options: SessionModalOptions) {
                             <span class="text-slate-500 font-bold uppercase tracking-wider text-xs">Availability</span>
                             <span id="usm-capacity" class="font-mono text-white bg-slate-900 px-2 py-1 rounded inline-block"></span>
                         </div>
+                        <div id="usm-visibility-row" class="hidden flex justify-between items-center pt-1">
+                            <span class="text-slate-500 font-bold uppercase tracking-wider text-xs">Visibility</span>
+                            <span id="usm-visibility" class="font-mono text-amber-300 bg-amber-500/10 border border-amber-500/30 px-2 py-1 rounded inline-block text-[11px] uppercase tracking-wider">Committee Only</span>
+                        </div>
                     </div>
                     
                     <p id="usm-error" class="hidden text-red-400 text-xs mb-4 p-3 bg-red-400/10 rounded border border-red-400/20 text-center font-bold"></p>
@@ -81,13 +85,20 @@ export function openSessionModal(options: SessionModalOptions) {
                                 </div>
                             </div>
                             <div class="space-y-1 text-left mt-2">
-                                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Required Membership</label>
-                                    <select id="usm-edit-required-membership" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white text-[11px] focus:outline-none focus:border-amber-500 block">
-                                        <option value="basic">Basic (All Members)</option>
-                                        <option value="bouldering">Bouldering Add-on</option>
-                                        <option value="comp_team">Competition Team Only</option>
-                                    </select>
-                                </div>
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Required Membership</label>
+                                <select id="usm-edit-required-membership" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white text-[11px] focus:outline-none focus:border-amber-500 block">
+                                    <option value="basic">Basic (All Members)</option>
+                                    <option value="bouldering">Bouldering Add-on</option>
+                                    <option value="comp_team">Competition Team Only</option>
+                                </select>
+                            </div>
+                            <div class="space-y-1 text-left mt-2">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Visibility</label>
+                                <select id="usm-edit-visibility" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white text-[11px] focus:outline-none focus:border-amber-500 block">
+                                    <option value="all">Everyone</option>
+                                    <option value="committee_only">Committee Only</option>
+                                </select>
+                            </div>
                             <div class="flex flex-col gap-2 mt-4 pt-4 border-t border-slate-800">
                                 <button type="submit" class="btn-primary w-full !px-4 !py-3 !text-xs uppercase tracking-wider !bg-amber-500 hover:!bg-amber-400 !text-brand-darker !shadow-amber-500/20 font-black">Save Adjustments</button>
                                 <button type="button" id="usm-delete-btn" class="w-full text-[10px] font-bold px-2 py-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded uppercase tracking-wider transition-colors hidden text-center">Delete Event</button>
@@ -113,13 +124,14 @@ export function openSessionModal(options: SessionModalOptions) {
             const capacity = parseInt((document.getElementById('usm-edit-capacity') as HTMLInputElement).value, 10);
             const bookedSlots = parseInt((document.getElementById('usm-edit-booked') as HTMLInputElement).value, 10) || 0;
             const requiredMembership = (document.getElementById('usm-edit-required-membership') as HTMLSelectElement).value as 'basic' | 'bouldering' | 'comp_team';
+            const visibility = (document.getElementById('usm-edit-visibility') as HTMLSelectElement).value as 'all' | 'committee_only';
 
             if (id && title && date && type && !isNaN(capacity)) {
                 try {
                     const submitBtn = document.querySelector('#usm-edit-form button[type="submit"]') as HTMLButtonElement;
                     submitBtn.disabled = true;
                     submitBtn.textContent = 'Saving...';
-                    await adminApi.updateSession(id, { title, date, type, capacity, bookedSlots, requiredMembership });
+                    await adminApi.updateSession(id, { title, date, type, capacity, bookedSlots, requiredMembership, visibility });
                     close();
                     if ((window as any)._usmCurrentOnEditSuccess) (window as any)._usmCurrentOnEditSuccess();
                 } catch (err: any) {
@@ -160,6 +172,7 @@ export function openSessionModal(options: SessionModalOptions) {
     const typeEl = document.getElementById('usm-type')!;
     const datetimeEl = document.getElementById('usm-datetime')!;
     const capacityEl = document.getElementById('usm-capacity')!;
+    const visibilityRowEl = document.getElementById('usm-visibility-row')!;
     const iconEl = document.getElementById('usm-icon')!;
     const actionsEl = document.getElementById('usm-actions')!;
     const errorEl = document.getElementById('usm-error')!;
@@ -183,6 +196,11 @@ export function openSessionModal(options: SessionModalOptions) {
         minute: '2-digit'
     });
     capacityEl.textContent = `${session.bookedSlots} / ${session.capacity} Slots`;
+    if ((session as any).visibility === 'committee_only') {
+        visibilityRowEl.classList.remove('hidden');
+    } else {
+        visibilityRowEl.classList.add('hidden');
+    }
 
     // Styling the icon depending on Type
     if (session.type === 'Competition') {
@@ -300,6 +318,7 @@ export function openSessionModal(options: SessionModalOptions) {
             (document.getElementById('usm-edit-capacity') as HTMLInputElement).value = session.capacity.toString();
             (document.getElementById('usm-edit-booked') as HTMLInputElement).value = session.bookedSlots.toString();
             (document.getElementById('usm-edit-required-membership') as HTMLSelectElement).value = (session as any).requiredMembership || 'basic';
+            (document.getElementById('usm-edit-visibility') as HTMLSelectElement).value = (session as any).visibility || 'all';
         }
     }
 

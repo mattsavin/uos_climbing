@@ -141,10 +141,12 @@ function initializeDatabase() {
             date TEXT NOT NULL,
             capacity INTEGER NOT NULL,
             bookedSlots INTEGER DEFAULT 0,
-            requiredMembership TEXT DEFAULT 'basic'
+            requiredMembership TEXT DEFAULT 'basic',
+            visibility TEXT DEFAULT 'all'
         )`);
 
         db.run('ALTER TABLE sessions ADD COLUMN requiredMembership TEXT DEFAULT "basic"', (err) => { });
+        db.run('ALTER TABLE sessions ADD COLUMN visibility TEXT DEFAULT "all"', (err) => { });
 
         // Bookings Table
         db.run(`CREATE TABLE IF NOT EXISTS bookings (

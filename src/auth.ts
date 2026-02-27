@@ -64,6 +64,7 @@ export interface Session {
     capacity: number;
     bookedSlots: number;
     requiredMembership?: 'basic' | 'bouldering' | 'comp_team';
+    visibility?: 'all' | 'committee_only';
 }
 
 // Current Session State
@@ -615,4 +616,3 @@ export const gearApi = {
 };
 
 // Initialize session asynchronously will be handled in dashboard.ts
-

@@ -70,9 +70,9 @@ describe('Sessions API', () => {
     });
 
     // Helper functions for test isolation
-    const createSession = async (token: string, title: string) => {
+    const createSession = async (token: string, title: string, extra: Record<string, any> = {}) => {
         const res = await request(app).post('/api/sessions').set('Authorization', `Bearer ${token}`).send({
-            title, type: 'Social', date: '2026-03-01T18:00:00', capacity: 10
+            title, type: 'Social', date: '2026-03-01T18:00:00', capacity: 10, ...extra
         });
         return res.body.id;
     };
@@ -105,6 +105,26 @@ describe('Sessions API', () => {
         expect(res.body.some((s: any) => s.id === sessionId)).toBe(true);
     });
 
+    it('should hide committee-only sessions from non-committee users', async () => {
+        const sessionId = await createSession(committeeToken, 'Committee Hidden Session', { visibility: 'committee_only' });
+        const res = await request(app)
+            .get('/api/sessions')
+            .set('Authorization', `Bearer ${userToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.some((s: any) => s.id === sessionId)).toBe(false);
+    });
+
+    it('should show committee-only sessions to committee users', async () => {
+        const sessionId = await createSession(committeeToken, 'Committee Visible Session', { visibility: 'committee_only' });
+        const res = await request(app)
+            .get('/api/sessions')
+            .set('Authorization', `Bearer ${committeeToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.some((s: any) => s.id === sessionId)).toBe(true);
+    });
+
     it('should allow user to book a session', async () => {
         const sessionId = await createSession(committeeToken, 'Bookable Session');
         const res = await request(app)
@@ -126,6 +146,16 @@ describe('Sessions API', () => {
 
         expect(res.status).toBe(400);
         expect(res.body).toHaveProperty('error', 'Already booked this session');
+    });
+
+    it('should prevent non-committee users booking committee-only sessions', async () => {
+        const sessionId = await createSession(committeeToken, 'Committee Booking Guard', { visibility: 'committee_only' });
+        const res = await request(app)
+            .post(`/api/sessions/${sessionId}/book`)
+            .set('Authorization', `Bearer ${userToken}`);
+
+        expect(res.status).toBe(403);
+        expect(res.body).toHaveProperty('error', 'This session is for committee members only.');
     });
 
     it('should show user bookings', async () => {
@@ -225,6 +255,88 @@ describe('Sessions API', () => {
         expect(res.headers['content-type']).toContain('text/calendar');
         expect(res.text).toContain('BEGIN:VCALENDAR');
         expect(res.text).toContain('iCal Session');
+    });
+
+    it('should return an empty iCal feed when user has no bookings', async () => {
+        // Fresh user with no bookings
+        const user3Res = await request(app).post('/api/auth/register').send({
+            firstName: 'User', lastName: '3', email: 'user3_ical@example.com', password: 'Password123!', passwordConfirm: 'Password123!', registrationNumber: 'U3ICAL'
+        });
+        const tokenCookie = (user3Res.headers['set-cookie'] as any)?.find((c: string) => c.startsWith('uscc_token='));
+        const user3Token = tokenCookie ? tokenCookie.split(';')[0].split('=')[1] : (user3Res.body.token || '');
+
+        const meRes = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${user3Token}`);
+        const user3 = meRes.body.user;
+
+        // Create sessions but do not book them
+        await request(app).post('/api/sessions').set('Authorization', `Bearer ${committeeToken}`).send({
+            title: 'Public iCal Session', type: 'Social', date: '2026-03-03T18:00:00', capacity: 20, visibility: 'all'
+        });
+        await request(app).post('/api/sessions').set('Authorization', `Bearer ${committeeToken}`).send({
+            title: 'Committee iCal Session', type: 'Meeting', date: '2026-03-04T18:00:00', capacity: 20, visibility: 'committee_only'
+        });
+
+        const res = await request(app).get(`/api/sessions/ical/${user3.calendarToken}`);
+        expect(res.status).toBe(200);
+        expect(res.text).toContain('BEGIN:VCALENDAR');
+        expect(res.text).toContain('END:VCALENDAR');
+        expect(res.text).not.toContain('BEGIN:VEVENT');
+    });
+
+    it('should include only booked sessions in iCal', async () => {
+        const user4Res = await request(app).post('/api/auth/register').send({
+            firstName: 'User', lastName: '4', email: 'user4_ical@example.com', password: 'Password123!', passwordConfirm: 'Password123!', registrationNumber: 'U4ICAL'
+        });
+        const tokenCookie = (user4Res.headers['set-cookie'] as any)?.find((c: string) => c.startsWith('uscc_token='));
+        const user4Token = tokenCookie ? tokenCookie.split(';')[0].split('=')[1] : (user4Res.body.token || '');
+        const meRes = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${user4Token}`);
+        const user4 = meRes.body.user;
+
+        const bookedSessionId = await createSession(committeeToken, 'Booked iCal Session');
+        const unbookedSessionId = await createSession(committeeToken, 'Unbooked iCal Session');
+        await bookSession(user4Token, bookedSessionId);
+
+        const res = await request(app).get(`/api/sessions/ical/${user4.calendarToken}`);
+        expect(res.status).toBe(200);
+        expect(res.text).toContain('Booked iCal Session');
+        expect(res.text).not.toContain('Unbooked iCal Session');
+        expect(res.text).toContain(bookedSessionId);
+        expect(res.text).not.toContain(unbookedSessionId);
+    });
+
+    it('should include all visible sessions in all-sessions iCal feed for regular users', async () => {
+        const user5Res = await request(app).post('/api/auth/register').send({
+            firstName: 'User', lastName: '5', email: 'user5_ical@example.com', password: 'Password123!', passwordConfirm: 'Password123!', registrationNumber: 'U5ICAL'
+        });
+        const tokenCookie = (user5Res.headers['set-cookie'] as any)?.find((c: string) => c.startsWith('uscc_token='));
+        const user5Token = tokenCookie ? tokenCookie.split(';')[0].split('=')[1] : (user5Res.body.token || '');
+        const meRes = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${user5Token}`);
+        const user5 = meRes.body.user;
+
+        await request(app).post('/api/sessions').set('Authorization', `Bearer ${committeeToken}`).send({
+            title: 'All Feed Public Session', type: 'Social', date: '2026-03-05T18:00:00', capacity: 20, visibility: 'all'
+        });
+        await request(app).post('/api/sessions').set('Authorization', `Bearer ${committeeToken}`).send({
+            title: 'All Feed Committee Session', type: 'Meeting', date: '2026-03-06T18:00:00', capacity: 20, visibility: 'committee_only'
+        });
+
+        const res = await request(app).get(`/api/sessions/ical/${user5.calendarToken}/all`);
+        expect(res.status).toBe(200);
+        expect(res.text).toContain('All Feed Public Session');
+        expect(res.text).not.toContain('All Feed Committee Session');
+    });
+
+    it('should include committee-only sessions in all-sessions iCal feed for committee users', async () => {
+        const meRes = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${committeeToken}`);
+        const committeeUser = meRes.body.user;
+
+        await request(app).post('/api/sessions').set('Authorization', `Bearer ${committeeToken}`).send({
+            title: 'All Feed Committee Visible', type: 'Meeting', date: '2026-03-07T18:00:00', capacity: 20, visibility: 'committee_only'
+        });
+
+        const res = await request(app).get(`/api/sessions/ical/${committeeUser.calendarToken}/all`);
+        expect(res.status).toBe(200);
+        expect(res.text).toContain('All Feed Committee Visible');
     });
 
     describe('Database Errors', () => {

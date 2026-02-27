@@ -98,6 +98,11 @@ export function initSessionHandlers() {
         sessionReqMbSelect.innerHTML = config.membershipTypes.map((m: any) => `<option value="${m.id}">${m.label}</option>`).join('');
     }
 
+    const sessionVisibilitySelect = document.getElementById('session-visibility') as HTMLSelectElement | null;
+    if (sessionVisibilitySelect) {
+        sessionVisibilitySelect.value = 'all';
+    }
+
     const filtersContainer = document.getElementById('calendar-filters-container');
     if (filtersContainer) {
         filtersContainer.innerHTML = config.calendarFilters.map((f: any) => `
@@ -150,9 +155,10 @@ export function initSessionHandlers() {
             const dateStr = (document.getElementById('session-date') as HTMLInputElement).value;
             const capacity = parseInt((document.getElementById('session-capacity') as HTMLInputElement).value, 10);
             const requiredMembership = ((document.getElementById('session-required-membership') as HTMLSelectElement)?.value || 'basic') as 'basic' | 'bouldering' | 'comp_team';
+            const visibility = ((document.getElementById('session-visibility') as HTMLSelectElement)?.value || 'all') as 'all' | 'committee_only';
 
             if (title && type && dateStr && !isNaN(capacity)) {
-                await adminApi.addSession({ title, type, date: dateStr, capacity, requiredMembership });
+                await adminApi.addSession({ title, type, date: dateStr, capacity, requiredMembership, visibility });
                 (addSessionForm as HTMLFormElement).reset();
                 addSessionFormContainer?.classList.add('hidden');
                 await renderSessions(getIsCommittee());

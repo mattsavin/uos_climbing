@@ -87,13 +87,15 @@ export async function renderAdminLists() {
         ? pendingMemberships.map(pm => createPendingMembershipRow(pm.user, pm.membership)).join('')
         : '<p class="p-5 text-sm text-slate-500 text-center">No pending registrations.</p>';
 
-    // Render Active — committee members + anyone with at least one active membership row,
-    // excluding root admin. We check individual rows because the top-level membershipStatus
-    // can be stale if rows were approved individually rather than via the bulk approve action.
+    // Render Active — committee members/role-holders + anyone with active membership data,
+    // excluding root admin. We prefer membership rows, but also allow legacy top-level
+    // membershipStatus='active' so older records without rows still appear.
     const allActive = allUsersRaw.filter((u: any) => {
         if (u.email === 'sheffieldclimbing@gmail.com') return false;
-        if (u.role === 'committee') return true;
-        return (u.memberships as any[] || []).some((m: any) => m.status === 'active');
+        const isCommittee = u.role === 'committee' || !!u.committeeRole || (Array.isArray(u.committeeRoles) && u.committeeRoles.length > 0);
+        if (isCommittee) return true;
+        const hasActiveMembershipRow = (u.memberships as any[] || []).some((m: any) => m.status === 'active');
+        return hasActiveMembershipRow || u.membershipStatus === 'active';
     });
 
     // Apply search filter if query exists

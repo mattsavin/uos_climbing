@@ -215,6 +215,14 @@
                                             class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-gold">
                                         </select>
                                     </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-400 mb-1 uppercase">Who Can See This Event</label>
+                                        <select id="session-visibility"
+                                            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-gold">
+                                            <option value="all">Everyone</option>
+                                            <option value="committee_only">Committee Only</option>
+                                        </select>
+                                    </div>
                                     <div class="flex justify-end gap-3 mt-4">
                                         <button type="button" id="cancel-session-btn"
                                             class="text-xs font-bold text-slate-400 hover:text-white transition-colors">Cancel</button>
@@ -243,14 +251,15 @@
                                     Year</h4>
                                 <!-- Right: iCal + Next -->
                                 <div class="flex items-center justify-end gap-2">
-                                    <a href="#" id="ical-link"
-                                        class="p-2 text-brand-gold hover:text-white transition-colors bg-brand-gold/10 rounded-lg hover:bg-brand-gold/20"
-                                        title="Copy iCal Link">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
-                                            </path>
-                                        </svg>
+                                    <a href="#" id="ical-link-all"
+                                        class="px-2 py-1 text-[10px] font-black uppercase tracking-widest text-brand-gold hover:text-white transition-colors bg-brand-gold/10 rounded-lg hover:bg-brand-gold/20"
+                                        title="Copy iCal Link for All Visible Sessions">
+                                        iCal All
+                                    </a>
+                                    <a href="#" id="ical-link-booked"
+                                        class="px-2 py-1 text-[10px] font-black uppercase tracking-widest text-cyan-300 hover:text-white transition-colors bg-cyan-500/10 rounded-lg hover:bg-cyan-500/20"
+                                        title="Copy iCal Link for Booked Sessions Only">
+                                        iCal Booked
                                     </a>
                                     <button id="next-month-btn"
                                         class="p-2 text-slate-400 hover:text-white transition-colors bg-white/5 rounded-lg hover:bg-white/10">

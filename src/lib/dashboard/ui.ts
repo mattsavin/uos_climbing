@@ -48,7 +48,8 @@ export async function updateUI() {
         const manageTypesShortcut = document.getElementById('manage-types-shortcut');
         const addSessionToggleBtn = document.getElementById('add-session-toggle-btn');
         const addSessionFormContainer = document.getElementById('add-session-form-container');
-        const icalLink = document.getElementById('ical-link') as HTMLAnchorElement | null;
+        const icalLinkAll = document.getElementById('ical-link-all') as HTMLAnchorElement | null;
+        const icalLinkBooked = document.getElementById('ical-link-booked') as HTMLAnchorElement | null;
         const adminPortalCard = document.getElementById('admin-portal-card'); // Element to toggle
 
         // Check membership renewal
@@ -257,10 +258,15 @@ export async function updateUI() {
             if (addSessionFormContainer) addSessionFormContainer.classList.add('hidden');
         }
 
-        if (icalLink) {
-            const link = `${window.location.origin}/api/sessions/ical/${user.calendarToken}`;
-            icalLink.dataset.link = link;
-            icalLink.href = link;
+        const bookedLink = `${window.location.origin}/api/sessions/ical/${user.calendarToken}`;
+        const allLink = `${window.location.origin}/api/sessions/ical/${user.calendarToken}/all`;
+        if (icalLinkAll) {
+            icalLinkAll.dataset.link = allLink;
+            icalLinkAll.href = allLink;
+        }
+        if (icalLinkBooked) {
+            icalLinkBooked.dataset.link = bookedLink;
+            icalLinkBooked.href = bookedLink;
         }
 
         await renderSessions(isCommittee);
@@ -272,7 +278,25 @@ export async function updateUI() {
 
 export function initGeneralHandlers() {
     const logoutBtn = document.getElementById('logout-btn');
-    const icalLink = document.getElementById('ical-link');
+    const icalLinkAll = document.getElementById('ical-link-all');
+    const icalLinkBooked = document.getElementById('ical-link-booked');
+
+    const attachIcalCopy = (el: HTMLElement | null, label: string) => {
+        if (!el) return;
+        el.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const link = el.dataset.link;
+            if (link) {
+                const copied = await copyTextWithFallback(link);
+                if (copied) {
+                    showToast(`Copied ${label} iCal link to your clipboard!`, 'success');
+                } else {
+                    window.prompt(`Copy your ${label} iCal link:`, link);
+                    showToast('Could not copy link. Try manually selecting it if possible.', 'error');
+                }
+            }
+        });
+    };
 
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
@@ -281,19 +305,6 @@ export function initGeneralHandlers() {
         });
     }
 
-    if (icalLink) {
-        icalLink.addEventListener('click', async (e) => {
-            e.preventDefault();
-            const link = (icalLink as HTMLElement).dataset.link;
-            if (link) {
-                const copied = await copyTextWithFallback(link);
-                if (copied) {
-                    showToast('Copied iCal link to your clipboard!', 'success');
-                } else {
-                    window.prompt('Copy your iCal link:', link);
-                    showToast('Could not copy link. Try manually selecting it if possible.', 'error');
-                }
-            }
-        });
-    }
+    attachIcalCopy(icalLinkAll as HTMLElement | null, 'all sessions');
+    attachIcalCopy(icalLinkBooked as HTMLElement | null, 'booked sessions');
 }

@@ -230,6 +230,10 @@ function renderSessionChip(
         : reqMemb === 'bouldering'
             ? `<span class="text-[8px] font-black uppercase tracking-widest opacity-90 bg-blue-500/30 text-blue-300 px-1 rounded">Bouldering</span>`
             : '';
+    const visibilityBadge = (session as any).visibility === 'committee_only'
+        ? `<span class="text-[8px] font-black uppercase tracking-widest opacity-90 bg-amber-500/25 text-amber-200 px-1 rounded border border-amber-500/30">Committee</span>`
+        : '';
+    const badges = [visibilityBadge, membBadge].filter(Boolean).join('');
 
     return `
         <div class="session-chip mt-1 border rounded p-2 text-xs font-medium leading-tight w-full overflow-hidden ${isClickable ? 'cursor-pointer hover:opacity-80 transition-opacity' : 'cursor-default'} flex flex-col gap-1 ${bg}" data-id="${session.id}">
@@ -238,7 +242,7 @@ function renderSessionChip(
                 ${isBooked ? '<span class="text-current font-black text-sm" title="Booked">✓</span>' : ''}
             </div>
             <div class="text-[11px] font-semibold leading-snug wrap-break-word">${session.title}</div>
-            ${membBadge ? `<div>${membBadge}</div>` : ''}
+            ${badges ? `<div class="flex items-center gap-1 flex-wrap">${badges}</div>` : ''}
             <div class="mt-auto pt-1 border-t border-current border-opacity-20 min-w-0">
                 <span class="block font-bold text-[10px] uppercase tracking-wider opacity-90">${session.bookedSlots}/${session.capacity} Slots</span>
                 <span class="block text-[8px] uppercase tracking-widest opacity-75 leading-snug break-words" title="${session.type}">${session.type}</span>
