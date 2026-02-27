@@ -161,6 +161,37 @@ describe('Admin API', () => {
         expect(resGet.body).toHaveProperty('electionsOpen', true);
     });
 
+    it('should allow root admin to trigger a test email', async () => {
+        const res = await request(app)
+            .post('/api/admin/test-email')
+            .set('Authorization', `Bearer ${rootToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveProperty('success', true);
+        expect(res.body).toHaveProperty('target', 'sheffieldclimbing@gmail.com');
+        expect(typeof res.body.sent).toBe('boolean');
+    });
+
+    it('should prevent non-root committee users from triggering test email', async () => {
+        const nonRootRes = await request(app).post('/api/auth/register').send({
+            firstName: 'Non', lastName: 'Root', email: 'non_root_admin@example.com', password: 'Password123!', passwordConfirm: 'Password123!', registrationNumber: 'NRAD1'
+        });
+        const nonRootId = nonRootRes.body.user?.id;
+        await request(app).post(`/api/admin/users/${nonRootId}/promote`).set('Authorization', `Bearer ${rootToken}`);
+        const reloginRes = await request(app).post('/api/auth/login').send({
+            email: 'non_root_admin@example.com', password: 'Password123!'
+        });
+        const reloginCookie = (reloginRes.headers['set-cookie'] as any)?.find((c: string) => c.startsWith('uscc_token='));
+        const nonRootCommitteeToken = reloginCookie ? reloginCookie.split(';')[0].split('=')[1] : '';
+
+        const res = await request(app)
+            .post('/api/admin/test-email')
+            .set('Authorization', `Bearer ${nonRootCommitteeToken}`);
+
+        expect(res.status).toBe(403);
+        expect(res.body).toHaveProperty('error', 'Only Root Admin can perform this action');
+    });
+
     it('should reject invalid committee role', async () => {
         const targetRes = await request(app).post('/api/auth/register').send({
             firstName: 'Role', lastName: 'Test', email: 'role@ex.com', password: 'pwd', passwordConfirm: 'pwd', registrationNumber: 'R1'

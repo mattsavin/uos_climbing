@@ -415,6 +415,10 @@ export const adminApi = {
         });
     },
 
+    async sendTestEmail() {
+        return apiFetch('/api/admin/test-email', { method: 'POST' });
+    },
+
     // Session Management API
     async getSessions(): Promise<Session[]> {
         return apiFetch('/api/sessions');

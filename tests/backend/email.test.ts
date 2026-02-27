@@ -7,7 +7,9 @@ vi.mock('../../backend/config', () => {
         EMAIL_USER: 'test@example.com',
         EMAIL_CLIENT_ID: 'mock-client-id',
         EMAIL_CLIENT_SECRET: 'mock-client-secret',
-        EMAIL_REFRESH_TOKEN: 'mock-refresh-token'
+        EMAIL_REFRESH_TOKEN: 'mock-refresh-token',
+        RESEND_API_KEY: '',
+        EMAIL_FROM: ''
     };
 });
 

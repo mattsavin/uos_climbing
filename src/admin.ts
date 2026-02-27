@@ -1,8 +1,9 @@
 import './style.css';
-import { authState } from './auth';
+import { adminApi, authState } from './auth';
 import { initAdminConfirm, renderAdminLists } from './lib/dashboard/admin';
 import { initSessionTypeHandlers, renderSessionTypes } from './lib/dashboard/session-types';
 import { adminConfirmModalHtml } from './components';
+import { showToast } from './utils';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Inject components
@@ -24,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Authenticate and check permissions
     authState.init().then(() => {
         const user = authState.getUser();
+        const rootTestEmailBtn = document.getElementById('root-send-test-email-btn') as HTMLButtonElement | null;
 
         if (!user) {
             window.location.href = '/login.html';
@@ -36,6 +38,29 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isCommittee && user.email !== 'sheffieldclimbing@gmail.com') {
             window.location.href = '/dashboard.html';
             return;
+        }
+
+        const isRootAdmin = user.email === 'sheffieldclimbing@gmail.com';
+        if (isRootAdmin && rootTestEmailBtn) {
+            rootTestEmailBtn.classList.remove('hidden');
+            rootTestEmailBtn.addEventListener('click', async () => {
+                rootTestEmailBtn.disabled = true;
+                const prevText = rootTestEmailBtn.textContent || 'Send Test Email';
+                rootTestEmailBtn.textContent = 'Sending...';
+                try {
+                    const result = await adminApi.sendTestEmail() as any;
+                    if (result?.sent) {
+                        showToast(`Test email sent to ${result.target}`, 'success');
+                    } else {
+                        showToast('Email provider is not configured, test send skipped.', 'error');
+                    }
+                } catch (err: any) {
+                    showToast(err.message || 'Failed to send test email', 'error');
+                } finally {
+                    rootTestEmailBtn.disabled = false;
+                    rootTestEmailBtn.textContent = prevText;
+                }
+            });
         }
 
         renderAdminLists();

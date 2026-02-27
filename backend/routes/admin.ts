@@ -20,6 +20,27 @@ router.post('/config/elections', authenticateToken, requireCommittee, (req, res)
     });
 });
 
+/** Send a test email (root admin only) */
+router.post('/test-email', authenticateToken, requireCommittee, async (req: any, res) => {
+    if (req.user.email !== 'sheffieldclimbing@gmail.com') {
+        return res.status(403).json({ error: 'Only Root Admin can perform this action' });
+    }
+
+    const target = req.user.email;
+    const sent = await sendEmail(
+        target,
+        'USCC Test Email',
+        'This is a test email from the USCC admin portal.',
+        '<p>This is a test email from the USCC admin portal.</p>'
+    );
+
+    res.json({
+        success: true,
+        sent,
+        target
+    });
+});
+
 /** Get all users with their membership rows joined */
 router.get('/users', authenticateToken, requireCommittee, (req, res) => {
     db.all(
