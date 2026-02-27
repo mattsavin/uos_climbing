@@ -26,10 +26,10 @@ document.addEventListener('DOMContentLoaded', () => {
     initAdminConfirm();
     initProfileHandlers();
     initAccountModalHandlers();
-    initCommitteeProfileHandlers();
 
     // Initial Boot
     authState.init().then(() => {
         updateUI();
+        initCommitteeProfileHandlers();
     });
 });

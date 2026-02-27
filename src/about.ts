@@ -20,8 +20,34 @@ async function renderCommittee() {
         const members = await response.json();
         const roles = config.committeeRoles;
 
+        const normalize = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, '');
+        const roleAliases: Record<string, string[]> = {
+            president: ['chair'],
+            chair: ['president']
+        };
+
+        const memberMatchesRole = (member: any, role: any) => {
+            const rawRoles: string[] = [];
+            if (typeof member.roles === 'string' && member.roles.trim()) {
+                rawRoles.push(...member.roles.split(',').map((r: string) => r.trim()).filter(Boolean));
+            }
+            if (typeof member.committeeRole === 'string' && member.committeeRole.trim()) {
+                rawRoles.push(member.committeeRole.trim());
+            }
+
+            const normalizedMemberRoles = new Set(rawRoles.map(normalize));
+            const roleKeys = [
+                normalize(role.id),
+                normalize(role.title),
+                ...(roleAliases[normalize(role.id)] || []),
+                ...(roleAliases[normalize(role.title)] || [])
+            ];
+
+            return roleKeys.some((k) => normalizedMemberRoles.has(k));
+        };
+
         committeeGrid.innerHTML = roles.map(role => {
-            const member = members.find((m: any) => m.role === role.id);
+            const member = members.find((m: any) => memberMatchesRole(m, role));
             const name = member ? member.name : "To Be Announced";
             const instagram = member ? member.instagram : null;
             const faveCrag = member ? member.faveCrag : null;

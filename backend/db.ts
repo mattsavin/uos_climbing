@@ -275,6 +275,14 @@ function initializeDatabase() {
             } else {
                 // Ensure existing root admin is always marked as active + verified
                 db.run('UPDATE users SET emailVerified = 1, membershipStatus = ? WHERE email = ?', ['active', 'committee@sheffieldclimbing.org']);
+                // In non-production, keep local root credentials stable for troubleshooting/dev access
+                if (process.env.NODE_ENV !== 'production') {
+                    const rootHash = await bcrypt.hash('SuperSecret123!', 10);
+                    db.run(
+                        'UPDATE users SET passwordHash = ?, role = ?, firstName = ?, lastName = ?, name = ? WHERE email = ?',
+                        [rootHash, 'committee', 'Root', 'Admin', 'Root Admin', 'committee@sheffieldclimbing.org']
+                    );
+                }
                 // Upgrade any existing basic memberships to active (avoids pending+active duplicates)
                 db.run(
                     'UPDATE user_memberships SET status = ? WHERE userId = ? AND membershipType = ?',

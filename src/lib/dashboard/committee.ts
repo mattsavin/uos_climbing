@@ -13,17 +13,33 @@ export function initCommitteeProfileHandlers() {
     const saveBtn = document.getElementById('save-comm-profile-btn');
 
     if (!committeeProfileCard) return;
+    const committeeProfileCardEl = committeeProfileCard as HTMLElement;
 
-    // Check if user is committee and show card
-    const user = authState.getUser();
-    const isCommittee = user?.role === 'committee' || !!user?.committeeRole || (Array.isArray(user?.committeeRoles) && user.committeeRoles.length > 0);
-
-    if (isCommittee) {
-        committeeProfileCard.classList.remove('hidden');
-        populateCommitteeFields();
+    function isCommitteeUser(user: any) {
+        return !!user && (
+            user.role === 'committee'
+            || !!user.committeeRole
+            || (Array.isArray(user.committeeRoles) && user.committeeRoles.length > 0)
+        );
     }
 
+    function refreshCardVisibilityAndData() {
+        const user = authState.getUser();
+        if (isCommitteeUser(user)) {
+            committeeProfileCardEl.classList.remove('hidden');
+            populateCommitteeFields();
+            return;
+        }
+        committeeProfileCardEl.classList.add('hidden');
+    }
+
+    // Initial pass (may run before auth init finishes)
+    refreshCardVisibilityAndData();
+    // Re-run after dashboard/auth state updates
+    window.addEventListener('dashboardUpdate', refreshCardVisibilityAndData);
+
     async function populateCommitteeFields() {
+        const user = authState.getUser();
         if (!user) return;
 
         // Populate existing values
@@ -66,6 +82,7 @@ export function initCommitteeProfileHandlers() {
                 showToast('Profile photo updated!', 'success');
 
                 // Update local user state
+                const user = authState.getUser();
                 if (user) user.profilePhoto = result.photoPath;
             } catch (err: any) {
                 showToast(err.message || 'Failed to upload photo', 'error');
@@ -92,6 +109,7 @@ export function initCommitteeProfileHandlers() {
                 showToast('Committee profile updated!', 'success');
 
                 // Update local user state
+                const user = authState.getUser();
                 if (user) {
                     user.instagram = profile.instagram;
                     user.faveCrag = profile.faveCrag;

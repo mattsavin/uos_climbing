@@ -41,7 +41,7 @@ const upload = multer({
 /** GET /api/committee - Get all committee members */
 router.get('/', (req, res) => {
     const query = `
-        SELECT u.id, u.firstName, u.lastName, u.name, u.email, u.instagram, u.faveCrag, u.bio, u.profilePhoto, 
+        SELECT u.id, u.firstName, u.lastName, u.name, u.email, u.instagram, u.faveCrag, u.bio, u.profilePhoto, u.committeeRole,
                GROUP_CONCAT(cr.role, ', ') as roles
         FROM users u
         LEFT JOIN committee_roles cr ON u.id = cr.userId
@@ -73,29 +73,38 @@ router.put('/me', authenticateToken, (req: any, res) => {
 });
 
 /** POST /api/committee/me/photo - Upload profile photo */
-router.post('/me/photo', authenticateToken, upload.single('photo'), (req: any, res) => {
-    if (req.user.role !== 'committee') {
-        return res.status(403).json({ error: 'Only committee members can upload profile photos' });
-    }
-
-    if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded' });
-    }
-
-    const photoPath = `/uploads/profile-photos/${req.file.filename}`;
-
-    // Get old photo to delete it
-    db.get('SELECT profilePhoto FROM users WHERE id = ?', [req.user.id], (err, user: any) => {
-        if (!err && user && user.profilePhoto) {
-            const oldPath = path.join(process.cwd(), user.profilePhoto);
-            if (fs.existsSync(oldPath)) {
-                fs.unlinkSync(oldPath);
-            }
+router.post('/me/photo', authenticateToken, (req: any, res) => {
+    upload.single('photo')(req, res, (uploadErr: any) => {
+        if (uploadErr instanceof multer.MulterError && uploadErr.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({ error: 'Photo too large. Max size is 5MB.' });
+        }
+        if (uploadErr) {
+            return res.status(400).json({ error: uploadErr.message || 'Invalid image upload.' });
         }
 
-        db.run('UPDATE users SET profilePhoto = ? WHERE id = ?', [photoPath, req.user.id], (err) => {
-            if (err) return res.status(500).json({ error: 'Database error' });
-            res.json({ success: true, photoPath });
+        if (req.user.role !== 'committee') {
+            return res.status(403).json({ error: 'Only committee members can upload profile photos' });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        const photoPath = `/uploads/profile-photos/${req.file.filename}`;
+
+        // Get old photo to delete it
+        db.get('SELECT profilePhoto FROM users WHERE id = ?', [req.user.id], (err, user: any) => {
+            if (!err && user && user.profilePhoto) {
+                const oldPath = path.join(process.cwd(), user.profilePhoto);
+                if (fs.existsSync(oldPath)) {
+                    fs.unlinkSync(oldPath);
+                }
+            }
+
+            db.run('UPDATE users SET profilePhoto = ? WHERE id = ?', [photoPath, req.user.id], (err) => {
+                if (err) return res.status(500).json({ error: 'Database error' });
+                res.json({ success: true, photoPath });
+            });
         });
     });
 });

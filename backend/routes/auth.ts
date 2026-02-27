@@ -9,6 +9,8 @@ import { authenticateToken } from '../middleware/auth';
 import { sendEmail } from '../services/email';
 
 const IS_TEST = process.env.NODE_ENV === 'test';
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const AUTH_RATE_LIMIT_ENABLED = process.env.AUTH_RATE_LIMIT_ENABLED === 'true';
 
 // Create the limiter once at module init — express-rate-limit forbids per-request creation
 const _rateLimiter = rateLimit({
@@ -20,7 +22,8 @@ const _rateLimiter = rateLimit({
 });
 
 const authLimiter = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    if (IS_TEST) return next();
+    // Keep local development usable by default; enable explicitly via AUTH_RATE_LIMIT_ENABLED=true
+    if (IS_TEST || (!IS_PRODUCTION && !AUTH_RATE_LIMIT_ENABLED)) return next();
     return _rateLimiter(req, res, next);
 };
 
@@ -158,17 +161,27 @@ router.post('/register', authLimiter, async (req, res) => {
 
 router.post('/login', authLimiter, (req, res) => {
     const { email, password } = req.body;
+    const normalizedEmail = (email || '').toString().trim().toLowerCase();
 
-    if (!email || !password) {
+    if (!normalizedEmail || !password) {
         return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    db.get('SELECT * FROM users WHERE email = ?', [email], async (err, user: any) => {
-        if (err) return res.status(500).json({ error: 'Database error' });
-        if (!user) return res.status(401).json({ error: 'Invalid email or password' });
+    db.get('SELECT * FROM users WHERE email = ?', [normalizedEmail], async (err, user: any) => {
+        if (err) {
+            console.error('Login database error:', err);
+            return res.status(500).json({ error: 'Database error' });
+        }
+        if (!user) {
+            console.warn(`Login failed: user not found for email "${normalizedEmail}"`);
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
 
         const validPassword = await bcrypt.compare(password, user.passwordHash);
-        if (!validPassword) return res.status(401).json({ error: 'Invalid email or password' });
+        if (!validPassword) {
+            console.warn(`Login failed: incorrect password for email "${normalizedEmail}"`);
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
 
         // Block login if email is not verified (unless test env)
         if (!IS_TEST && !user.emailVerified) {
@@ -362,7 +375,10 @@ router.post('/logout', (req, res) => {
 });
 
 router.get('/me', authenticateToken, (req: any, res) => {
-    db.get('SELECT id, firstName, lastName, name, email, registrationNumber, role, committeeRole, membershipStatus, membershipYear, emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements, calendarToken FROM users WHERE id = ?', [req.user.id], (err, user: any) => {
+    db.get(
+        'SELECT id, firstName, lastName, name, email, registrationNumber, role, committeeRole, membershipStatus, membershipYear, emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements, calendarToken, instagram, faveCrag, bio, profilePhoto FROM users WHERE id = ?',
+        [req.user.id],
+        (err, user: any) => {
         if (err || !user) return res.status(404).json({ error: 'User not found' });
         user.name = user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
 
