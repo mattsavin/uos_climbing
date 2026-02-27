@@ -3,6 +3,38 @@ import { renderSessions } from './sessions';
 import { showToast } from '../../utils';
 import { config } from '../../config';
 
+async function copyTextWithFallback(text: string): Promise<boolean> {
+    try {
+        if (window.isSecureContext && navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(text);
+            return true;
+        }
+    } catch {
+        // Fall through to legacy copy fallback.
+    }
+
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.setAttribute('readonly', '');
+    textArea.style.position = 'fixed';
+    textArea.style.top = '-9999px';
+    textArea.style.opacity = '0';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+
+    let copied = false;
+    try {
+        copied = document.execCommand('copy');
+    } catch {
+        copied = false;
+    } finally {
+        document.body.removeChild(textArea);
+    }
+
+    return copied;
+}
+
 export async function updateUI() {
     const user = authState.getUser();
 
@@ -226,7 +258,9 @@ export async function updateUI() {
         }
 
         if (icalLink) {
-            icalLink.dataset.link = `${window.location.origin}/api/sessions/ical/${user.calendarToken}`;
+            const link = `${window.location.origin}/api/sessions/ical/${user.calendarToken}`;
+            icalLink.dataset.link = link;
+            icalLink.href = link;
         }
 
         await renderSessions(isCommittee);
@@ -252,11 +286,11 @@ export function initGeneralHandlers() {
             e.preventDefault();
             const link = (icalLink as HTMLElement).dataset.link;
             if (link) {
-                try {
-                    await navigator.clipboard.writeText(link);
+                const copied = await copyTextWithFallback(link);
+                if (copied) {
                     showToast('Copied iCal link to your clipboard!', 'success');
-                } catch (err) {
-                    console.error('Failed to copy text: ', err);
+                } else {
+                    window.prompt('Copy your iCal link:', link);
                     showToast('Could not copy link. Try manually selecting it if possible.', 'error');
                 }
             }
