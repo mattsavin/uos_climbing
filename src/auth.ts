@@ -21,6 +21,10 @@ export interface User {
     membershipStatus: 'active' | 'pending' | 'rejected';
     membershipYear?: string;
     calendarToken?: string;
+    instagram?: string;
+    faveCrag?: string;
+    bio?: string;
+    profilePhoto?: string;
     memberships?: MembershipRow[];
 }
 
@@ -653,6 +657,34 @@ export const gearApi = {
 
     async returnRequest(id: string) {
         return apiFetch(`/api/gear/requests/${id}/return`, { method: 'POST' });
+    }
+};
+
+export const committeeApi = {
+    async getCommitteeMembers() {
+        return apiFetch('/api/committee');
+    },
+
+    async updateMyProfile(profile: { instagram?: string; faveCrag?: string; bio?: string }) {
+        return apiFetch('/api/committee/me', {
+            method: 'PUT',
+            body: JSON.stringify(profile)
+        });
+    },
+
+    async uploadPhoto(file: File) {
+        const formData = new FormData();
+        formData.append('photo', file);
+
+        const res = await fetch('/api/committee/me/photo', {
+            method: 'POST',
+            credentials: 'include',
+            body: formData
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Photo upload failed');
+        return data;
     }
 };
 

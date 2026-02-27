@@ -10,6 +10,7 @@ import sessionTypeRoutes from './routes/session-types';
 import membershipTypeRoutes from './routes/membership-types';
 import votingRoutes from './routes/voting';
 import gearRoutes from './routes/gear';
+import committeeRoutes from './routes/committee';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import history from 'connect-history-api-fallback';
@@ -30,6 +31,9 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+
+// Serve profile photos
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Beta Gate Middleware
 app.use(betaGate);
@@ -69,6 +73,7 @@ app.use('/api/session-types', sessionTypeRoutes);
 app.use('/api/membership-types', membershipTypeRoutes);
 app.use('/api/voting', votingRoutes);
 app.use('/api/gear', gearRoutes);
+app.use('/api/committee', committeeRoutes);
 
 // Shared route for iCal (also registered in sessions.ts but keeping here for backward compatibility if needed, 
 // though /api/sessions/ical/:userId is preferred now. The original was /api/ical/:userId)

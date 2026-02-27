@@ -39,7 +39,11 @@ function initializeDatabase() {
             membershipStatus TEXT DEFAULT 'pending',
             membershipYear TEXT,
             calendarToken TEXT UNIQUE,
-            emailVerified INTEGER DEFAULT 0
+            emailVerified INTEGER DEFAULT 0,
+            instagram TEXT,
+            faveCrag TEXT,
+            bio TEXT,
+            profilePhoto TEXT
         )`);
 
         // Email Verifications Table (OTP storage)
@@ -141,6 +145,10 @@ function initializeDatabase() {
                 });
             }
         });
+        db.run('ALTER TABLE users ADD COLUMN instagram TEXT', (err) => { });
+        db.run('ALTER TABLE users ADD COLUMN faveCrag TEXT', (err) => { });
+        db.run('ALTER TABLE users ADD COLUMN bio TEXT', (err) => { });
+        db.run('ALTER TABLE users ADD COLUMN profilePhoto TEXT', (err) => { });
 
         // Sessions Table
         db.run(`CREATE TABLE IF NOT EXISTS sessions (
