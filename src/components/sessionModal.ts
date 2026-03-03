@@ -41,6 +41,10 @@ export function openSessionModal(options: SessionModalOptions) {
                             <span class="text-slate-500 font-bold uppercase tracking-wider text-xs">Availability</span>
                             <span id="usm-capacity" class="font-mono text-white bg-slate-900 px-2 py-1 rounded inline-block"></span>
                         </div>
+                        <div id="usm-location-row" class="hidden flex justify-between items-center pt-1">
+                            <span class="text-slate-500 font-bold uppercase tracking-wider text-xs">Location</span>
+                            <span id="usm-location" class="font-mono text-white text-right"></span>
+                        </div>
                         <div id="usm-visibility-row" class="hidden flex justify-between items-center pt-1">
                             <span class="text-slate-500 font-bold uppercase tracking-wider text-xs">Visibility</span>
                             <span id="usm-visibility" class="font-mono text-amber-300 bg-amber-500/10 border border-amber-500/30 px-2 py-1 rounded inline-block text-[11px] uppercase tracking-wider">Committee Only</span>
@@ -77,6 +81,10 @@ export function openSessionModal(options: SessionModalOptions) {
                             <div class="space-y-1 text-left">
                                 <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Title</label>
                                 <input type="text" id="usm-edit-title" required class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500 block">
+                            </div>
+                            <div class="space-y-1 text-left">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Location</label>
+                                <input type="text" id="usm-edit-location" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500 block" placeholder="e.g. Main Wall, Roof Cave">
                             </div>
                             <div class="grid grid-cols-2 gap-3 text-left">
                                 <div class="space-y-1">
@@ -133,6 +141,7 @@ export function openSessionModal(options: SessionModalOptions) {
             const id = (document.getElementById('usm-edit-id') as HTMLInputElement).value;
             const title = (document.getElementById('usm-edit-title') as HTMLInputElement).value;
             const date = (document.getElementById('usm-edit-date') as HTMLInputElement).value;
+            const location = (document.getElementById('usm-edit-location') as HTMLInputElement).value;
             const type = (document.getElementById('usm-edit-type') as HTMLSelectElement).value as any;
             const capacity = parseInt((document.getElementById('usm-edit-capacity') as HTMLInputElement).value, 10);
             const bookedSlots = parseInt((document.getElementById('usm-edit-booked') as HTMLInputElement).value, 10) || 0;
@@ -146,7 +155,7 @@ export function openSessionModal(options: SessionModalOptions) {
                     const submitBtn = document.querySelector('#usm-edit-form button[type="submit"]') as HTMLButtonElement;
                     submitBtn.disabled = true;
                     submitBtn.textContent = 'Saving...';
-                    await adminApi.updateSession(id, { title, date, type, capacity, bookedSlots, requiredMembership, visibility, registrationVisibility });
+                    await adminApi.updateSession(id, { title, date, location, type, capacity, bookedSlots, requiredMembership, visibility, registrationVisibility });
                     close();
                     if ((window as any)._usmCurrentOnEditSuccess) (window as any)._usmCurrentOnEditSuccess();
                 } catch (err: any) {
@@ -217,6 +226,14 @@ export function openSessionModal(options: SessionModalOptions) {
         minute: '2-digit'
     });
     capacityEl.textContent = `${session.bookedSlots} / ${session.capacity} Slots`;
+    const locationRowEl = document.getElementById('usm-location-row')!;
+    const locationEl = document.getElementById('usm-location')!;
+    if ((session as any).location) {
+        locationRowEl.classList.remove('hidden');
+        locationEl.textContent = escapeHTML((session as any).location);
+    } else {
+        locationRowEl.classList.add('hidden');
+    }
     if ((session as any).visibility === 'committee_only') {
         visibilityRowEl.classList.remove('hidden');
     } else {
@@ -334,6 +351,7 @@ export function openSessionModal(options: SessionModalOptions) {
             (document.getElementById('usm-edit-id') as HTMLInputElement).value = session.id;
             (document.getElementById('usm-edit-title') as HTMLInputElement).value = session.title;
             (document.getElementById('usm-edit-date') as HTMLInputElement).value = session.date;
+            (document.getElementById('usm-edit-location') as HTMLInputElement).value = (session as any).location || '';
 
             const typeSelect = document.getElementById('usm-edit-type') as HTMLSelectElement;
             adminApi.getSessionTypes().then(types => {

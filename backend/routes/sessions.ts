@@ -47,6 +47,9 @@ function buildIcalContent(userId: string, sessions: any[]) {
         icalContent += `DTSTART:${formatDT(start)}\r\n`;
         icalContent += `DTEND:${formatDT(end)}\r\n`;
         icalContent += `SUMMARY:${s.title} (${s.type})\r\n`;
+        if (s.location) {
+            icalContent += `LOCATION:${s.location}\r\n`;
+        }
         icalContent += "END:VEVENT\r\n";
     });
     icalContent += "END:VCALENDAR\r\n";
@@ -137,7 +140,7 @@ router.get('/ical/:calendarToken/all', (req, res) => {
 });
 
 router.post('/', authenticateToken, requireCommittee, (req, res) => {
-    const { title, type, date, capacity, requiredMembership, visibility, registrationVisibility } = req.body;
+    const { title, type, date, capacity, location, requiredMembership, visibility, registrationVisibility } = req.body;
     const id = 'sess_' + Date.now();
     const eventVisibility = visibility === 'committee_only' ? 'committee_only' : 'all';
     const eventRegistrationVisibility = registrationVisibility === 'committee_only' ? 'committee_only' : 'all';
@@ -151,8 +154,8 @@ router.post('/', authenticateToken, requireCommittee, (req, res) => {
             if (!exists) return res.status(400).json({ error: 'Invalid required membership type' });
 
             db.run(
-                'INSERT INTO sessions (id, type, title, date, capacity, bookedSlots, requiredMembership, visibility, registrationVisibility) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [id, type, title, date, capacity, 0, reqMemb, eventVisibility, eventRegistrationVisibility],
+                'INSERT INTO sessions (id, type, title, date, capacity, bookedSlots, location, requiredMembership, visibility, registrationVisibility) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [id, type, title, date, capacity, 0, location || null, reqMemb, eventVisibility, eventRegistrationVisibility],
                 function (err) {
                     if (err) return res.status(500).json({ error: 'Database error' });
                     res.json({
@@ -162,6 +165,7 @@ router.post('/', authenticateToken, requireCommittee, (req, res) => {
                         date,
                         capacity,
                         bookedSlots: 0,
+                        location: location || undefined,
                         requiredMembership: reqMemb,
                         visibility: eventVisibility,
                         registrationVisibility: eventRegistrationVisibility
@@ -173,7 +177,7 @@ router.post('/', authenticateToken, requireCommittee, (req, res) => {
 });
 
 router.put('/:id', authenticateToken, requireCommittee, (req, res) => {
-    const { title, type, date, capacity, bookedSlots, requiredMembership, visibility, registrationVisibility } = req.body;
+    const { title, type, date, capacity, bookedSlots, location, requiredMembership, visibility, registrationVisibility } = req.body;
     const eventVisibility = visibility === 'committee_only' ? 'committee_only' : 'all';
     const eventRegistrationVisibility = registrationVisibility === 'committee_only' ? 'committee_only' : 'all';
     getDefaultMembershipType((typeErr, defaultMembershipType) => {
@@ -186,8 +190,8 @@ router.put('/:id', authenticateToken, requireCommittee, (req, res) => {
             if (!exists) return res.status(400).json({ error: 'Invalid required membership type' });
 
             db.run(
-                'UPDATE sessions SET title = ?, type = ?, date = ?, capacity = ?, bookedSlots = ?, requiredMembership = ?, visibility = ?, registrationVisibility = ? WHERE id = ?',
-                [title, type, date, capacity, bookedSlots, reqMemb, eventVisibility, eventRegistrationVisibility, req.params.id],
+                'UPDATE sessions SET title = ?, type = ?, date = ?, capacity = ?, bookedSlots = ?, location = ?, requiredMembership = ?, visibility = ?, registrationVisibility = ? WHERE id = ?',
+                [title, type, date, capacity, bookedSlots, location || null, reqMemb, eventVisibility, eventRegistrationVisibility, req.params.id],
                 function (err) {
                     if (err) return res.status(500).json({ error: 'Database error' });
                     res.json({ success: true });

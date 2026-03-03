@@ -223,6 +223,7 @@ function renderSessionChip(
     const safeTime = escapeHTML(timeStr);
     const safeTitle = escapeHTML(session.title || '');
     const safeType = escapeHTML(session.type || '');
+    const safeLocation = escapeHTML((session as any).location || '');
 
     let bg = colorMap[session.type]?.chip || 'bg-slate-600/50 text-slate-300 border-slate-600/30';
 
@@ -255,6 +256,7 @@ function renderSessionChip(
                 ${isBooked ? '<span class="text-current font-black text-sm" title="Booked">✓</span>' : (isPast ? '<span class="text-[9px] uppercase tracking-tighter opacity-70">Expired</span>' : '')}
             </div>
             <div class="text-[11px] font-semibold leading-snug wrap-break-word">${safeTitle}</div>
+            ${safeLocation ? `<div class="text-[10px] opacity-80 leading-snug" title="${safeLocation}">📍 ${safeLocation}</div>` : ''}
             ${badges ? `<div class="flex items-center gap-1 flex-wrap">${badges}</div>` : ''}
             <div class="mt-auto pt-1 border-t border-current border-opacity-20 min-w-0">
                 <span class="block font-bold text-[10px] uppercase tracking-wider opacity-90">${session.bookedSlots}/${session.capacity} Slots</span>

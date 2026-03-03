@@ -176,6 +176,7 @@ function initializeDatabase() {
         db.run('ALTER TABLE sessions ADD COLUMN requiredMembership TEXT DEFAULT "basic"', (err) => { });
         db.run('ALTER TABLE sessions ADD COLUMN visibility TEXT DEFAULT "all"', (err) => { });
         db.run('ALTER TABLE sessions ADD COLUMN registrationVisibility TEXT DEFAULT "all"', (err) => { });
+        db.run('ALTER TABLE sessions ADD COLUMN location TEXT', (err) => { });
 
         // Bookings Table
         db.run(`CREATE TABLE IF NOT EXISTS bookings (

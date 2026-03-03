@@ -182,6 +182,7 @@ export function initSessionHandlers() {
             e.preventDefault();
             const title = (document.getElementById('session-title') as HTMLInputElement).value;
             const type = (document.getElementById('session-type') as HTMLSelectElement).value as any;
+            const location = (document.getElementById('session-location') as HTMLInputElement).value;
             const dateStr = (document.getElementById('session-date') as HTMLInputElement).value;
             const capacity = parseInt((document.getElementById('session-capacity') as HTMLInputElement).value, 10);
             const registrationRule = ((document.getElementById('session-registration-rule') as HTMLSelectElement)?.value || 'basic');
@@ -190,7 +191,7 @@ export function initSessionHandlers() {
             const requiredMembership = registrationRule === 'committee_only' ? undefined : registrationRule;
 
             if (title && type && dateStr && !isNaN(capacity)) {
-                await adminApi.addSession({ title, type, date: dateStr, capacity, requiredMembership, visibility, registrationVisibility });
+                await adminApi.addSession({ title, type, date: dateStr, location, capacity, requiredMembership, visibility, registrationVisibility });
                 (addSessionForm as HTMLFormElement).reset();
                 addSessionFormContainer?.classList.add('hidden');
                 await renderSessions(getIsCommittee());

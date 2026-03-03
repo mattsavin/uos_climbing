@@ -73,6 +73,7 @@ export interface Session {
     date: string; // ISO 8601 Date String
     capacity: number;
     bookedSlots: number;
+    location?: string;
     requiredMembership?: string;
     visibility?: 'all' | 'committee_only';
     registrationVisibility?: 'all' | 'committee_only';
