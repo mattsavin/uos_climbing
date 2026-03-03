@@ -27,8 +27,13 @@ export async function initLoginApp() {
     const registerError = document.getElementById('register-error') as HTMLElement;
     const domainEmailPopup = document.getElementById('domain-email-popup') as HTMLElement | null;
     const domainEmailPopupBackdrop = document.getElementById('domain-email-popup-backdrop');
+    const domainEmailPopupTitle = document.getElementById('domain-email-popup-title') as HTMLElement | null;
     const domainEmailPopupClose = document.getElementById('domain-email-popup-close');
+    const domainEmailPopupConfirm = document.getElementById('domain-email-popup-confirm') as HTMLButtonElement | null;
     const domainEmailPopupMessage = document.getElementById('domain-email-popup-message') as HTMLElement | null;
+    const domainEmailPopupConfirmWrap = document.getElementById('domain-email-popup-confirm-wrap') as HTMLElement | null;
+    const domainEmailPopupConfirmInput = document.getElementById('domain-email-popup-confirm-input') as HTMLInputElement | null;
+    const domainEmailPopupConfirmError = document.getElementById('domain-email-popup-confirm-error') as HTMLElement | null;
 
     const verifyBtn = document.getElementById('verify-btn') as HTMLButtonElement;
     const verifyError = document.getElementById('verify-error') as HTMLElement;
@@ -51,6 +56,8 @@ export async function initLoginApp() {
     // In-memory state for active verification
     let pendingUserId: string | null = null;
     let defaultMembershipType = 'basic';
+    let popupResolve: ((confirmed: boolean) => void) | null = null;
+    let popupExpectedRegistrationNumber: string | null = null;
 
     function toMembershipOptionMarkup(typeId: string, label: string, checked: boolean): string {
         return `
@@ -131,18 +138,85 @@ export async function initLoginApp() {
         resetPasswordInput?.focus();
     }
 
-    function closeDomainEmailPopup() {
+    function closeDomainEmailPopup(confirmed = false) {
         domainEmailPopup?.classList.add('hidden');
+        if (popupResolve) {
+            const resolve = popupResolve;
+            popupResolve = null;
+            resolve(confirmed);
+        }
     }
 
-    function showDomainEmailPopup(message: string) {
+    function showDomainEmailPopup(message: string, title = 'University Email Required') {
+        if (popupResolve) {
+            popupResolve(false);
+            popupResolve = null;
+        }
+        popupExpectedRegistrationNumber = null;
+        if (domainEmailPopupTitle) domainEmailPopupTitle.textContent = title;
         if (domainEmailPopupMessage) domainEmailPopupMessage.textContent = message;
+        if (domainEmailPopupConfirmWrap) domainEmailPopupConfirmWrap.classList.add('hidden');
+        if (domainEmailPopupConfirmInput) domainEmailPopupConfirmInput.value = '';
+        if (domainEmailPopupConfirmError) {
+            domainEmailPopupConfirmError.classList.add('hidden');
+            domainEmailPopupConfirmError.textContent = '';
+        }
+        if (domainEmailPopupConfirm) domainEmailPopupConfirm.classList.add('hidden');
+        if (domainEmailPopupClose) domainEmailPopupClose.textContent = 'Got it';
         domainEmailPopup?.classList.remove('hidden');
     }
 
     [domainEmailPopupBackdrop, domainEmailPopupClose].forEach(el => {
-        el?.addEventListener('click', closeDomainEmailPopup);
+        el?.addEventListener('click', () => closeDomainEmailPopup(false));
     });
+
+    domainEmailPopupConfirm?.addEventListener('click', () => closeDomainEmailPopup(true));
+
+    domainEmailPopupConfirmInput?.addEventListener('input', () => {
+        if (!popupExpectedRegistrationNumber || !domainEmailPopupConfirm || !domainEmailPopupConfirmError) return;
+        const typed = domainEmailPopupConfirmInput.value.trim();
+        const matches = typed === popupExpectedRegistrationNumber;
+        domainEmailPopupConfirm.disabled = !matches;
+        if (!typed || matches) {
+            domainEmailPopupConfirmError.classList.add('hidden');
+            domainEmailPopupConfirmError.textContent = '';
+            return;
+        }
+        domainEmailPopupConfirmError.textContent = 'Registration numbers do not match yet.';
+        domainEmailPopupConfirmError.classList.remove('hidden');
+    });
+
+    function showRegistrationNumberOverridePopup(registrationNumber: string): Promise<boolean> {
+        if (popupResolve) {
+            popupResolve(false);
+            popupResolve = null;
+        }
+        popupExpectedRegistrationNumber = registrationNumber;
+        if (domainEmailPopupTitle) domainEmailPopupTitle.textContent = 'Check Registration Number';
+        if (domainEmailPopupMessage) {
+            domainEmailPopupMessage.textContent =
+                'Registration numbers normally start with 2 (for example: 2xxxxxxxx). If you continue, your membership may not link properly and you will not be able to change this value later. Please double-check before continuing.';
+        }
+        if (domainEmailPopupClose) domainEmailPopupClose.textContent = 'Go back';
+        if (domainEmailPopupConfirm) {
+            domainEmailPopupConfirm.textContent = 'Continue anyway';
+            domainEmailPopupConfirm.disabled = true;
+            domainEmailPopupConfirm.classList.remove('hidden');
+        }
+        if (domainEmailPopupConfirmWrap) domainEmailPopupConfirmWrap.classList.remove('hidden');
+        if (domainEmailPopupConfirmInput) {
+            domainEmailPopupConfirmInput.value = '';
+            domainEmailPopupConfirmInput.focus();
+        }
+        if (domainEmailPopupConfirmError) {
+            domainEmailPopupConfirmError.classList.add('hidden');
+            domainEmailPopupConfirmError.textContent = '';
+        }
+        domainEmailPopup?.classList.remove('hidden');
+        return new Promise(resolve => {
+            popupResolve = resolve;
+        });
+    }
 
     // Check if page loaded with a reset token in the URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -222,7 +296,7 @@ export async function initLoginApp() {
         const firstName = (document.getElementById('reg-fname') as HTMLInputElement).value;
         const lastName = (document.getElementById('reg-sname') as HTMLInputElement).value;
         const email = (document.getElementById('reg-email') as HTMLInputElement).value;
-        const registrationNumber = (document.getElementById('reg-regnum') as HTMLInputElement).value;
+        const registrationNumber = (document.getElementById('reg-regnum') as HTMLInputElement).value.trim();
         const password = (document.getElementById('reg-password') as HTMLInputElement).value;
         const passwordConfirm = (document.getElementById('reg-password-confirm') as HTMLInputElement).value;
         const normalizedEmail = email.trim().toLowerCase();
@@ -250,6 +324,15 @@ export async function initLoginApp() {
             registerBtn.disabled = false;
             registerBtn.textContent = 'Create Account';
             return;
+        }
+
+        if (!/^2\d{8}$/.test(registrationNumber)) {
+            registerBtn.disabled = false;
+            registerBtn.textContent = 'Create Account';
+            const proceed = await showRegistrationNumberOverridePopup(registrationNumber);
+            if (!proceed) return;
+            registerBtn.disabled = true;
+            registerBtn.textContent = 'Creating Account...';
         }
 
         try {

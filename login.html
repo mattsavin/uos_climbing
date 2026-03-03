@@ -240,11 +240,11 @@
                             <div>
                                 <label
                                     class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5"
-                                    for="reg-regnum">Ucard Number</label>
+                                    for="reg-regnum">Registration Number (not UCard number)</label>
                                 <input type="text" id="reg-regnum" required pattern="[0-9]{9}"
-                                    title="9 digit registration number"
+                                    title="9 digit registration number (normally starts with 2)"
                                     class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold transition-all shadow-inner"
-                                    placeholder="e.g. 210123456" />
+                                    placeholder="e.g. 2xxxxxxxx" />
                             </div>
 
                             <div>
@@ -312,12 +312,25 @@
                     </svg>
                 </div>
                 <div class="min-w-0">
-                    <h3 class="text-sm font-black uppercase tracking-widest text-white">University Email Required</h3>
+                    <h3 id="domain-email-popup-title" class="text-sm font-black uppercase tracking-widest text-white">
+                        University Email Required</h3>
                     <p id="domain-email-popup-message" class="mt-2 text-sm text-slate-300 leading-relaxed">Please
                         register with your @sheffield.ac.uk email address.</p>
                 </div>
             </div>
+            <div id="domain-email-popup-confirm-wrap" class="hidden mt-4">
+                <label for="domain-email-popup-confirm-input"
+                    class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Type your
+                    registration number again to confirm</label>
+                <input id="domain-email-popup-confirm-input" type="text" inputmode="numeric" autocomplete="off"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400 transition-all shadow-inner"
+                    placeholder="Re-enter registration number" />
+                <p id="domain-email-popup-confirm-error" class="hidden mt-2 text-[11px] text-red-300"></p>
+            </div>
             <div class="mt-5 flex justify-end">
+                <button id="domain-email-popup-confirm" type="button"
+                    class="hidden mr-2 btn-outline !px-4 !py-2 !text-[11px] !rounded-lg !border-red-500/70 !text-red-300 hover:!bg-red-500 hover:!text-white disabled:!opacity-50 disabled:cursor-not-allowed">Continue
+                    anyway</button>
                 <button id="domain-email-popup-close" type="button"
                     class="btn-outline !px-4 !py-2 !text-[11px] !rounded-lg !border-brand-gold/60 !text-brand-gold hover:!bg-brand-gold hover:!text-brand-darker">Got
                     it</button>
