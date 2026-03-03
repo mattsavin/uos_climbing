@@ -359,15 +359,18 @@ export async function updateUI() {
                         type: 'svg',
                         margin: 0,
                         color: {
-                            dark: '#0f172a', // slate-900
+                            dark: '#000000', // pure black for maximum contrast
                             light: '#ffffff'
                         }
                     }, (err, svg) => {
                         if (!err) {
-                            qrContainer.innerHTML = svg;
+                            // Add responsive sizing classes to the SVG string if needed, 
+                            // but ensuring it has w-full h-full is usually enough.
+                            const styledSvg = svg.replace('<svg ', '<svg class="w-full h-full" ');
+                            qrContainer.innerHTML = styledSvg;
                             // Also update the modal QR if it exists
                             const modalQrContainer = document.getElementById('enlarged-qr-container');
-                            if (modalQrContainer) modalQrContainer.innerHTML = svg;
+                            if (modalQrContainer) modalQrContainer.innerHTML = styledSvg;
                         }
                     });
                 }

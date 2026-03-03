@@ -191,6 +191,38 @@
       transform: translateX(100%);
     }
   }
+
+  /* Responsive scaling for membership card modal */
+  @media (max-height: 700px) {
+    #modal-card-user-photo-container {
+      width: 4rem !important;
+      height: 4rem !important;
+      margin-bottom: 0.5rem !important;
+    }
+
+    #modal-qr-vibrant-container {
+      padding: 1rem !important;
+      margin-bottom: 0.75rem !important;
+    }
+  }
+
+  @media (max-height: 550px) {
+    #modal-card-user-photo-container {
+      width: 3rem !important;
+      height: 3rem !important;
+      margin-bottom: 0.25rem !important;
+    }
+
+    #modal-qr-vibrant-container {
+      padding: 0.5rem !important;
+      margin-bottom: 0.5rem !important;
+    }
+
+    #modal-bottom-text {
+      display: none !important;
+      /* Last resort: hide text on extremely short screens */
+    }
+  }
 }
 
 /* Custom Scrollbar */
