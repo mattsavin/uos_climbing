@@ -30,7 +30,7 @@ test.describe('Mobile Viewport Experiences', () => {
         await expect(mobileMenu.locator('a', { hasText: 'About' }).first()).toBeVisible();
         await expect(mobileMenu.locator('a', { hasText: 'Competitions' }).first()).toBeVisible();
         await expect(mobileMenu.locator('a', { hasText: 'Gallery' }).first()).toBeVisible();
-        await expect(mobileMenu.locator('a', { hasText: 'Join Us' }).first()).toBeVisible();
+        await expect(mobileMenu.locator('a', { hasText: 'Schedule' }).first()).toBeVisible();
 
         // Click the hamburger menu again to close it
         await mobileMenuBtn.click();
