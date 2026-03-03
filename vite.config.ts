@@ -18,7 +18,7 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         about: resolve(__dirname, 'about.html'),
         competitions: resolve(__dirname, 'competitions.html'),
-        join: resolve(__dirname, 'join.html'),
+        schedule: resolve(__dirname, 'schedule.html'),
         dashboard: resolve(__dirname, 'dashboard.html'),
         gear: resolve(__dirname, 'gear.html'),
         login: resolve(__dirname, 'login.html'),

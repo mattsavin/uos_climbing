@@ -5,7 +5,7 @@ const pagesToCheck = [
   '/about.html',
   '/competitions.html',
   '/gallery.html',
-  '/join.html',
+  '/schedule.html',
   '/beginners.html',
   '/walls.html',
   '/faq.html',
@@ -31,7 +31,7 @@ test.describe('Mobile Nav Across Pages', () => {
       await expect(mobileMenu.locator('a', { hasText: 'About' }).first()).toBeVisible();
       await expect(mobileMenu.locator('a', { hasText: 'Competitions' }).first()).toBeVisible();
       await expect(mobileMenu.locator('a', { hasText: 'Gallery' }).first()).toBeVisible();
-      await expect(mobileMenu.locator('a', { hasText: 'Join Us' }).first()).toBeVisible();
+      await expect(mobileMenu.locator('a', { hasText: 'Schedule' }).first()).toBeVisible();
     });
   }
 });

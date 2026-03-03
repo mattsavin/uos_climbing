@@ -100,7 +100,7 @@ if (process.env.NODE_ENV === 'production') {
             // Re-route Vite's HTML entrypoints
             { from: /^\/dashboard$/, to: '/dashboard.html' },
             { from: /^\/about$/, to: '/about.html' },
-            { from: /^\/join$/, to: '/join.html' },
+            { from: /^\/schedule$/, to: '/schedule.html' },
             { from: /^\/competitions$/, to: '/competitions.html' },
             { from: /^\/gear$/, to: '/gear.html' },
             { from: /^\/login$/, to: '/login.html' },

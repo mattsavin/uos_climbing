@@ -12,14 +12,13 @@ const primaryNavLinks = [
   { href: '/about.html', label: 'About' },
   { href: '/competitions.html', label: 'Competitions' },
   { href: '/gallery.html', label: 'Gallery' },
-  { href: '/join.html', label: 'Join Us' }
+  { href: '/schedule.html', label: 'Schedule' }
 ] as const satisfies readonly NavLink[];
 
 const resourceNavLinks = [
   { href: '/beginners.html', label: "Beginner's Guide", mobileLabel: 'Beginner Guide' },
   { href: '/walls.html', label: 'Local Walls' },
   { href: '/faq.html', label: 'FAQ', mobileLabel: 'Club FAQ' },
-  { href: '/gear.html', label: 'Gear Hire' }
 ] as const satisfies readonly NavLink[];
 
 const renderLinks = (
@@ -28,17 +27,17 @@ const renderLinks = (
 ) => links.map((link) => template(link)).join('');
 
 const desktopPrimaryLinksHtml = renderLinks(primaryNavLinks
-  .filter((link) => link.label !== 'Join Us')
+  .filter((link) => link.label !== 'Schedule')
   , (link) => `<a href="${link.href}" class="nav-link">${link.label}</a>`);
 
 const desktopResourceLinksHtml = renderLinks(resourceNavLinks,
-    (link) => `<a href="${link.href}" class="px-4 py-2 text-sm text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors">${link.label}</a>`
-  );
+  (link) => `<a href="${link.href}" class="px-4 py-2 text-sm text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors">${link.label}</a>`
+);
 
 const mobilePrimaryLinksHtml = renderLinks(primaryNavLinks,
-    (link) =>
-      `<li><a href="${link.href}" class="text-4xl font-black text-white hover:text-brand-gold transition-colors block ${link.label === 'Join Us' ? 'text-gradient' : ''}">${link.label}</a></li>`
-  );
+  (link) =>
+    `<li><a href="${link.href}" class="text-4xl font-black text-white hover:text-brand-gold transition-colors block ${link.label === 'Schedule' ? 'text-gradient' : ''}">${link.label}</a></li>`
+);
 
 const mobileResourceLinksHtml = renderLinks(
   resourceNavLinks,
@@ -74,7 +73,7 @@ const createNavbar = () => `
                 </div>
               </div>
             </div>
-            <a href="/join.html" class="nav-link">Join Us</a>
+            <a href="/schedule.html" class="nav-link">Schedule</a>
             <div class="flex items-center gap-4">
               <a href="/login.html" id="nav-auth-btn" class="text-sm font-bold text-slate-400 hover:text-brand-gold transition-colors uppercase tracking-wider px-4 py-2 border border-slate-700 hover:border-brand-gold/50 rounded-lg">
                 Sign In
@@ -151,7 +150,7 @@ const createFooter = () => `
           <ul class="space-y-2">
             <li><a href="/about.html" class="text-slate-400 hover:text-brand-gold transition-colors">About Us</a></li>
             <li><a href="/competitions.html" class="text-slate-400 hover:text-brand-gold transition-colors">Team & Comps</a></li>
-            <li><a href="/join.html" class="text-slate-400 hover:text-brand-gold transition-colors">Weekly Meets</a></li>
+            <li><a href="/schedule.html" class="text-slate-400 hover:text-brand-gold transition-colors">Weekly Meets</a></li>
             <li><a href="/gallery.html" class="text-slate-400 hover:text-brand-gold transition-colors">Gallery</a></li>
             <li><a href="/gear.html" class="text-slate-400 hover:text-brand-gold transition-colors">Gear Hire</a></li>
           </ul>
