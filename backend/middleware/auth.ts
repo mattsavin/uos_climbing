@@ -2,6 +2,8 @@ import jwt from 'jsonwebtoken';
 import { SECRET_KEY } from '../config';
 import { db } from '../db';
 
+const ROOT_ADMIN_EMAIL = (process.env.ROOT_ADMIN_EMAIL || 'committee@sheffieldclimbing.org').toLowerCase();
+
 // Middleware to verify JWT
 export const authenticateToken = (req: any, res: any, next: any) => {
     // Get token from cookies, fallback to Authorization header
@@ -21,10 +23,6 @@ export const authenticateToken = (req: any, res: any, next: any) => {
 };
 
 export const requireCommittee = (req: any, res: any, next: any) => {
-    if (req.user.email === 'committee@sheffieldclimbing.org') {
-        return next();
-    }
-
     const isCommitteeJWT = req.user.role === 'committee' || !!req.user.committeeRole || (Array.isArray(req.user.committeeRoles) && req.user.committeeRoles.length > 0);
 
     if (isCommitteeJWT) {
@@ -33,8 +31,8 @@ export const requireCommittee = (req: any, res: any, next: any) => {
 
     // Fallback: check DB in case of stale token
     db.get(
-        'SELECT id FROM users WHERE id = ? AND (role = "committee" OR committeeRole IS NOT NULL OR email = ?)',
-        [req.user.id, 'committee@sheffieldclimbing.org'],
+        'SELECT id FROM users WHERE id = ? AND (role = "committee" OR committeeRole IS NOT NULL)',
+        [req.user.id],
         (err, row) => {
             if (!err && row) {
                 return next();
@@ -51,12 +49,13 @@ export const requireCommittee = (req: any, res: any, next: any) => {
 };
 
 export const requireKitSec = (req: any, res: any, next: any) => {
-    // We fetch user from db to get their committeeRole
-    db.get('SELECT committeeRole, email FROM users WHERE id = ?', [req.user.id], (err, user: any) => {
+    // Fetch the latest role fields from DB in case the token is stale.
+    db.get('SELECT role, committeeRole, email FROM users WHERE id = ?', [req.user.id], (err, user: any) => {
         if (err || !user) return res.status(403).json({ error: 'Unauthorized' });
 
         // Root admin or Kit & Safety Sec can pass
-        if (user.email === 'committee@sheffieldclimbing.org' || user.committeeRole === 'Kit & Safety Sec') {
+        const isRootAdmin = user.role === 'committee' && (user.email || '').toLowerCase() === ROOT_ADMIN_EMAIL;
+        if (isRootAdmin || user.committeeRole === 'Kit & Safety Sec') {
             next();
         } else {
             return res.status(403).json({ error: 'Requires Kit & Safety Sec privileges' });

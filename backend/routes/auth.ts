@@ -11,6 +11,7 @@ import { sendEmail } from '../services/email';
 const IS_TEST = process.env.NODE_ENV === 'test';
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const AUTH_RATE_LIMIT_ENABLED = process.env.AUTH_RATE_LIMIT_ENABLED === 'true';
+const ROOT_ADMIN_EMAIL = (process.env.ROOT_ADMIN_EMAIL || 'committee@sheffieldclimbing.org').toLowerCase();
 
 // Create the limiter once at module init — express-rate-limit forbids per-request creation
 const _rateLimiter = rateLimit({
@@ -94,12 +95,11 @@ router.post('/register', authLimiter, async (req, res) => {
 
             let role = 'member';
             let membershipStatus = 'pending';
-            // Root admin email is pre-verified
-            const isRootAdmin = normalizedEmail === 'committee@sheffieldclimbing.org';
-            if (!IS_TEST && !isRootAdmin && !normalizedEmail.endsWith('@sheffield.ac.uk')) {
+            if (!IS_TEST && !normalizedEmail.endsWith('@sheffield.ac.uk')) {
                 return res.status(400).json({ error: 'Please register with your @sheffield.ac.uk email address.' });
             }
-            if (isRootAdmin) {
+            const isRootAdminTestBypass = IS_TEST && normalizedEmail === ROOT_ADMIN_EMAIL;
+            if (isRootAdminTestBypass) {
                 role = 'committee';
                 membershipStatus = 'active';
             }
@@ -113,8 +113,8 @@ router.post('/register', authLimiter, async (req, res) => {
             }
 
             const calendarToken = crypto.randomUUID();
-            // In test env or for root admin, mark as verified immediately
-            const emailVerified = (IS_TEST || isRootAdmin) ? 1 : 0;
+            // In test env, mark as verified immediately
+            const emailVerified = (IS_TEST || isRootAdminTestBypass) ? 1 : 0;
 
             db.run(
                 'INSERT INTO users (id, firstName, lastName, name, email, passwordHash, registrationNumber, role, membershipStatus, membershipYear, calendarToken, emailVerified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -128,7 +128,7 @@ router.post('/register', authLimiter, async (req, res) => {
                     }
 
                     // Insert user_memberships rows
-                    const membershipRowStatus = (IS_TEST || isRootAdmin || preApproved) ? 'active' : 'pending';
+                    const membershipRowStatus = (IS_TEST || preApproved || isRootAdminTestBypass) ? 'active' : 'pending';
                     const stmt = db.prepare('INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)');
                     types.forEach((t: string) => {
                         stmt.run(['umem_' + Date.now() + Math.random().toString(36).substr(2, 5), id, t, membershipRowStatus, membershipYear]);
@@ -141,8 +141,8 @@ router.post('/register', authLimiter, async (req, res) => {
 
                     const user = { id, firstName, lastName, email: normalizedEmail, registrationNumber: normalizedRegistrationNumber, role, committeeRole: null, membershipStatus, membershipYear, calendarToken };
 
-                    if (IS_TEST || isRootAdmin) {
-                        // In test environment or for root admin: skip email verification, return token immediately
+                    if (IS_TEST || isRootAdminTestBypass) {
+                        // In test environment: skip email verification, return token immediately
                         const token = jwt.sign(user, SECRET_KEY, { expiresIn: '24h' });
                         res.cookie('uscc_token', token, cookieOptions);
                         return res.json({ user, token });
@@ -332,14 +332,12 @@ router.post('/forgot-password', authLimiter, (req, res) => {
             (dbErr) => {
                 if (dbErr) return;
 
-                const forwardedProtoRaw = req.headers['x-forwarded-proto'];
-                const forwardedProto = typeof forwardedProtoRaw === 'string'
-                    ? forwardedProtoRaw.split(',')[0].trim()
-                    : '';
-                const inferredProto = forwardedProto || req.protocol || 'http';
-                const inferredHost = req.get('host') || '';
-                const inferredBaseUrl = inferredHost ? `${inferredProto}://${inferredHost}` : '';
-                const baseUrl = process.env.APP_URL || inferredBaseUrl || 'http://localhost:5173';
+                const appUrl = (process.env.APP_URL || '').trim().replace(/\/+$/, '');
+                const baseUrl = appUrl || (IS_PRODUCTION ? '' : 'http://localhost:5173');
+                if (!baseUrl) {
+                    console.error('APP_URL is required in production for password reset links.');
+                    return;
+                }
                 const resetLink = `${baseUrl}/login.html?reset_token=${token}`;
 
                 sendEmail(

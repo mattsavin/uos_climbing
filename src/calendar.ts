@@ -1,4 +1,5 @@
 import type { Session } from './auth';
+import { escapeHTML } from './utils';
 
 interface SessionColorStyle {
     chip: string;
@@ -52,7 +53,7 @@ function renderCalendarLegend(
         return `
                     <div class="flex items-center gap-2 min-w-0">
                         <span class="w-2.5 h-2.5 rounded-full ${style.dot} shrink-0"></span>
-                        <span class="truncate max-w-42.5">${type}</span>
+                        <span class="truncate max-w-42.5">${escapeHTML(type)}</span>
                     </div>
                 `;
     }).join('')}
@@ -219,6 +220,9 @@ function renderSessionChip(
     const isPast = sessionDate < new Date();
     const isBooked = myBookings.includes(session.id);
     const timeStr = sessionDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    const safeTime = escapeHTML(timeStr);
+    const safeTitle = escapeHTML(session.title || '');
+    const safeType = escapeHTML(session.type || '');
 
     let bg = colorMap[session.type]?.chip || 'bg-slate-600/50 text-slate-300 border-slate-600/30';
 
@@ -247,14 +251,14 @@ function renderSessionChip(
     return `
         <div class="session-chip mt-1 border rounded p-2 text-xs font-medium leading-tight w-full overflow-hidden ${clickable ? 'cursor-pointer hover:opacity-80 transition-opacity' : 'cursor-default'} flex flex-col gap-1 ${bg}" data-id="${session.id}">
             <div class="w-full flex items-center justify-between gap-2 min-w-0">
-                <span class="font-bold block min-w-0 truncate" title="${timeStr}">${timeStr}</span>
+                <span class="font-bold block min-w-0 truncate" title="${safeTime}">${safeTime}</span>
                 ${isBooked ? '<span class="text-current font-black text-sm" title="Booked">✓</span>' : (isPast ? '<span class="text-[9px] uppercase tracking-tighter opacity-70">Expired</span>' : '')}
             </div>
-            <div class="text-[11px] font-semibold leading-snug wrap-break-word">${session.title}</div>
+            <div class="text-[11px] font-semibold leading-snug wrap-break-word">${safeTitle}</div>
             ${badges ? `<div class="flex items-center gap-1 flex-wrap">${badges}</div>` : ''}
             <div class="mt-auto pt-1 border-t border-current border-opacity-20 min-w-0">
                 <span class="block font-bold text-[10px] uppercase tracking-wider opacity-90">${session.bookedSlots}/${session.capacity} Slots</span>
-                <span class="block text-[8px] uppercase tracking-widest opacity-75 leading-snug break-words" title="${session.type}">${session.type}</span>
+                <span class="block text-[8px] uppercase tracking-widest opacity-75 leading-snug break-words" title="${safeType}">${safeType}</span>
             </div>
         </div>
     `;

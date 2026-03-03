@@ -6,6 +6,7 @@ import crypto from 'crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const ROOT_ADMIN_EMAIL = (process.env.ROOT_ADMIN_EMAIL || 'committee@sheffieldclimbing.org').toLowerCase();
 
 const dbPath = process.env.NODE_ENV === 'test'
     ? ':memory:'
@@ -264,7 +265,7 @@ function initializeDatabase() {
         )`);
 
         // Create root admin if not exists
-        db.get('SELECT id, membershipYear FROM users WHERE email = ?', ['committee@sheffieldclimbing.org'], async (err, row: any) => {
+        db.get('SELECT id, membershipYear FROM users WHERE email = ?', [ROOT_ADMIN_EMAIL], async (err, row: any) => {
             if (!row) {
                 const rootHash = await bcrypt.hash('SuperSecret123!', 10);
                 const currentYear = new Date().getFullYear();
@@ -273,7 +274,7 @@ function initializeDatabase() {
 
                 db.run(
                     'INSERT INTO users (id, firstName, lastName, name, email, passwordHash, role, membershipStatus, membershipYear, calendarToken, emailVerified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                    ['user_root', 'Root', 'Admin', 'Root Admin', 'committee@sheffieldclimbing.org', rootHash, 'committee', 'active', membershipYear, crypto.randomUUID(), 1],
+                    ['user_root', 'Root', 'Admin', 'Root Admin', ROOT_ADMIN_EMAIL, rootHash, 'committee', 'active', membershipYear, crypto.randomUUID(), 1],
                     () => {
                         // Insert the active basic membership row for the root admin
                         db.run(
@@ -285,13 +286,13 @@ function initializeDatabase() {
                 console.log('Root admin created.');
             } else {
                 // Ensure existing root admin is always marked as active + verified
-                db.run('UPDATE users SET emailVerified = 1, membershipStatus = ? WHERE email = ?', ['active', 'committee@sheffieldclimbing.org']);
+                db.run('UPDATE users SET emailVerified = 1, membershipStatus = ? WHERE email = ?', ['active', ROOT_ADMIN_EMAIL]);
                 // In non-production, keep local root credentials stable for troubleshooting/dev access
                 if (process.env.NODE_ENV !== 'production') {
                     const rootHash = await bcrypt.hash('SuperSecret123!', 10);
                     db.run(
                         'UPDATE users SET passwordHash = ?, role = ?, firstName = ?, lastName = ?, name = ? WHERE email = ?',
-                        [rootHash, 'committee', 'Root', 'Admin', 'Root Admin', 'committee@sheffieldclimbing.org']
+                        [rootHash, 'committee', 'Root', 'Admin', 'Root Admin', ROOT_ADMIN_EMAIL]
                     );
                 }
                 // Upgrade any existing basic memberships to active (avoids pending+active duplicates)

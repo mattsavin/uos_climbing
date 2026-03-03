@@ -4,6 +4,14 @@ import { authenticateToken, requireCommittee } from '../middleware/auth';
 import { sendEmail } from '../services/email';
 
 const router = express.Router();
+const ROOT_ADMIN_EMAIL = (process.env.ROOT_ADMIN_EMAIL || 'committee@sheffieldclimbing.org').toLowerCase();
+
+function isRootAdmin(user: any): boolean {
+    return !!user
+        && user.role === 'committee'
+        && typeof user.email === 'string'
+        && user.email.toLowerCase() === ROOT_ADMIN_EMAIL;
+}
 
 function getMembershipLabel(membershipType: string, callback: (label: string) => void) {
     db.get('SELECT label FROM membership_types WHERE id = ?', [membershipType], (err, row: any) => {
@@ -97,7 +105,7 @@ router.post('/config/elections', authenticateToken, requireCommittee, (req, res)
 
 /** Send a test email (root admin only) */
 router.post('/test-email', authenticateToken, requireCommittee, async (req: any, res) => {
-    if (req.user.email !== 'committee@sheffieldclimbing.org') {
+    if (!isRootAdmin(req.user)) {
         return res.status(403).json({ error: 'Only Root Admin can perform this action' });
     }
 
@@ -360,14 +368,14 @@ router.post('/users/:id/promote', authenticateToken, requireCommittee, (req, res
 
 router.post('/users/:id/demote', authenticateToken, requireCommittee, (req: any, res) => {
     // Only root admin can demote
-    if (req.user.email !== 'committee@sheffieldclimbing.org') {
+    if (!isRootAdmin(req.user)) {
         return res.status(403).json({ error: 'Only Root Admin can perform this action' });
     }
 
     // Cannot demote root admin
     db.get('SELECT email FROM users WHERE id = ?', [req.params.id], (err, user: any) => {
         if (err) return res.status(500).json({ error: 'Database error' });
-        if (user && user.email === 'committee@sheffieldclimbing.org') {
+        if (user && typeof user.email === 'string' && user.email.toLowerCase() === ROOT_ADMIN_EMAIL) {
             return res.status(403).json({ error: 'Cannot demote the Root Admin' });
         }
 
@@ -398,7 +406,7 @@ router.post('/users/:id/committee-role', authenticateToken, requireCommittee, (r
 
         const invalidRole = roles.find(r => !validRoles.includes(r));
         if (invalidRole) {
-            return res.status(400).json({ error: `Invalid committee role: ${invalidRole}` });
+            return res.status(400).json({ error: 'Invalid committee role' });
         }
 
         const legacyRole = roles.length > 0 ? roles[0] : null;
@@ -530,7 +538,7 @@ router.get('/committee-roles', authenticateToken, requireCommittee, (req: any, r
 
 /** Create a new committee role (root admin only) */
 router.post('/committee-roles', authenticateToken, requireCommittee, (req: any, res) => {
-    if (req.user.email !== 'committee@sheffieldclimbing.org') {
+    if (!isRootAdmin(req.user)) {
         return res.status(403).json({ error: 'Only Root Admin can perform this action' });
     }
 
@@ -552,7 +560,7 @@ router.post('/committee-roles', authenticateToken, requireCommittee, (req: any, 
 
 /** Update a committee role (root admin only) */
 router.put('/committee-roles/:id', authenticateToken, requireCommittee, (req: any, res) => {
-    if (req.user.email !== 'committee@sheffieldclimbing.org') {
+    if (!isRootAdmin(req.user)) {
         return res.status(403).json({ error: 'Only Root Admin can perform this action' });
     }
 
@@ -572,7 +580,7 @@ router.put('/committee-roles/:id', authenticateToken, requireCommittee, (req: an
 
 /** Delete a committee role (root admin only) */
 router.delete('/committee-roles/:id', authenticateToken, requireCommittee, (req: any, res) => {
-    if (req.user.email !== 'committee@sheffieldclimbing.org') {
+    if (!isRootAdmin(req.user)) {
         return res.status(403).json({ error: 'Only Root Admin can perform this action' });
     }
 

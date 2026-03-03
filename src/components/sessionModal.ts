@@ -1,5 +1,5 @@
 import { adminApi, type Session, type User } from '../auth';
-import { showConfirmModal } from '../utils';
+import { escapeHTML, showConfirmModal } from '../utils';
 
 export interface SessionModalOptions {
     session: Session;
@@ -387,8 +387,8 @@ async function renderAttendees(sessionId: string, container: HTMLElement, countE
         container.innerHTML = attendees.map(u => `
             <div class="flex items-center justify-between p-2 rounded bg-white/5 border border-white/5">
                 <div class="min-w-0">
-                    <p class="text-xs font-bold text-white truncate">${u.firstName} ${u.lastName}</p>
-                    <p class="text-[9px] text-slate-500 truncate">${u.email}</p>
+                    <p class="text-xs font-bold text-white truncate">${escapeHTML(`${u.firstName || ''} ${u.lastName || ''}`.trim())}</p>
+                    <p class="text-[9px] text-slate-500 truncate">${escapeHTML(u.email || '')}</p>
                 </div>
                 <button class="remove-attendee-btn p-1.5 text-slate-500 hover:text-red-400 transition-colors" data-user-id="${u.id}" title="Remove Attendee">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -413,7 +413,7 @@ async function renderAttendees(sessionId: string, container: HTMLElement, countE
         });
 
     } catch (err: any) {
-        container.innerHTML = `<div class="text-center py-4 text-red-400 text-xs">Error: ${err.message}</div>`;
+        container.innerHTML = `<div class="text-center py-4 text-red-400 text-xs">Error: ${escapeHTML(err.message || 'Failed to load attendees')}</div>`;
     }
 }
 

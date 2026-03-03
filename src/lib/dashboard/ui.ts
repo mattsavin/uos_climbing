@@ -353,7 +353,7 @@ export async function updateUI() {
                 const qrContainer = document.getElementById('card-qr-container');
                 if (qrContainer) {
                     // Public verification URL
-                    const verifyUrl = `${window.location.origin}/verify/${user.registrationNumber || user.id}`;
+                    const verifyUrl = `${window.location.origin}/verify/${user.calendarToken || user.id}`;
 
                     QRCode.toString(verifyUrl, {
                         type: 'svg',

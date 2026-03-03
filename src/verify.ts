@@ -11,17 +11,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     const photoPlaceholder = document.getElementById('verify-photo-placeholder');
     const errorMessage = document.getElementById('error-message');
 
-    // Extract ID from URL: /verify/:id
+    // Extract opaque token from URL: /verify/:token
     const pathParts = window.location.pathname.split('/');
-    const memberId = pathParts[pathParts.length - 1];
+    const memberToken = pathParts[pathParts.length - 1];
 
-    if (!memberId || memberId === 'verify') {
+    if (!memberToken || memberToken === 'verify') {
         showError('Invalid verification link.');
         return;
     }
 
     try {
-        const res = await fetch(`/api/verify/${memberId}`);
+        const res = await fetch(`/api/verify/${memberToken}`);
         const data = await res.json();
 
         if (!res.ok) {
@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Populate Data
         if (nameEl) nameEl.textContent = data.name;
-        if (regEl) regEl.textContent = `ID: ${data.registrationNumber || 'N/A'}`;
+        if (regEl) regEl.textContent = 'ID: Verified by secure token';
         if (yearEl) yearEl.textContent = data.year || '2026/27'; // Fallback if not provided
         if (expiryEl) expiryEl.textContent = data.expiryDate;
 

@@ -5,6 +5,16 @@ import { escapeHTML, showToast, showConfirmModal } from './utils';
 import { config } from './config';
 
 document.addEventListener('DOMContentLoaded', () => {
+    const sanitizeExternalUrl = (raw: string | null | undefined): string | null => {
+        if (!raw) return null;
+        try {
+            const parsed = new URL(raw, window.location.origin);
+            if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+            return parsed.toString();
+        } catch {
+            return null;
+        }
+    };
 
     const portal = document.getElementById('elections-portal');
     const closedMessage = document.getElementById('voting-closed-message');
@@ -232,10 +242,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         listHtml += roleCandidates.map(c => {
                             const safeName = escapeHTML(c.name);
                             const safeManifesto = escapeHTML(c.manifesto);
-                            const safeLink = c.presentationLink ? escapeHTML(c.presentationLink) : '';
+                            const safeLink = sanitizeExternalUrl(c.presentationLink);
 
                             const slideBadge = safeLink ? `
-                                <a href="${safeLink}" target="_blank" rel="noopener noreferrer" class="absolute top-4 right-20 text-[10px] uppercase font-bold px-2 py-1 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded flex items-center gap-1 hover:bg-blue-500/40 transition-colors">
+                                <a href="${escapeHTML(safeLink)}" target="_blank" rel="noopener noreferrer" class="absolute top-4 right-20 text-[10px] uppercase font-bold px-2 py-1 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded flex items-center gap-1 hover:bg-blue-500/40 transition-colors">
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                                     Slides
                                 </a>
