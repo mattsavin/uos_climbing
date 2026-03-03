@@ -730,7 +730,39 @@ export const committeeApi = {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Photo upload failed');
         return data;
+    },
+
+    async exportMembersCSV(membershipType: string): Promise<void> {
+        const url = `/api/committee/export/members?membershipType=${encodeURIComponent(membershipType)}`;
+        const res = await fetch(url, {
+            credentials: 'include'
+        });
+
+        if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || 'Export failed');
+        }
+
+        // Get the filename from the Content-Disposition header
+        const contentDisposition = res.headers.get('content-disposition');
+        let filename = `members-${membershipType}.csv`;
+        if (contentDisposition) {
+            const match = contentDisposition.match(/filename="(.+?)"/);
+            if (match) filename = match[1];
+        }
+
+        // Create blob and download
+        const blob = await res.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(downloadUrl);
     }
 };
+
 
 // Initialize session asynchronously will be handled in dashboard.ts

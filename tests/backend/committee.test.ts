@@ -142,4 +142,79 @@ describe('Committee API', () => {
 
         expect(res.status).toBe(403);
     });
+
+    it('should export members with verified membership type as CSV', async () => {
+        // Create test users with verified memberships
+        const user1Email = `csv_test_user1_${Date.now()}@example.com`;
+        const user2Email = `csv_test_user2_${Date.now()}@example.com`;
+
+        // Register users
+        const user1Res = await request(app).post('/api/auth/register').send({
+            firstName: 'CSV', lastName: 'User1', email: user1Email,
+            password: 'Password123!', passwordConfirm: 'Password123!',
+            registrationNumber: 'CSV001'
+        });
+        const user1Id = user1Res.body.user.id;
+
+        const user2Res = await request(app).post('/api/auth/register').send({
+            firstName: 'CSV', lastName: 'User2', email: user2Email,
+            password: 'Password123!', passwordConfirm: 'Password123!',
+            registrationNumber: 'CSV002'
+        });
+        const user2Id = user2Res.body.user.id;
+
+        // Add verified memberships
+        db.run('INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)',
+            [`mem_1_${Date.now()}`, user1Id, 'basic', 'active', '2024'],
+            (err) => { if (err) console.error('Error inserting user1 membership:', err); }
+        );
+        db.run('INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)',
+            [`mem_2_${Date.now()}`, user2Id, 'basic', 'active', '2024'],
+            (err) => { if (err) console.error('Error inserting user2 membership:', err); }
+        );
+
+        // Wait a moment for DB writes
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Request CSV export
+        const res = await request(app)
+            .get('/api/committee/export/members?membershipType=basic')
+            .set('Authorization', `Bearer ${committeeToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.headers['content-type']).toContain('text/csv');
+        expect(res.headers['content-disposition']).toContain('attachment; filename="members-basic-');
+        expect(res.text).toContain('firstName,lastName,email');
+        expect(res.text).toContain('CSV');
+        expect(res.text).toContain('User1');
+        expect(res.text).toContain('User2');
+    });
+
+    it('should return error when membershipType parameter is missing', async () => {
+        const res = await request(app)
+            .get('/api/committee/export/members')
+            .set('Authorization', `Bearer ${committeeToken}`);
+
+        expect(res.status).toBe(400);
+        expect(res.body).toHaveProperty('error', 'membershipType query parameter is required');
+    });
+
+    it('should prevent non-committee members from exporting members', async () => {
+        const res = await request(app)
+            .get('/api/committee/export/members?membershipType=basic')
+            .set('Authorization', `Bearer ${memberToken}`);
+
+        expect(res.status).toBe(403);
+    });
+
+    it('should return CSV with headers even if no members match', async () => {
+        const res = await request(app)
+            .get('/api/committee/export/members?membershipType=nonexistent')
+            .set('Authorization', `Bearer ${committeeToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.headers['content-type']).toContain('text/csv');
+        // Should have header row but no data rows
+        expect(res.text).toContain('firstName,lastName,email');
+    });
 });

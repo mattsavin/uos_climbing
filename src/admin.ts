@@ -5,6 +5,8 @@ import { initSessionTypeHandlers, renderSessionTypes } from './lib/dashboard/ses
 import { initMembershipTypeHandlers, renderMembershipTypes } from './lib/dashboard/membership-types';
 import { initCommitteeRoleHandlers, renderCommitteeRoles } from './lib/dashboard/committee-roles';
 import { adminConfirmModalHtml } from './components';
+import { csvExportModalHtml } from './components';
+import { initCsvExportModal } from './lib/dashboard/committee';
 import { showToast } from './utils';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -12,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const app = document.getElementById('app');
     if (app) {
         app.insertAdjacentHTML('beforeend', adminConfirmModalHtml);
+        app.insertAdjacentHTML('beforeend', csvExportModalHtml);
     }
 
     // Listen for custom update events
@@ -28,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initSessionTypeHandlers();
     initMembershipTypeHandlers();
     initCommitteeRoleHandlers();
+    initCsvExportModal();
 
     // Authenticate and check permissions
     authState.init().then(() => {

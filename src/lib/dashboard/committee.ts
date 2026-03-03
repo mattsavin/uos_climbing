@@ -1,4 +1,4 @@
-import { authState, committeeApi } from '../../auth';
+import { authState, committeeApi, adminApi } from '../../auth';
 import { showToast } from '../../utils';
 
 export function initCommitteeProfileHandlers() {
@@ -120,6 +120,84 @@ export function initCommitteeProfileHandlers() {
             } finally {
                 saveBtn.textContent = 'Save Profile';
                 (saveBtn as HTMLButtonElement).disabled = false;
+            }
+        });
+    }
+}
+
+export async function initCsvExportModal() {
+    const modal = document.getElementById('csv-export-modal');
+    const backdrop = document.getElementById('csv-export-backdrop');
+    const cancelBtn = document.getElementById('csv-export-cancel-btn');
+    const confirmBtn = document.getElementById('csv-export-confirm-btn');
+    const typeSelect = document.getElementById('csv-export-membership-type') as HTMLSelectElement;
+    const exportBtn = document.getElementById('open-csv-export-modal-btn');
+
+    if (!modal || !exportBtn) return;
+
+    // Populate membership types when modal is about to open
+    async function populateMembershipTypes() {
+        try {
+            const membershipTypes = await adminApi.getMembershipTypes();
+            if (typeSelect) {
+                typeSelect.innerHTML = '<option value="">-- Select a type --</option>';
+                membershipTypes.forEach(type => {
+                    const option = document.createElement('option');
+                    option.value = type.id;
+                    option.textContent = type.label;
+                    if (type.deprecated) {
+                        option.textContent += ' (Deprecated)';
+                    }
+                    typeSelect.appendChild(option);
+                });
+            }
+        } catch (err: any) {
+            showToast('Failed to load membership types', 'error');
+        }
+    }
+
+    function closeModal() {
+        modal.classList.add('hidden');
+    }
+
+    function openModal() {
+        modal.classList.remove('hidden');
+        typeSelect.value = '';
+        populateMembershipTypes();
+    }
+
+    exportBtn.addEventListener('click', () => {
+        openModal();
+    });
+
+    if (backdrop) {
+        backdrop.addEventListener('click', closeModal);
+    }
+
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', closeModal);
+    }
+
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', async () => {
+            const selectedType = typeSelect.value;
+            if (!selectedType) {
+                showToast('Please select a membership type', 'error');
+                return;
+            }
+
+            try {
+                confirmBtn.textContent = 'Exporting...';
+                (confirmBtn as HTMLButtonElement).disabled = true;
+
+                await committeeApi.exportMembersCSV(selectedType);
+                showToast('CSV export started', 'success');
+                closeModal();
+            } catch (err: any) {
+                showToast(err.message || 'Failed to export CSV', 'error');
+            } finally {
+                confirmBtn.textContent = 'Export';
+                (confirmBtn as HTMLButtonElement).disabled = false;
             }
         });
     }
