@@ -45,14 +45,24 @@
                         <div class="p-5 border-b border-white/10 bg-slate-800/50">
                             <h3 class="text-lg font-bold text-white">Pending Registrations</h3>
                         </div>
-                        <div id="pending-list" class="divide-y divide-white/5 max-h-[400px] overflow-y-auto"></div>
+                        <div class="p-4 border-b border-white/10 bg-slate-900/40">
+                            <p class="text-xs text-slate-400 mb-2">Paste SU rows: student id, name, member type, subscription purchased, date joined (date joined is ignored).</p>
+                            <textarea id="su-roster-input" rows="5" placeholder="220142139	Lily Tierney	Student	Mountaineering - Alumni Membership 2025-26	2026-02-03" class="w-full bg-slate-900 text-xs text-white border border-slate-700 rounded-lg px-3 py-2 font-mono focus:border-brand-gold focus:ring-1 focus:ring-brand-gold outline-none"></textarea>
+                            <div class="mt-2 flex items-center gap-2">
+                                <button id="import-su-roster-btn" class="btn-primary !py-1.5 !px-3 !text-[10px]">Approve / Pre-Approve</button>
+                                <span id="su-roster-result" class="text-[11px] text-slate-400"></span>
+                            </div>
+                        </div>
+                        <div id="pending-list" class="divide-y divide-white/5 max-h-[620px] overflow-y-auto"></div>
                     </div>
 
                     <div class="glass-card !p-0 overflow-hidden">
-                        <div class="p-5 border-b border-white/10 bg-slate-800/50">
+                        <div class="p-5 border-b border-white/10 bg-slate-800/50 flex justify-between items-center">
                             <h3 class="text-lg font-bold text-white">Active Member Roster</h3>
+                            <button id="open-csv-export-modal-btn" class="btn-primary !py-1 !px-3 !text-[10px] !bg-emerald-600 hover:!bg-emerald-500">Export
+                                CSV</button>
                         </div>
-                        <div id="active-list" class="divide-y divide-white/5 max-h-[400px] overflow-y-auto"></div>
+                        <div id="active-list" class="divide-y divide-white/5 max-h-[620px] overflow-y-auto"></div>
                     </div>
 
                     <div id="manage-session-types-card"
@@ -74,6 +84,17 @@
                                 New</button>
                         </div>
                         <div id="membership-types-list" class="divide-y divide-white/5 max-h-[400px] overflow-y-auto">
+                        </div>
+                    </div>
+
+                    <div id="manage-committee-roles-card"
+                        class="glass-card !p-0 overflow-hidden border border-purple-500/20">
+                        <div class="p-5 border-b border-white/10 bg-slate-800/50 flex justify-between items-center">
+                            <h3 class="text-lg font-bold text-white">Committee Roles</h3>
+                            <button id="add-committee-role-btn" class="btn-primary !py-1 !px-3 !text-[10px]">Add
+                                New</button>
+                        </div>
+                        <div id="committee-roles-list" class="divide-y divide-white/5 max-h-[400px] overflow-y-auto">
                         </div>
                     </div>
                 </div>

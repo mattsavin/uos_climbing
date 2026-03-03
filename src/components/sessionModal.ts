@@ -1,5 +1,5 @@
 import { adminApi, type Session, type User } from '../auth';
-import { showConfirmModal } from '../utils';
+import { escapeHTML, showConfirmModal } from '../utils';
 
 export interface SessionModalOptions {
     session: Session;
@@ -41,9 +41,17 @@ export function openSessionModal(options: SessionModalOptions) {
                             <span class="text-slate-500 font-bold uppercase tracking-wider text-xs">Availability</span>
                             <span id="usm-capacity" class="font-mono text-white bg-slate-900 px-2 py-1 rounded inline-block"></span>
                         </div>
+                        <div id="usm-location-row" class="hidden flex justify-between items-center pt-1">
+                            <span class="text-slate-500 font-bold uppercase tracking-wider text-xs">Location</span>
+                            <span id="usm-location" class="font-mono text-white text-right"></span>
+                        </div>
                         <div id="usm-visibility-row" class="hidden flex justify-between items-center pt-1">
                             <span class="text-slate-500 font-bold uppercase tracking-wider text-xs">Visibility</span>
                             <span id="usm-visibility" class="font-mono text-amber-300 bg-amber-500/10 border border-amber-500/30 px-2 py-1 rounded inline-block text-[11px] uppercase tracking-wider">Committee Only</span>
+                        </div>
+                        <div id="usm-registration-visibility-row" class="hidden flex justify-between items-center pt-1">
+                            <span class="text-slate-500 font-bold uppercase tracking-wider text-xs">Registration</span>
+                            <span id="usm-registration-visibility" class="font-mono text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 px-2 py-1 rounded inline-block text-[11px] uppercase tracking-wider">Committee Only</span>
                         </div>
                     </div>
                     
@@ -74,6 +82,10 @@ export function openSessionModal(options: SessionModalOptions) {
                                 <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Title</label>
                                 <input type="text" id="usm-edit-title" required class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500 block">
                             </div>
+                            <div class="space-y-1 text-left">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Location</label>
+                                <input type="text" id="usm-edit-location" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500 block" placeholder="e.g. Main Wall, Roof Cave">
+                            </div>
                             <div class="grid grid-cols-2 gap-3 text-left">
                                 <div class="space-y-1">
                                     <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Date & Time</label>
@@ -96,15 +108,15 @@ export function openSessionModal(options: SessionModalOptions) {
                                 </div>
                             </div>
                             <div class="space-y-1 text-left mt-2">
-                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Required Membership</label>
-                                <select id="usm-edit-required-membership" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white text-[11px] focus:outline-none focus:border-amber-500 block">
-                                    <option value="basic">Basic Membership</option>
-                                </select>
-                            </div>
-                            <div class="space-y-1 text-left mt-2">
                                 <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Visibility</label>
                                 <select id="usm-edit-visibility" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white text-[11px] focus:outline-none focus:border-amber-500 block">
                                     <option value="all">Everyone</option>
+                                    <option value="committee_only">Committee Only</option>
+                                </select>
+                            </div>
+                            <div class="space-y-1 text-left mt-2">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Who Can Register</label>
+                                <select id="usm-edit-registration-rule" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white text-[11px] focus:outline-none focus:border-amber-500 block">
                                     <option value="committee_only">Committee Only</option>
                                 </select>
                             </div>
@@ -129,18 +141,21 @@ export function openSessionModal(options: SessionModalOptions) {
             const id = (document.getElementById('usm-edit-id') as HTMLInputElement).value;
             const title = (document.getElementById('usm-edit-title') as HTMLInputElement).value;
             const date = (document.getElementById('usm-edit-date') as HTMLInputElement).value;
+            const location = (document.getElementById('usm-edit-location') as HTMLInputElement).value;
             const type = (document.getElementById('usm-edit-type') as HTMLSelectElement).value as any;
             const capacity = parseInt((document.getElementById('usm-edit-capacity') as HTMLInputElement).value, 10);
             const bookedSlots = parseInt((document.getElementById('usm-edit-booked') as HTMLInputElement).value, 10) || 0;
-            const requiredMembership = (document.getElementById('usm-edit-required-membership') as HTMLSelectElement).value;
+            const registrationRule = (document.getElementById('usm-edit-registration-rule') as HTMLSelectElement).value;
             const visibility = (document.getElementById('usm-edit-visibility') as HTMLSelectElement).value as 'all' | 'committee_only';
+            const registrationVisibility = registrationRule === 'committee_only' ? 'committee_only' : 'all';
+            const requiredMembership = registrationRule === 'committee_only' ? undefined : registrationRule;
 
             if (id && title && date && type && !isNaN(capacity)) {
                 try {
                     const submitBtn = document.querySelector('#usm-edit-form button[type="submit"]') as HTMLButtonElement;
                     submitBtn.disabled = true;
                     submitBtn.textContent = 'Saving...';
-                    await adminApi.updateSession(id, { title, date, type, capacity, bookedSlots, requiredMembership, visibility });
+                    await adminApi.updateSession(id, { title, date, location, type, capacity, bookedSlots, requiredMembership, visibility, registrationVisibility });
                     close();
                     if ((window as any)._usmCurrentOnEditSuccess) (window as any)._usmCurrentOnEditSuccess();
                 } catch (err: any) {
@@ -182,6 +197,7 @@ export function openSessionModal(options: SessionModalOptions) {
     const datetimeEl = document.getElementById('usm-datetime')!;
     const capacityEl = document.getElementById('usm-capacity')!;
     const visibilityRowEl = document.getElementById('usm-visibility-row')!;
+    const registrationVisibilityRowEl = document.getElementById('usm-registration-visibility-row')!;
     const iconEl = document.getElementById('usm-icon')!;
     const actionsEl = document.getElementById('usm-actions')!;
     const errorEl = document.getElementById('usm-error')!;
@@ -210,10 +226,23 @@ export function openSessionModal(options: SessionModalOptions) {
         minute: '2-digit'
     });
     capacityEl.textContent = `${session.bookedSlots} / ${session.capacity} Slots`;
+    const locationRowEl = document.getElementById('usm-location-row')!;
+    const locationEl = document.getElementById('usm-location')!;
+    if ((session as any).location) {
+        locationRowEl.classList.remove('hidden');
+        locationEl.textContent = escapeHTML((session as any).location);
+    } else {
+        locationRowEl.classList.add('hidden');
+    }
     if ((session as any).visibility === 'committee_only') {
         visibilityRowEl.classList.remove('hidden');
     } else {
         visibilityRowEl.classList.add('hidden');
+    }
+    if ((session as any).registrationVisibility === 'committee_only') {
+        registrationVisibilityRowEl.classList.remove('hidden');
+    } else {
+        registrationVisibilityRowEl.classList.add('hidden');
     }
 
     // Styling the icon depending on Type
@@ -322,6 +351,7 @@ export function openSessionModal(options: SessionModalOptions) {
             (document.getElementById('usm-edit-id') as HTMLInputElement).value = session.id;
             (document.getElementById('usm-edit-title') as HTMLInputElement).value = session.title;
             (document.getElementById('usm-edit-date') as HTMLInputElement).value = session.date;
+            (document.getElementById('usm-edit-location') as HTMLInputElement).value = (session as any).location || '';
 
             const typeSelect = document.getElementById('usm-edit-type') as HTMLSelectElement;
             adminApi.getSessionTypes().then(types => {
@@ -331,15 +361,25 @@ export function openSessionModal(options: SessionModalOptions) {
 
             (document.getElementById('usm-edit-capacity') as HTMLInputElement).value = session.capacity.toString();
             (document.getElementById('usm-edit-booked') as HTMLInputElement).value = session.bookedSlots.toString();
-            const requiredMembershipSelect = document.getElementById('usm-edit-required-membership') as HTMLSelectElement;
+            const registrationRuleSelect = document.getElementById('usm-edit-registration-rule') as HTMLSelectElement;
             adminApi.getMembershipTypes().then(types => {
-                requiredMembershipSelect.innerHTML = types.length
-                    ? types.map(t => `<option value="${t.id}">${t.label}</option>`).join('')
-                    : '<option value="basic">Basic Membership</option>';
-                requiredMembershipSelect.value = (session as any).requiredMembership || (types.find(t => t.id === 'basic')?.id || types[0]?.id || 'basic');
+                const activeTypes = types.filter(t => !t.deprecated || t.id === 'basic');
+                const membershipOptions = activeTypes.length
+                    ? activeTypes.map(t => `<option value="${t.id}">${t.label} Members</option>`).join('')
+                    : '<option value="basic">Basic Members</option>';
+                registrationRuleSelect.innerHTML = `
+                    ${membershipOptions}
+                    <option value="committee_only">Committee Only</option>
+                `;
+                registrationRuleSelect.value = (session as any).registrationVisibility === 'committee_only'
+                    ? 'committee_only'
+                    : ((session as any).requiredMembership || (activeTypes.find(t => t.id === 'basic')?.id || activeTypes[0]?.id || 'basic'));
             }).catch(() => {
-                requiredMembershipSelect.innerHTML = '<option value="basic">Basic Membership</option>';
-                requiredMembershipSelect.value = (session as any).requiredMembership || 'basic';
+                registrationRuleSelect.innerHTML = `
+                    <option value="basic">Basic Members</option>
+                    <option value="committee_only">Committee Only</option>
+                `;
+                registrationRuleSelect.value = (session as any).registrationVisibility === 'committee_only' ? 'committee_only' : ((session as any).requiredMembership || 'basic');
             });
             (document.getElementById('usm-edit-visibility') as HTMLSelectElement).value = (session as any).visibility || 'all';
 
@@ -365,8 +405,8 @@ async function renderAttendees(sessionId: string, container: HTMLElement, countE
         container.innerHTML = attendees.map(u => `
             <div class="flex items-center justify-between p-2 rounded bg-white/5 border border-white/5">
                 <div class="min-w-0">
-                    <p class="text-xs font-bold text-white truncate">${u.firstName} ${u.lastName}</p>
-                    <p class="text-[9px] text-slate-500 truncate">${u.email}</p>
+                    <p class="text-xs font-bold text-white truncate">${escapeHTML(`${u.firstName || ''} ${u.lastName || ''}`.trim())}</p>
+                    <p class="text-[9px] text-slate-500 truncate">${escapeHTML(u.email || '')}</p>
                 </div>
                 <button class="remove-attendee-btn p-1.5 text-slate-500 hover:text-red-400 transition-colors" data-user-id="${u.id}" title="Remove Attendee">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -391,7 +431,7 @@ async function renderAttendees(sessionId: string, container: HTMLElement, countE
         });
 
     } catch (err: any) {
-        container.innerHTML = `<div class="text-center py-4 text-red-400 text-xs">Error: ${err.message}</div>`;
+        container.innerHTML = `<div class="text-center py-4 text-red-400 text-xs">Error: ${escapeHTML(err.message || 'Failed to load attendees')}</div>`;
     }
 }
 

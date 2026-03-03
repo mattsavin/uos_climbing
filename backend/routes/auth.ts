@@ -9,6 +9,9 @@ import { authenticateToken } from '../middleware/auth';
 import { sendEmail } from '../services/email';
 
 const IS_TEST = process.env.NODE_ENV === 'test';
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const AUTH_RATE_LIMIT_ENABLED = process.env.AUTH_RATE_LIMIT_ENABLED === 'true';
+const ROOT_ADMIN_EMAIL = (process.env.ROOT_ADMIN_EMAIL || 'committee@sheffieldclimbing.org').toLowerCase();
 
 // Create the limiter once at module init — express-rate-limit forbids per-request creation
 const _rateLimiter = rateLimit({
@@ -20,7 +23,8 @@ const _rateLimiter = rateLimit({
 });
 
 const authLimiter = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    if (IS_TEST) return next();
+    // Keep local development usable by default; enable explicitly via AUTH_RATE_LIMIT_ENABLED=true
+    if (IS_TEST || (!IS_PRODUCTION && !AUTH_RATE_LIMIT_ENABLED)) return next();
     return _rateLimiter(req, res, next);
 };
 
@@ -48,8 +52,9 @@ function getMembershipTypeIds(callback: (err: Error | null, ids: string[]) => vo
 router.post('/register', authLimiter, async (req, res) => {
     const { firstName, lastName, email, registrationNumber, password, passwordConfirm, membershipTypes } = req.body;
     const normalizedEmail = (email || '').toString().trim().toLowerCase();
+    const normalizedRegistrationNumber = (registrationNumber || '').toString().trim();
 
-    if (!firstName || !lastName || !normalizedEmail || !password || !passwordConfirm || !registrationNumber) {
+    if (!firstName || !lastName || !normalizedEmail || !password || !passwordConfirm || !normalizedRegistrationNumber) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -74,32 +79,46 @@ router.post('/register', authLimiter, async (req, res) => {
         if (types.length === 0) types = [defaultMembership];
 
         try {
+            const preApproved: any = await new Promise((resolve, reject) => {
+                db.get(
+                    'SELECT registrationNumber, membershipYear FROM preapproved_members WHERE registrationNumber = ?',
+                    [normalizedRegistrationNumber],
+                    (err, row: any) => {
+                        if (err) return reject(err);
+                        resolve(row || null);
+                    }
+                );
+            });
+
             const passwordHash = await bcrypt.hash(password, 10);
             const id = 'user_' + Date.now() + Math.random().toString(36).substr(2, 5);
 
             let role = 'member';
             let membershipStatus = 'pending';
-            // Root admin email is pre-verified
-            const isRootAdmin = normalizedEmail === 'committee@sheffieldclimbing.org';
-            if (!IS_TEST && !isRootAdmin && !normalizedEmail.endsWith('@sheffield.ac.uk')) {
+            if (!IS_TEST && !normalizedEmail.endsWith('@sheffield.ac.uk')) {
                 return res.status(400).json({ error: 'Please register with your @sheffield.ac.uk email address.' });
             }
-            if (isRootAdmin) {
+            const isRootAdminTestBypass = IS_TEST && normalizedEmail === ROOT_ADMIN_EMAIL;
+            if (isRootAdminTestBypass) {
                 role = 'committee';
                 membershipStatus = 'active';
             }
 
             const currentYear = new Date().getFullYear();
             const currentMonth = new Date().getMonth();
-            const membershipYear = currentMonth < 8 ? `${currentYear - 1}/${currentYear}` : `${currentYear}/${currentYear + 1}`;
+            let membershipYear = currentMonth < 8 ? `${currentYear - 1}/${currentYear}` : `${currentYear}/${currentYear + 1}`;
+            if (preApproved?.membershipYear) {
+                membershipStatus = 'active';
+                membershipYear = preApproved.membershipYear;
+            }
 
             const calendarToken = crypto.randomUUID();
-            // In test env or for root admin, mark as verified immediately
-            const emailVerified = (IS_TEST || isRootAdmin) ? 1 : 0;
+            // In test env, mark as verified immediately
+            const emailVerified = (IS_TEST || isRootAdminTestBypass) ? 1 : 0;
 
             db.run(
                 'INSERT INTO users (id, firstName, lastName, name, email, passwordHash, registrationNumber, role, membershipStatus, membershipYear, calendarToken, emailVerified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [id, firstName, lastName, `${firstName} ${lastName}`, normalizedEmail, passwordHash, registrationNumber, role, membershipStatus, membershipYear, calendarToken, emailVerified],
+                [id, firstName, lastName, `${firstName} ${lastName}`, normalizedEmail, passwordHash, normalizedRegistrationNumber, role, membershipStatus, membershipYear, calendarToken, emailVerified],
                 function (err) {
                     if (err) {
                         if (err.message.includes('UNIQUE constraint failed')) {
@@ -109,17 +128,21 @@ router.post('/register', authLimiter, async (req, res) => {
                     }
 
                     // Insert user_memberships rows
-                    const membershipRowStatus = (IS_TEST || isRootAdmin) ? 'active' : 'pending';
+                    const membershipRowStatus = (IS_TEST || preApproved || isRootAdminTestBypass) ? 'active' : 'pending';
                     const stmt = db.prepare('INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)');
                     types.forEach((t: string) => {
                         stmt.run(['umem_' + Date.now() + Math.random().toString(36).substr(2, 5), id, t, membershipRowStatus, membershipYear]);
                     });
                     stmt.finalize();
 
-                    const user = { id, firstName, lastName, email: normalizedEmail, registrationNumber, role, committeeRole: null, membershipStatus, membershipYear, calendarToken };
+                    if (preApproved) {
+                        db.run('DELETE FROM preapproved_members WHERE registrationNumber = ?', [normalizedRegistrationNumber]);
+                    }
 
-                    if (IS_TEST || isRootAdmin) {
-                        // In test environment or for root admin: skip email verification, return token immediately
+                    const user = { id, firstName, lastName, email: normalizedEmail, registrationNumber: normalizedRegistrationNumber, role, committeeRole: null, membershipStatus, membershipYear, calendarToken };
+
+                    if (IS_TEST || isRootAdminTestBypass) {
+                        // In test environment: skip email verification, return token immediately
                         const token = jwt.sign(user, SECRET_KEY, { expiresIn: '24h' });
                         res.cookie('uscc_token', token, cookieOptions);
                         return res.json({ user, token });
@@ -158,17 +181,27 @@ router.post('/register', authLimiter, async (req, res) => {
 
 router.post('/login', authLimiter, (req, res) => {
     const { email, password } = req.body;
+    const normalizedEmail = (email || '').toString().trim().toLowerCase();
 
-    if (!email || !password) {
+    if (!normalizedEmail || !password) {
         return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    db.get('SELECT * FROM users WHERE email = ?', [email], async (err, user: any) => {
-        if (err) return res.status(500).json({ error: 'Database error' });
-        if (!user) return res.status(401).json({ error: 'Invalid email or password' });
+    db.get('SELECT * FROM users WHERE email = ?', [normalizedEmail], async (err, user: any) => {
+        if (err) {
+            console.error('Login database error:', err);
+            return res.status(500).json({ error: 'Database error' });
+        }
+        if (!user) {
+            console.warn(`Login failed: user not found for email "${normalizedEmail}"`);
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
 
         const validPassword = await bcrypt.compare(password, user.passwordHash);
-        if (!validPassword) return res.status(401).json({ error: 'Invalid email or password' });
+        if (!validPassword) {
+            console.warn(`Login failed: incorrect password for email "${normalizedEmail}"`);
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
 
         // Block login if email is not verified (unless test env)
         if (!IS_TEST && !user.emailVerified) {
@@ -299,14 +332,12 @@ router.post('/forgot-password', authLimiter, (req, res) => {
             (dbErr) => {
                 if (dbErr) return;
 
-                const forwardedProtoRaw = req.headers['x-forwarded-proto'];
-                const forwardedProto = typeof forwardedProtoRaw === 'string'
-                    ? forwardedProtoRaw.split(',')[0].trim()
-                    : '';
-                const inferredProto = forwardedProto || req.protocol || 'http';
-                const inferredHost = req.get('host') || '';
-                const inferredBaseUrl = inferredHost ? `${inferredProto}://${inferredHost}` : '';
-                const baseUrl = process.env.APP_URL || inferredBaseUrl || 'http://localhost:5173';
+                const appUrl = (process.env.APP_URL || '').trim().replace(/\/+$/, '');
+                const baseUrl = appUrl || (IS_PRODUCTION ? '' : 'http://localhost:5173');
+                if (!baseUrl) {
+                    console.error('APP_URL is required in production for password reset links.');
+                    return;
+                }
                 const resetLink = `${baseUrl}/login.html?reset_token=${token}`;
 
                 sendEmail(
@@ -362,7 +393,10 @@ router.post('/logout', (req, res) => {
 });
 
 router.get('/me', authenticateToken, (req: any, res) => {
-    db.get('SELECT id, firstName, lastName, name, email, registrationNumber, role, committeeRole, membershipStatus, membershipYear, emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements, calendarToken FROM users WHERE id = ?', [req.user.id], (err, user: any) => {
+    db.get(
+        'SELECT id, firstName, lastName, name, email, registrationNumber, role, committeeRole, membershipStatus, membershipYear, emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements, calendarToken, instagram, faveCrag, bio, profilePhoto FROM users WHERE id = ?',
+        [req.user.id],
+        (err, user: any) => {
         if (err || !user) return res.status(404).json({ error: 'User not found' });
         user.name = user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
 

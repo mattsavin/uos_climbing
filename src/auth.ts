@@ -21,6 +21,10 @@ export interface User {
     membershipStatus: 'active' | 'pending' | 'rejected';
     membershipYear?: string;
     calendarToken?: string;
+    instagram?: string;
+    faveCrag?: string;
+    bio?: string;
+    profilePhoto?: string;
     memberships?: MembershipRow[];
 }
 
@@ -69,8 +73,10 @@ export interface Session {
     date: string; // ISO 8601 Date String
     capacity: number;
     bookedSlots: number;
+    location?: string;
     requiredMembership?: string;
     visibility?: 'all' | 'committee_only';
+    registrationVisibility?: 'all' | 'committee_only';
 }
 
 // Current Session State
@@ -349,8 +355,21 @@ async function apiFetch(endpoint: string, options: RequestInit = {}) {
     };
 
     const res = await fetch(endpoint, { ...options, headers, credentials: 'include' });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'API Request Failed');
+    const text = await res.text();
+    let data: any = null;
+
+    if (text) {
+        try {
+            data = JSON.parse(text);
+        } catch {
+            if (!res.ok) {
+                throw new Error(`API Request Failed (${res.status})`);
+            }
+            return text;
+        }
+    }
+
+    if (!res.ok) throw new Error(data?.error || `API Request Failed (${res.status})`);
     return data;
 }
 
@@ -423,6 +442,13 @@ export const adminApi = {
 
     async sendTestEmail() {
         return apiFetch('/api/admin/test-email', { method: 'POST' });
+    },
+
+    async importSuRoster(raw: string) {
+        return apiFetch('/api/admin/memberships/import-su-roster', {
+            method: 'POST',
+            body: JSON.stringify({ raw })
+        });
     },
 
     // Session Management API
@@ -512,6 +538,29 @@ export const adminApi = {
 
     async deleteMembershipType(id: string): Promise<void> {
         return apiFetch(`/api/membership-types/${id}`, { method: 'DELETE' });
+    },
+
+    // Committee Roles Management API
+    async getAvailableRoles() {
+        return apiFetch('/api/admin/committee-roles');
+    },
+
+    async addCommitteeRole(id: string, label: string) {
+        return apiFetch('/api/admin/committee-roles', {
+            method: 'POST',
+            body: JSON.stringify({ id, label })
+        });
+    },
+
+    async updateCommitteeRole(id: string, label: string) {
+        return apiFetch(`/api/admin/committee-roles/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ label })
+        });
+    },
+
+    async deleteCommitteeRole(id: string): Promise<void> {
+        return apiFetch(`/api/admin/committee-roles/${id}`, { method: 'DELETE' });
     }
 };
 
@@ -655,5 +704,65 @@ export const gearApi = {
         return apiFetch(`/api/gear/requests/${id}/return`, { method: 'POST' });
     }
 };
+
+export const committeeApi = {
+    async getCommitteeMembers() {
+        return apiFetch('/api/committee');
+    },
+
+    async updateMyProfile(profile: { instagram?: string; faveCrag?: string; bio?: string }) {
+        return apiFetch('/api/committee/me', {
+            method: 'PUT',
+            body: JSON.stringify(profile)
+        });
+    },
+
+    async uploadPhoto(file: File) {
+        const formData = new FormData();
+        formData.append('photo', file);
+
+        const res = await fetch('/api/committee/me/photo', {
+            method: 'POST',
+            credentials: 'include',
+            body: formData
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Photo upload failed');
+        return data;
+    },
+
+    async exportMembersCSV(membershipType: string): Promise<void> {
+        const url = `/api/committee/export/members?membershipType=${encodeURIComponent(membershipType)}`;
+        const res = await fetch(url, {
+            credentials: 'include'
+        });
+
+        if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || 'Export failed');
+        }
+
+        // Get the filename from the Content-Disposition header
+        const contentDisposition = res.headers.get('content-disposition');
+        let filename = `members-${membershipType}.csv`;
+        if (contentDisposition) {
+            const match = contentDisposition.match(/filename="(.+?)"/);
+            if (match) filename = match[1];
+        }
+
+        // Create blob and download
+        const blob = await res.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(downloadUrl);
+    }
+};
+
 
 // Initialize session asynchronously will be handled in dashboard.ts

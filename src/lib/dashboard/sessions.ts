@@ -97,22 +97,31 @@ export function initSessionHandlers() {
         });
     }
 
-    const sessionReqMbSelect = document.getElementById('session-required-membership');
-    if (sessionReqMbSelect) {
+    const sessionRegistrationRuleSelect = document.getElementById('session-registration-rule') as HTMLSelectElement | null;
+    if (sessionRegistrationRuleSelect) {
         adminApi.getMembershipTypes().then((types) => {
-            const fallback = '<option value="basic">Basic Membership</option>';
             const activeTypes = types.filter(t => !t.deprecated || t.id === 'basic');
-            sessionReqMbSelect.innerHTML = activeTypes.length
-                ? activeTypes.map((m: any) => `<option value="${m.id}">${m.label}</option>`).join('')
-                : fallback;
+            const membershipOptions = activeTypes.length
+                ? activeTypes.map((m: any) => `<option value="${m.id}">${m.label} Members</option>`).join('')
+                : '<option value="basic">Basic Members</option>';
+            sessionRegistrationRuleSelect.innerHTML = `
+                ${membershipOptions}
+                <option value="committee_only">Committee Only</option>
+            `;
         }).catch(() => {
-            sessionReqMbSelect.innerHTML = '<option value="basic">Basic Membership</option>';
+            sessionRegistrationRuleSelect.innerHTML = `
+                <option value="basic">Basic Members</option>
+                <option value="committee_only">Committee Only</option>
+            `;
         });
     }
 
     const sessionVisibilitySelect = document.getElementById('session-visibility') as HTMLSelectElement | null;
     if (sessionVisibilitySelect) {
         sessionVisibilitySelect.value = 'all';
+    }
+    if (sessionRegistrationRuleSelect) {
+        sessionRegistrationRuleSelect.value = 'basic';
     }
 
     const filtersContainer = document.getElementById('calendar-filters-container');
@@ -173,13 +182,16 @@ export function initSessionHandlers() {
             e.preventDefault();
             const title = (document.getElementById('session-title') as HTMLInputElement).value;
             const type = (document.getElementById('session-type') as HTMLSelectElement).value as any;
+            const location = (document.getElementById('session-location') as HTMLInputElement).value;
             const dateStr = (document.getElementById('session-date') as HTMLInputElement).value;
             const capacity = parseInt((document.getElementById('session-capacity') as HTMLInputElement).value, 10);
-            const requiredMembership = ((document.getElementById('session-required-membership') as HTMLSelectElement)?.value || 'basic');
+            const registrationRule = ((document.getElementById('session-registration-rule') as HTMLSelectElement)?.value || 'basic');
             const visibility = ((document.getElementById('session-visibility') as HTMLSelectElement)?.value || 'all') as 'all' | 'committee_only';
+            const registrationVisibility = registrationRule === 'committee_only' ? 'committee_only' : 'all';
+            const requiredMembership = registrationRule === 'committee_only' ? undefined : registrationRule;
 
             if (title && type && dateStr && !isNaN(capacity)) {
-                await adminApi.addSession({ title, type, date: dateStr, capacity, requiredMembership, visibility });
+                await adminApi.addSession({ title, type, date: dateStr, location, capacity, requiredMembership, visibility, registrationVisibility });
                 (addSessionForm as HTMLFormElement).reset();
                 addSessionFormContainer?.classList.add('hidden');
                 await renderSessions(getIsCommittee());

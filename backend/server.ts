@@ -10,10 +10,14 @@ import sessionTypeRoutes from './routes/session-types';
 import membershipTypeRoutes from './routes/membership-types';
 import votingRoutes from './routes/voting';
 import gearRoutes from './routes/gear';
+import committeeRoutes from './routes/committee';
+import verifyRoutes from './routes/verify';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import history from 'connect-history-api-fallback';
 import cookieParser from 'cookie-parser';
+import { betaGate } from './middleware/beta-gate';
+import jwt from 'jsonwebtoken';
 
 // ESM dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
@@ -29,6 +33,38 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
+// Serve profile photos
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
+// Beta Gate Middleware
+app.use(betaGate);
+
+// Beta Auth Route
+app.post('/api/beta-auth', (req, res) => {
+    const { passcode } = req.body;
+    const correctPasscode = process.env.BETA_PASSCODE;
+
+    if (!correctPasscode) {
+        return res.status(500).json({ success: false, message: 'BETA_PASSCODE not configured' });
+    }
+
+    if (passcode === correctPasscode) {
+        const secret = process.env.BETA_ACCESS_SECRET || 'default_beta_secret';
+        const token = jwt.sign({ access: true }, secret, { expiresIn: '7d' });
+
+        res.cookie('BETA_ACCESS_TOKEN', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        });
+
+        return res.json({ success: true });
+    }
+
+    return res.status(401).json({ success: false, message: 'Invalid passcode' });
+});
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -38,6 +74,8 @@ app.use('/api/session-types', sessionTypeRoutes);
 app.use('/api/membership-types', membershipTypeRoutes);
 app.use('/api/voting', votingRoutes);
 app.use('/api/gear', gearRoutes);
+app.use('/api/committee', committeeRoutes);
+app.use('/api/verify', verifyRoutes);
 
 // Shared route for iCal (also registered in sessions.ts but keeping here for backward compatibility if needed, 
 // though /api/sessions/ical/:userId is preferred now. The original was /api/ical/:userId)
@@ -62,13 +100,23 @@ if (process.env.NODE_ENV === 'production') {
             // Re-route Vite's HTML entrypoints
             { from: /^\/dashboard$/, to: '/dashboard.html' },
             { from: /^\/about$/, to: '/about.html' },
-            { from: /^\/join$/, to: '/join.html' },
+            { from: /^\/schedule$/, to: '/schedule.html' },
             { from: /^\/competitions$/, to: '/competitions.html' },
             { from: /^\/gear$/, to: '/gear.html' },
             { from: /^\/login$/, to: '/login.html' },
-            { from: /^\/elections$/, to: '/elections.html' }
+            { from: /^\/elections$/, to: '/elections.html' },
+            { from: /^\/beta-gate$/, to: '/beta-gate.html' },
+            { from: /^\/verify\/.*$/, to: '/verify.html' }
         ]
     }));
+
+    // 3. Serve static files again AFTER history fallback has rewritten the URL
+    app.use(express.static(distPath));
+} else {
+    // Also handle beta-gate in dev for testing
+    app.get('/beta-gate', (req, res) => {
+        res.sendFile(path.join(__dirname, '../public/beta-gate.html'));
+    });
 }
 
 export { app };

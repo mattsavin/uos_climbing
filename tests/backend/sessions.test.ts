@@ -70,9 +70,16 @@ describe('Sessions API', () => {
     });
 
     // Helper functions for test isolation
+    const futureIso = (daysAhead = 7) => {
+        const d = new Date();
+        d.setDate(d.getDate() + daysAhead);
+        d.setHours(18, 0, 0, 0);
+        return d.toISOString();
+    };
+
     const createSession = async (token: string, title: string, extra: Record<string, any> = {}) => {
         const res = await request(app).post('/api/sessions').set('Authorization', `Bearer ${token}`).send({
-            title, type: 'Social', date: '2026-03-01T18:00:00', capacity: 10, ...extra
+            title, type: 'Social', date: futureIso(7), capacity: 10, ...extra
         });
         return res.body.id;
     };
@@ -88,7 +95,7 @@ describe('Sessions API', () => {
             .send({
                 title: 'Test Session',
                 type: 'Social',
-                date: '2026-03-01T18:00:00',
+                date: futureIso(7),
                 capacity: 10
             });
 
@@ -148,14 +155,40 @@ describe('Sessions API', () => {
         expect(res.body).toHaveProperty('error', 'Already booked this session');
     });
 
-    it('should prevent non-committee users booking committee-only sessions', async () => {
-        const sessionId = await createSession(committeeToken, 'Committee Booking Guard', { visibility: 'committee_only' });
+    it('should prevent non-committee users booking committee-restricted registration sessions', async () => {
+        const sessionId = await createSession(committeeToken, 'Committee Booking Guard', { registrationVisibility: 'committee_only' });
         const res = await request(app)
             .post(`/api/sessions/${sessionId}/book`)
             .set('Authorization', `Bearer ${userToken}`);
 
         expect(res.status).toBe(403);
-        expect(res.body).toHaveProperty('error', 'This session is for committee members only.');
+        expect(res.body).toHaveProperty('error', 'Registration for this session is for committee members only.');
+    });
+
+    it('should allow non-committee users booking a committee-visible session when registration is open', async () => {
+        const sessionId = await createSession(committeeToken, 'Visibility Only Restriction', {
+            visibility: 'committee_only',
+            registrationVisibility: 'all'
+        });
+        const res = await request(app)
+            .post(`/api/sessions/${sessionId}/book`)
+            .set('Authorization', `Bearer ${userToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveProperty('success', true);
+    });
+
+    it('should list publicly-visible but committee-registered sessions to non-committee users', async () => {
+        const sessionId = await createSession(committeeToken, 'Registration Only Restriction', {
+            visibility: 'all',
+            registrationVisibility: 'committee_only'
+        });
+        const res = await request(app)
+            .get('/api/sessions')
+            .set('Authorization', `Bearer ${userToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.some((s: any) => s.id === sessionId)).toBe(true);
     });
 
     it('should show user bookings', async () => {
@@ -188,7 +221,7 @@ describe('Sessions API', () => {
             .put(`/api/sessions/${sessionId}`)
             .set('Authorization', `Bearer ${committeeToken}`)
             .send({
-                title: 'Updated Title', type: 'Training', date: '2026-03-02T18:00:00', capacity: 20, bookedSlots: 0
+                title: 'Updated Title', type: 'Training', date: futureIso(8), capacity: 20, bookedSlots: 0
             });
 
         expect(res.status).toBe(200);
@@ -208,7 +241,7 @@ describe('Sessions API', () => {
     it('should prevent booking a full session', async () => {
         // Create session with capacity 1
         const resCreate = await request(app).post('/api/sessions').set('Authorization', `Bearer ${committeeToken}`).send({
-            title: 'Full Session', type: 'Social', date: '2026-03-01T18:00:00', capacity: 1
+            title: 'Full Session', type: 'Social', date: futureIso(9), capacity: 1
         });
         const sessionId = resCreate.body.id;
 
@@ -270,10 +303,10 @@ describe('Sessions API', () => {
 
         // Create sessions but do not book them
         await request(app).post('/api/sessions').set('Authorization', `Bearer ${committeeToken}`).send({
-            title: 'Public iCal Session', type: 'Social', date: '2026-03-03T18:00:00', capacity: 20, visibility: 'all'
+            title: 'Public iCal Session', type: 'Social', date: futureIso(10), capacity: 20, visibility: 'all'
         });
         await request(app).post('/api/sessions').set('Authorization', `Bearer ${committeeToken}`).send({
-            title: 'Committee iCal Session', type: 'Meeting', date: '2026-03-04T18:00:00', capacity: 20, visibility: 'committee_only'
+            title: 'Committee iCal Session', type: 'Meeting', date: futureIso(11), capacity: 20, visibility: 'committee_only'
         });
 
         const res = await request(app).get(`/api/sessions/ical/${user3.calendarToken}`);
@@ -314,10 +347,10 @@ describe('Sessions API', () => {
         const user5 = meRes.body.user;
 
         await request(app).post('/api/sessions').set('Authorization', `Bearer ${committeeToken}`).send({
-            title: 'All Feed Public Session', type: 'Social', date: '2026-03-05T18:00:00', capacity: 20, visibility: 'all'
+            title: 'All Feed Public Session', type: 'Social', date: futureIso(12), capacity: 20, visibility: 'all'
         });
         await request(app).post('/api/sessions').set('Authorization', `Bearer ${committeeToken}`).send({
-            title: 'All Feed Committee Session', type: 'Meeting', date: '2026-03-06T18:00:00', capacity: 20, visibility: 'committee_only'
+            title: 'All Feed Committee Session', type: 'Meeting', date: futureIso(13), capacity: 20, visibility: 'committee_only'
         });
 
         const res = await request(app).get(`/api/sessions/ical/${user5.calendarToken}/all`);
@@ -331,7 +364,7 @@ describe('Sessions API', () => {
         const committeeUser = meRes.body.user;
 
         await request(app).post('/api/sessions').set('Authorization', `Bearer ${committeeToken}`).send({
-            title: 'All Feed Committee Visible', type: 'Meeting', date: '2026-03-07T18:00:00', capacity: 20, visibility: 'committee_only'
+            title: 'All Feed Committee Visible', type: 'Meeting', date: futureIso(14), capacity: 20, visibility: 'committee_only'
         });
 
         const res = await request(app).get(`/api/sessions/ical/${committeeUser.calendarToken}/all`);

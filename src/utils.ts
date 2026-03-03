@@ -164,3 +164,26 @@ export function showPromptModal(message: string, placeholder = ''): Promise<stri
         backdrop.addEventListener('click', () => close(null));
     });
 }
+export function getVerificationWord(): string {
+    const words = [
+        'GRIPPED', 'CRUX', 'SEND', 'FLASH', 'DYNO', 'SMEAR', 'EDGING', 'MANTEL',
+        'JUG', 'SLOPER', 'CRIMP', 'POCKET', 'PINCH', 'CHALK', 'BELAY', 'BOLT',
+        'CARABINER', 'HARNESS', 'SLING', 'QUICKDRAW', 'PITCH', 'STANCE', 'ANCHOR',
+        'RAPPEL', 'ABSEIL', 'WHIPPER', 'FALL', 'SPOT', 'PAD', 'BOULDER', 'TRAVERSE',
+        'OVERHANG', 'SLAB', 'ARETE', 'DIEDRE', 'CHIMNEY', 'JAM', 'LOCK', 'ROPE'
+    ];
+
+    const today = new Date();
+    const dateStr = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
+
+    // Simple hash of the date string
+    let hash = 0;
+    for (let i = 0; i < dateStr.length; i++) {
+        const char = dateStr.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+
+    const index = Math.abs(hash) % words.length;
+    return words[index];
+}

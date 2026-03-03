@@ -31,7 +31,7 @@ test.describe('Authentication Flow', () => {
         await page.fill('#reg-fname', 'Playwright');
         await page.fill('#reg-sname', 'Tester');
         await page.fill('#reg-email', `e2e_${Date.now()}@sheffield.ac.uk`);
-        await page.fill('#reg-regnum', '123456789');
+        await page.fill('#reg-regnum', '223456789');
         await page.fill('#reg-password', 'Password123!');
         await page.fill('#reg-password-confirm', 'Password123!');
 

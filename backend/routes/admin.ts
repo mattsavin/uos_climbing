@@ -4,6 +4,14 @@ import { authenticateToken, requireCommittee } from '../middleware/auth';
 import { sendEmail } from '../services/email';
 
 const router = express.Router();
+const ROOT_ADMIN_EMAIL = (process.env.ROOT_ADMIN_EMAIL || 'committee@sheffieldclimbing.org').toLowerCase();
+
+function isRootAdmin(user: any): boolean {
+    return !!user
+        && user.role === 'committee'
+        && typeof user.email === 'string'
+        && user.email.toLowerCase() === ROOT_ADMIN_EMAIL;
+}
 
 function getMembershipLabel(membershipType: string, callback: (label: string) => void) {
     db.get('SELECT label FROM membership_types WHERE id = ?', [membershipType], (err, row: any) => {
@@ -25,6 +33,61 @@ function getDefaultMembershipType(callback: (err: Error | null, membershipTypeId
     );
 }
 
+function getCurrentAcademicYear(): string {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    return m < 8 ? `${y - 1}/${y}` : `${y}/${y + 1}`;
+}
+
+function academicYearFromSubscriptionText(text: string): string | null {
+    const normalized = (text || '').trim();
+    if (!normalized) return null;
+
+    // Matches: 2025-2026, 2025/2026, 2025-26, 2025/26
+    const m1 = normalized.match(/(\d{4})\s*[-/]\s*(\d{2,4})/);
+    if (m1) {
+        const startYear = Number(m1[1]);
+        let endYear = Number(m1[2]);
+        if (!Number.isFinite(startYear) || !Number.isFinite(endYear)) return null;
+        if (m1[2].length === 2) {
+            endYear = Math.floor(startYear / 100) * 100 + endYear;
+        }
+        if (endYear < startYear) endYear += 100;
+        return `${startYear}/${endYear}`;
+    }
+
+    // Matches: 25-26 / 25/26
+    const m2 = normalized.match(/(^|[^\d])(\d{2})\s*[-/]\s*(\d{2})([^\d]|$)/);
+    if (m2) {
+        const startYear = 2000 + Number(m2[2]);
+        let endYear = 2000 + Number(m2[3]);
+        if (!Number.isFinite(startYear) || !Number.isFinite(endYear)) return null;
+        if (endYear < startYear) endYear += 100;
+        return `${startYear}/${endYear}`;
+    }
+
+    return null;
+}
+
+function runDb(sql: string, params: any[] = []): Promise<{ changes: number }> {
+    return new Promise((resolve, reject) => {
+        db.run(sql, params, function (err) {
+            if (err) return reject(err);
+            resolve({ changes: this.changes || 0 });
+        });
+    });
+}
+
+function getDb(sql: string, params: any[] = []): Promise<any> {
+    return new Promise((resolve, reject) => {
+        db.get(sql, params, (err, row) => {
+            if (err) return reject(err);
+            resolve(row);
+        });
+    });
+}
+
 router.get('/config/elections', authenticateToken, requireCommittee, (req, res) => {
     db.get('SELECT value FROM config WHERE key = ?', ['electionsOpen'], (err, row: any) => {
         if (err) return res.status(500).json({ error: 'Database error' });
@@ -42,7 +105,7 @@ router.post('/config/elections', authenticateToken, requireCommittee, (req, res)
 
 /** Send a test email (root admin only) */
 router.post('/test-email', authenticateToken, requireCommittee, async (req: any, res) => {
-    if (req.user.email !== 'committee@sheffieldclimbing.org') {
+    if (!isRootAdmin(req.user)) {
         return res.status(403).json({ error: 'Only Root Admin can perform this action' });
     }
 
@@ -100,6 +163,125 @@ router.get('/users', authenticateToken, requireCommittee, (req, res) => {
             });
         }
     );
+});
+
+router.post('/memberships/import-su-roster', authenticateToken, requireCommittee, async (req, res) => {
+    try {
+        const raw = (req.body?.raw || '').toString();
+        if (!raw.trim()) return res.status(400).json({ error: 'No roster text provided' });
+
+        const lines = raw
+            .split(/\r?\n/)
+            .map((l: string) => l.trim())
+            .filter(Boolean);
+
+        if (!lines.length) return res.status(400).json({ error: 'No valid lines found' });
+
+        const defaultType = await new Promise<string | null>((resolve) => {
+            getDefaultMembershipType((_err, typeId) => resolve(typeId));
+        });
+        if (!defaultType) return res.status(500).json({ error: 'No membership types configured' });
+
+        const parsed: { registrationNumber: string; fullName: string; membershipYear: string }[] = [];
+        const skipped: { line: string; reason: string }[] = [];
+        let yearParsedFromSubscription = 0;
+        let yearFallbackUsed = 0;
+
+        for (const line of lines) {
+            const tabCols = line.split('\t').map((c) => c.trim()).filter(Boolean);
+            const cols = tabCols.length >= 5 ? tabCols : line.split(/\s{2,}/).map((c) => c.trim()).filter(Boolean);
+            if (cols.length < 5) {
+                skipped.push({ line, reason: 'Expected 5 columns' });
+                continue;
+            }
+
+            const registrationNumber = (cols[0] || '').trim();
+            const fullName = (cols[1] || '').trim();
+            const subscriptionPurchased = (cols[3] || '').trim();
+            const membershipYearFromSub = academicYearFromSubscriptionText(subscriptionPurchased);
+            const membershipYear = membershipYearFromSub || getCurrentAcademicYear();
+
+            if (!/^\d{6,12}$/.test(registrationNumber)) {
+                skipped.push({ line, reason: 'Invalid registration number' });
+                continue;
+            }
+
+            if (membershipYearFromSub) yearParsedFromSubscription++;
+            else yearFallbackUsed++;
+
+            parsed.push({ registrationNumber, fullName, membershipYear });
+        }
+
+        if (!parsed.length) {
+            return res.status(400).json({ error: 'No valid roster rows found', skipped });
+        }
+
+        let approvedExisting = 0;
+        let preapprovedOnly = 0;
+
+        for (const row of parsed) {
+            const existingUser: any = await getDb(
+                'SELECT id FROM users WHERE registrationNumber = ?',
+                [row.registrationNumber]
+            );
+
+            if (existingUser?.id) {
+                await runDb(
+                    'UPDATE users SET membershipStatus = ?, membershipYear = ? WHERE id = ?',
+                    ['active', row.membershipYear, existingUser.id]
+                );
+
+                await runDb(
+                    'UPDATE user_memberships SET status = ? WHERE userId = ? AND membershipYear = ? AND status = ?',
+                    ['active', existingUser.id, row.membershipYear, 'pending']
+                );
+
+                const basicExisting: any = await getDb(
+                    'SELECT id FROM user_memberships WHERE userId = ? AND membershipType = ? AND membershipYear = ?',
+                    [existingUser.id, defaultType, row.membershipYear]
+                );
+
+                if (basicExisting?.id) {
+                    await runDb('UPDATE user_memberships SET status = ? WHERE id = ?', ['active', basicExisting.id]);
+                } else {
+                    await runDb(
+                        'INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)',
+                        ['umem_' + require('crypto').randomUUID(), existingUser.id, defaultType, 'active', row.membershipYear]
+                    );
+                }
+
+                await runDb('DELETE FROM preapproved_members WHERE registrationNumber = ?', [row.registrationNumber]);
+                approvedExisting++;
+                continue;
+            }
+
+            await runDb(
+                `INSERT INTO preapproved_members (registrationNumber, fullName, membershipYear, source, createdAt)
+                 VALUES (?, ?, ?, ?, ?)
+                 ON CONFLICT(registrationNumber) DO UPDATE SET
+                    fullName = excluded.fullName,
+                    membershipYear = excluded.membershipYear,
+                    source = excluded.source,
+                    createdAt = excluded.createdAt`,
+                [row.registrationNumber, row.fullName, row.membershipYear, 'su_dashboard', Date.now()]
+            );
+            preapprovedOnly++;
+        }
+
+        res.json({
+            success: true,
+            totalLines: lines.length,
+            parsedRows: parsed.length,
+            approvedExisting,
+            preapprovedOnly,
+            yearParsedFromSubscription,
+            yearFallbackUsed,
+            skipped
+        });
+    } catch (err: any) {
+        console.error('Failed to import SU roster:', err);
+        res.status(500).json({ error: 'Failed to import SU roster' });
+    }
 });
 
 router.post('/users/:id/approve', authenticateToken, requireCommittee, (req, res) => {
@@ -186,14 +368,14 @@ router.post('/users/:id/promote', authenticateToken, requireCommittee, (req, res
 
 router.post('/users/:id/demote', authenticateToken, requireCommittee, (req: any, res) => {
     // Only root admin can demote
-    if (req.user.email !== 'committee@sheffieldclimbing.org') {
+    if (!isRootAdmin(req.user)) {
         return res.status(403).json({ error: 'Only Root Admin can perform this action' });
     }
 
     // Cannot demote root admin
     db.get('SELECT email FROM users WHERE id = ?', [req.params.id], (err, user: any) => {
         if (err) return res.status(500).json({ error: 'Database error' });
-        if (user && user.email === 'committee@sheffieldclimbing.org') {
+        if (user && typeof user.email === 'string' && user.email.toLowerCase() === ROOT_ADMIN_EMAIL) {
             return res.status(403).json({ error: 'Cannot demote the Root Admin' });
         }
 
@@ -216,35 +398,36 @@ router.post('/users/:id/committee-role', authenticateToken, requireCommittee, (r
         roles = req.body.committeeRole ? [req.body.committeeRole] : [];
     }
 
-    const validRoles = [
-        'Chair', 'Secretary', 'Treasurer', 'Welfare & Inclusions',
-        'Team Captain', 'Social Sec', "Women's Captain",
-        "Men's Captain", 'Publicity', 'Kit & Safety Sec'
-    ];
-
-    const invalidRole = roles.find(r => !validRoles.includes(r));
-    if (invalidRole) {
-        return res.status(400).json({ error: 'Invalid committee role' });
-    }
-
-    const legacyRole = roles.length > 0 ? roles[0] : null;
-
-    // Update legacy column for backward compatibility, then replace committee_roles rows
-    db.run('UPDATE users SET committeeRole = ? WHERE id = ?', [legacyRole, req.params.id], function (err) {
+    // Validate all roles against available roles from database
+    db.all('SELECT id FROM available_roles', [], (err, validRolesRows: any[]) => {
         if (err) return res.status(500).json({ error: 'Database error' });
 
-        db.run('DELETE FROM committee_roles WHERE userId = ?', [req.params.id], function (err2) {
-            if (err2) return res.status(500).json({ error: 'Database error' });
+        const validRoles = (validRolesRows || []).map(r => r.id);
 
-            if (roles.length === 0) {
-                return res.json({ success: true });
-            }
+        const invalidRole = roles.find(r => !validRoles.includes(r));
+        if (invalidRole) {
+            return res.status(400).json({ error: 'Invalid committee role' });
+        }
 
-            const stmt = db.prepare('INSERT OR IGNORE INTO committee_roles (userId, role) VALUES (?, ?)');
-            roles.forEach(r => stmt.run([req.params.id, r]));
-            stmt.finalize((err3: any) => {
-                if (err3) return res.status(500).json({ error: 'Database error' });
-                res.json({ success: true });
+        const legacyRole = roles.length > 0 ? roles[0] : null;
+
+        // Update legacy column for backward compatibility, then replace committee_roles rows
+        db.run('UPDATE users SET committeeRole = ? WHERE id = ?', [legacyRole, req.params.id], function (err) {
+            if (err) return res.status(500).json({ error: 'Database error' });
+
+            db.run('DELETE FROM committee_roles WHERE userId = ?', [req.params.id], function (err2) {
+                if (err2) return res.status(500).json({ error: 'Database error' });
+
+                if (roles.length === 0) {
+                    return res.json({ success: true });
+                }
+
+                const stmt = db.prepare('INSERT OR IGNORE INTO committee_roles (userId, role) VALUES (?, ?)');
+                roles.forEach(r => stmt.run([req.params.id, r]));
+                stmt.finalize((err3: any) => {
+                    if (err3) return res.status(500).json({ error: 'Database error' });
+                    res.json({ success: true });
+                });
             });
         });
     });
@@ -340,6 +523,80 @@ router.delete('/memberships/:id', authenticateToken, requireCommittee, (req, res
                 );
             }
 
+            res.json({ success: true });
+        });
+    });
+});
+
+/** Get all available committee roles (committee members can read) */
+router.get('/committee-roles', authenticateToken, requireCommittee, (req: any, res) => {
+    db.all('SELECT id, label FROM available_roles ORDER BY id ASC', [], (err, rows: any[]) => {
+        if (err) return res.status(500).json({ error: 'Database error' });
+        res.json(rows || []);
+    });
+});
+
+/** Create a new committee role (root admin only) */
+router.post('/committee-roles', authenticateToken, requireCommittee, (req: any, res) => {
+    if (!isRootAdmin(req.user)) {
+        return res.status(403).json({ error: 'Only Root Admin can perform this action' });
+    }
+
+    const { id, label } = req.body;
+    if (!id || !label) {
+        return res.status(400).json({ error: 'Role ID and label are required' });
+    }
+
+    db.run('INSERT INTO available_roles (id, label) VALUES (?, ?)', [id, label], function (err) {
+        if (err) {
+            if (err.message.includes('UNIQUE')) {
+                return res.status(400).json({ error: 'Role ID already exists' });
+            }
+            return res.status(500).json({ error: 'Database error' });
+        }
+        res.json({ success: true, id, label });
+    });
+});
+
+/** Update a committee role (root admin only) */
+router.put('/committee-roles/:id', authenticateToken, requireCommittee, (req: any, res) => {
+    if (!isRootAdmin(req.user)) {
+        return res.status(403).json({ error: 'Only Root Admin can perform this action' });
+    }
+
+    const { label } = req.body;
+    if (!label) {
+        return res.status(400).json({ error: 'Label is required' });
+    }
+
+    db.run('UPDATE available_roles SET label = ? WHERE id = ?', [label, req.params.id], function (err) {
+        if (err) return res.status(500).json({ error: 'Database error' });
+        if (this.changes === 0) {
+            return res.status(404).json({ error: 'Role not found' });
+        }
+        res.json({ success: true, id: req.params.id, label });
+    });
+});
+
+/** Delete a committee role (root admin only) */
+router.delete('/committee-roles/:id', authenticateToken, requireCommittee, (req: any, res) => {
+    if (!isRootAdmin(req.user)) {
+        return res.status(403).json({ error: 'Only Root Admin can perform this action' });
+    }
+
+    // Check if any users currently hold this role
+    db.get('SELECT COUNT(*) as count FROM committee_roles WHERE role = ?', [req.params.id], (err, row: any) => {
+        if (err) return res.status(500).json({ error: 'Database error' });
+
+        if (row && row.count > 0) {
+            return res.status(400).json({ error: 'Cannot delete a role that is assigned to users. Remove the role from all users first.' });
+        }
+
+        db.run('DELETE FROM available_roles WHERE id = ?', [req.params.id], function (err2) {
+            if (err2) return res.status(500).json({ error: 'Database error' });
+            if (this.changes === 0) {
+                return res.status(404).json({ error: 'Role not found' });
+            }
             res.json({ success: true });
         });
     });

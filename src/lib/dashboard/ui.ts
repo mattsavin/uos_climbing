@@ -1,6 +1,7 @@
 import { adminApi, authState, getCurrentAcademicYear, type MembershipType } from '../../auth';
 import { renderSessions } from './sessions';
-import { showToast } from '../../utils';
+import { getVerificationWord, showToast } from '../../utils';
+import QRCode from 'qrcode';
 
 async function copyTextWithFallback(text: string): Promise<boolean> {
     try {
@@ -296,9 +297,174 @@ export async function updateUI() {
 
         await renderSessions(isCommittee);
 
+        // --- NEW: Membership Card Population ---
+        const membershipCardContainer = document.getElementById('membership-card-container');
+        if (membershipCardContainer) {
+            const hasActiveMembership = (user.membershipStatus === 'active' || user.role === 'committee');
+            if (hasActiveMembership) {
+                membershipCardContainer.classList.remove('hidden');
+                const cardName = document.getElementById('card-user-name');
+                const cardReg = document.getElementById('card-user-reg');
+                const cardYear = document.getElementById('card-academic-year');
+
+                if (cardName) cardName.textContent = displayName;
+                if (cardReg) cardReg.textContent = `ID: ${user.registrationNumber || '12345678'}`;
+                if (cardYear) cardYear.textContent = user.membershipYear || currentYearStr;
+
+                // Word of the Day
+                const wordOfTheDay = getVerificationWord();
+                const cardWordEl = document.getElementById('card-word-of-the-day');
+                const modalWordEl = document.getElementById('modal-word-of-the-day');
+                if (cardWordEl) cardWordEl.textContent = wordOfTheDay;
+                if (modalWordEl) modalWordEl.textContent = wordOfTheDay;
+
+                // Profile Photo Handling
+                const cardPhoto = document.getElementById('card-user-photo') as HTMLImageElement;
+                const cardPhotoPlaceholder = document.getElementById('card-photo-placeholder');
+                const modalPhoto = document.getElementById('modal-card-user-photo') as HTMLImageElement;
+                const modalPhotoPlaceholder = document.getElementById('modal-card-photo-placeholder');
+
+                if (user.profilePhoto) {
+                    if (cardPhoto) {
+                        cardPhoto.src = user.profilePhoto;
+                        cardPhoto.classList.remove('hidden');
+                    }
+                    if (cardPhotoPlaceholder) cardPhotoPlaceholder.classList.add('hidden');
+                    if (modalPhoto) {
+                        modalPhoto.src = user.profilePhoto;
+                        modalPhoto.classList.remove('hidden');
+                    }
+                    if (modalPhotoPlaceholder) modalPhotoPlaceholder.classList.add('hidden');
+                } else {
+                    cardPhoto?.classList.add('hidden');
+                    cardPhotoPlaceholder?.classList.remove('hidden');
+                    modalPhoto?.classList.add('hidden');
+                    modalPhotoPlaceholder?.classList.remove('hidden');
+                }
+
+                // Live Date Indicator
+                const modalLiveDate = document.getElementById('modal-live-date');
+                const today = new Date();
+                const dateStr = today.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                // Note: The card in dashboard has a static "LIVE" badge but we could add time if needed.
+                if (modalLiveDate) modalLiveDate.textContent = dateStr;
+
+                // QR Code Generation - Link to Public Verification Page
+                const qrContainer = document.getElementById('card-qr-container');
+                if (qrContainer) {
+                    // Public verification URL
+                    const verifyUrl = `${window.location.origin}/verify/${user.calendarToken || user.id}`;
+
+                    QRCode.toString(verifyUrl, {
+                        type: 'svg',
+                        margin: 0,
+                        color: {
+                            dark: '#000000', // pure black for maximum contrast
+                            light: '#ffffff'
+                        }
+                    }, (err, svg) => {
+                        if (!err) {
+                            // Add responsive sizing classes to the SVG string if needed, 
+                            // but ensuring it has w-full h-full is usually enough.
+                            const styledSvg = svg.replace('<svg ', '<svg class="w-full h-full" ');
+                            qrContainer.innerHTML = styledSvg;
+                            // Also update the modal QR if it exists
+                            const modalQrContainer = document.getElementById('enlarged-qr-container');
+                            if (modalQrContainer) modalQrContainer.innerHTML = styledSvg;
+                        }
+                    });
+                }
+
+                // Expiry Date Calculation
+                const expiryContainer = document.getElementById('card-expiry-container');
+                const expiryDateText = document.getElementById('card-expiry-date');
+                const modalExpiryText = document.getElementById('modal-card-expiry');
+
+                if (expiryContainer && expiryDateText) {
+                    // Logic: Academic year X/Y expires Aug 31st of year Y
+                    const parts = (user.membershipYear || currentYearStr).split('/');
+                    if (parts.length === 2) {
+                        const expiryYear = parts[1].length === 2 ? `20${parts[1]}` : parts[1];
+                        const expiryDateStr = `31 Aug ${expiryYear}`;
+                        expiryDateText.textContent = expiryDateStr;
+                        expiryContainer.classList.remove('hidden');
+                        if (modalExpiryText) modalExpiryText.textContent = expiryDateStr;
+                    }
+                }
+
+                // Update Modal Content
+                const modalName = document.getElementById('modal-card-user-name');
+                const modalReg = document.getElementById('modal-card-user-reg');
+                if (modalName) modalName.textContent = displayName;
+                if (modalReg) modalReg.textContent = `ID: ${user.registrationNumber || '12345678'}`;
+
+            } else {
+                membershipCardContainer.classList.add('hidden');
+            }
+        }
+
+        // --- NEW: Skills Tracker Initialisation ---
+        initSkillsTracker(user.id || user.email);
+
     } else {
         window.location.href = '/login.html';
     }
+}
+
+function initSkillsTracker(userId: string) {
+    const list = document.getElementById('skills-tracker-list');
+    if (!list) return;
+
+    const storageKey = `uos_climb_skills_${userId}`;
+    const skills = [
+        { id: 'registered', label: 'Registered at Local Wall' },
+        { id: 'belay', label: 'Learned to Belay (Ropes)' },
+        { id: 'first_blue', label: 'Sent first Blue V1-V2' },
+        { id: 'first_lead', label: 'First Outdoor Lead (Peak)' },
+        { id: 'v5', label: 'Sent a Purple (V4-V5)' },
+        { id: 'comp', label: 'Entered First Competition' }
+    ];
+
+    let completed: string[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
+
+    const render = () => {
+        list.innerHTML = skills.map(skill => {
+            const isDone = completed.includes(skill.id);
+            return `
+                <div class="flex items-center gap-3 group cursor-pointer skill-item" data-id="${skill.id}">
+                    <div class="w-5 h-5 rounded border border-white/10 flex items-center justify-center group-hover:bg-white/5 transition-colors ${isDone ? 'bg-cyan-500/20 border-cyan-500/50' : ''}">
+                        ${isDone ? '<svg class="w-3 h-3 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>' : ''}
+                    </div>
+                    <span class="text-xs ${isDone ? 'text-white font-bold' : 'text-slate-400'} transition-colors">${skill.label}</span>
+                </div>
+            `;
+        }).join('');
+
+        // Update progress bar
+        const progressPercent = Math.round((completed.length / skills.length) * 100);
+        const progressText = document.querySelector('#skills-tracker-list + div span:last-child');
+        const progressBar = document.querySelector('#skills-tracker-list + div + div div');
+
+        if (progressText) progressText.textContent = `${completed.length}/${skills.length}`;
+        if (progressBar) (progressBar as HTMLElement).style.width = `${progressPercent}%`;
+
+        // Add click listeners
+        list.querySelectorAll('.skill-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const id = item.getAttribute('data-id');
+                if (!id) return;
+                if (completed.includes(id)) {
+                    completed = completed.filter(i => i !== id);
+                } else {
+                    completed.push(id);
+                }
+                localStorage.setItem(storageKey, JSON.stringify(completed));
+                render();
+            });
+        });
+    };
+
+    render();
 }
 
 export function initGeneralHandlers() {
@@ -332,4 +498,26 @@ export function initGeneralHandlers() {
 
     attachIcalCopy(icalLinkAll as HTMLElement | null, 'all sessions');
     attachIcalCopy(icalLinkBooked as HTMLElement | null, 'booked sessions');
+
+    // QR Enlargement Handlers
+    const qrTrigger = document.getElementById('qr-code-trigger');
+    const qrOverlay = document.getElementById('membership-card-overlay');
+    const closeQrBtn = document.getElementById('close-membership-card-btn');
+
+    if (qrTrigger && qrOverlay) {
+        qrTrigger.addEventListener('click', () => {
+            qrOverlay.classList.remove('hidden');
+            document.body.style.overflow = 'hidden'; // Prevent scroll
+        });
+
+        const closeCard = () => {
+            qrOverlay.classList.add('hidden');
+            document.body.style.overflow = '';
+        };
+
+        closeQrBtn?.addEventListener('click', closeCard);
+        qrOverlay.addEventListener('click', (e) => {
+            if (e.target === qrOverlay) closeCard();
+        });
+    }
 }
