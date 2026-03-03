@@ -32,3 +32,14 @@ dist-ssr
 *.db
 *.sqlite
 *.sqlite3
+
+# Test Artifacts
+coverage/
+playwright-report/
+test-results/
+test_output.txt
+test_output_v2.txt
+blob-report/
+playwright/.cache/
+cookies.txt
+tsconfig.tsbuildinfo
