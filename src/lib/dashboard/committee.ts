@@ -157,13 +157,15 @@ export async function initCsvExportModal() {
     }
 
     function closeModal() {
-        modal.classList.add('hidden');
+        if (modal) modal.classList.add('hidden');
     }
 
     function openModal() {
-        modal.classList.remove('hidden');
-        typeSelect.value = '';
-        populateMembershipTypes();
+        if (modal) {
+            modal.classList.remove('hidden');
+            typeSelect.value = '';
+            populateMembershipTypes();
+        }
     }
 
     exportBtn.addEventListener('click', () => {
