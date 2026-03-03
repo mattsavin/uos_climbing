@@ -1,8 +1,9 @@
 import './style.css';
 import { adminApi, authState } from './auth';
-import { initAdminConfirm, renderAdminLists } from './lib/dashboard/admin';
+import { initAdminConfirm, initSuRosterImport, renderAdminLists } from './lib/dashboard/admin';
 import { initSessionTypeHandlers, renderSessionTypes } from './lib/dashboard/session-types';
 import { initMembershipTypeHandlers, renderMembershipTypes } from './lib/dashboard/membership-types';
+import { initCommitteeRoleHandlers, renderCommitteeRoles } from './lib/dashboard/committee-roles';
 import { adminConfirmModalHtml } from './components';
 import { showToast } from './utils';
 
@@ -18,12 +19,15 @@ document.addEventListener('DOMContentLoaded', () => {
         renderAdminLists();
         renderSessionTypes();
         renderMembershipTypes();
+        renderCommitteeRoles();
     });
 
     // Initialize Handlers
     initAdminConfirm();
+    initSuRosterImport();
     initSessionTypeHandlers();
     initMembershipTypeHandlers();
+    initCommitteeRoleHandlers();
 
     // Authenticate and check permissions
     authState.init().then(() => {
@@ -74,5 +78,6 @@ document.addEventListener('DOMContentLoaded', () => {
         renderAdminLists();
         renderSessionTypes();
         renderMembershipTypes();
+        renderCommitteeRoles();
     });
 });

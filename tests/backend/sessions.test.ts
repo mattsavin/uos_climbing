@@ -148,14 +148,40 @@ describe('Sessions API', () => {
         expect(res.body).toHaveProperty('error', 'Already booked this session');
     });
 
-    it('should prevent non-committee users booking committee-only sessions', async () => {
-        const sessionId = await createSession(committeeToken, 'Committee Booking Guard', { visibility: 'committee_only' });
+    it('should prevent non-committee users booking committee-restricted registration sessions', async () => {
+        const sessionId = await createSession(committeeToken, 'Committee Booking Guard', { registrationVisibility: 'committee_only' });
         const res = await request(app)
             .post(`/api/sessions/${sessionId}/book`)
             .set('Authorization', `Bearer ${userToken}`);
 
         expect(res.status).toBe(403);
-        expect(res.body).toHaveProperty('error', 'This session is for committee members only.');
+        expect(res.body).toHaveProperty('error', 'Registration for this session is for committee members only.');
+    });
+
+    it('should allow non-committee users booking a committee-visible session when registration is open', async () => {
+        const sessionId = await createSession(committeeToken, 'Visibility Only Restriction', {
+            visibility: 'committee_only',
+            registrationVisibility: 'all'
+        });
+        const res = await request(app)
+            .post(`/api/sessions/${sessionId}/book`)
+            .set('Authorization', `Bearer ${userToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveProperty('success', true);
+    });
+
+    it('should list publicly-visible but committee-registered sessions to non-committee users', async () => {
+        const sessionId = await createSession(committeeToken, 'Registration Only Restriction', {
+            visibility: 'all',
+            registrationVisibility: 'committee_only'
+        });
+        const res = await request(app)
+            .get('/api/sessions')
+            .set('Authorization', `Bearer ${userToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.some((s: any) => s.id === sessionId)).toBe(true);
     });
 
     it('should show user bookings', async () => {

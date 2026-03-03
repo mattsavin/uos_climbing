@@ -75,6 +75,7 @@ export interface Session {
     bookedSlots: number;
     requiredMembership?: string;
     visibility?: 'all' | 'committee_only';
+    registrationVisibility?: 'all' | 'committee_only';
 }
 
 // Current Session State
@@ -353,8 +354,21 @@ async function apiFetch(endpoint: string, options: RequestInit = {}) {
     };
 
     const res = await fetch(endpoint, { ...options, headers, credentials: 'include' });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'API Request Failed');
+    const text = await res.text();
+    let data: any = null;
+
+    if (text) {
+        try {
+            data = JSON.parse(text);
+        } catch {
+            if (!res.ok) {
+                throw new Error(`API Request Failed (${res.status})`);
+            }
+            return text;
+        }
+    }
+
+    if (!res.ok) throw new Error(data?.error || `API Request Failed (${res.status})`);
     return data;
 }
 
@@ -427,6 +441,13 @@ export const adminApi = {
 
     async sendTestEmail() {
         return apiFetch('/api/admin/test-email', { method: 'POST' });
+    },
+
+    async importSuRoster(raw: string) {
+        return apiFetch('/api/admin/memberships/import-su-roster', {
+            method: 'POST',
+            body: JSON.stringify({ raw })
+        });
     },
 
     // Session Management API
@@ -516,6 +537,29 @@ export const adminApi = {
 
     async deleteMembershipType(id: string): Promise<void> {
         return apiFetch(`/api/membership-types/${id}`, { method: 'DELETE' });
+    },
+
+    // Committee Roles Management API
+    async getAvailableRoles() {
+        return apiFetch('/api/admin/committee-roles');
+    },
+
+    async addCommitteeRole(id: string, label: string) {
+        return apiFetch('/api/admin/committee-roles', {
+            method: 'POST',
+            body: JSON.stringify({ id, label })
+        });
+    },
+
+    async updateCommitteeRole(id: string, label: string) {
+        return apiFetch(`/api/admin/committee-roles/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ label })
+        });
+    },
+
+    async deleteCommitteeRole(id: string): Promise<void> {
+        return apiFetch(`/api/admin/committee-roles/${id}`, { method: 'DELETE' });
     }
 };
 

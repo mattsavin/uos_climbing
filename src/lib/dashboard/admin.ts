@@ -61,6 +61,43 @@ export function requestAdminConfirmation(title: string, message: string, callbac
     if (adminConfirmModal) adminConfirmModal.classList.remove('hidden');
 }
 
+export function initSuRosterImport() {
+    const input = document.getElementById('su-roster-input') as HTMLTextAreaElement | null;
+    const importBtn = document.getElementById('import-su-roster-btn') as HTMLButtonElement | null;
+    const resultEl = document.getElementById('su-roster-result');
+
+    if (!input || !importBtn || importBtn.dataset.bound === '1') return;
+    importBtn.dataset.bound = '1';
+
+    importBtn.addEventListener('click', async () => {
+        const raw = input.value.trim();
+        if (!raw) {
+            showToast('Paste at least one SU roster row first.', 'error');
+            return;
+        }
+
+        importBtn.disabled = true;
+        const prevText = importBtn.textContent || 'Approve / Pre-Approve';
+        importBtn.textContent = 'Importing...';
+        if (resultEl) resultEl.textContent = '';
+
+        try {
+            const result: any = await adminApi.importSuRoster(raw);
+            const summary = `${result.approvedExisting} approved, ${result.preapprovedOnly} pre-approved`;
+            const yearSummary = `years: ${result.yearParsedFromSubscription || 0} parsed, ${result.yearFallbackUsed || 0} fallback`;
+            if (resultEl) resultEl.textContent = summary;
+            showToast(`SU roster imported: ${summary} (${yearSummary})`, 'success');
+            window.dispatchEvent(new CustomEvent('dashboardUpdate'));
+        } catch (err: any) {
+            if (resultEl) resultEl.textContent = '';
+            showToast(err.message || 'Failed to import SU roster', 'error');
+        } finally {
+            importBtn.disabled = false;
+            importBtn.textContent = prevText;
+        }
+    });
+}
+
 export async function renderAdminLists() {
     const pendingList = document.getElementById('pending-list');
     const activeList = document.getElementById('active-list');

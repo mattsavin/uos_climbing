@@ -1,9 +1,8 @@
 import './style.css';
-import { authState } from './auth';
+import { authState, getCurrentAcademicYear } from './auth';
 import { renderCalendarEvents } from './calendar';
 import { openSessionModal } from './components/sessionModal';
 import { initApp } from './main';
-import { config } from './config';
 
 export async function initJoinApp() {
     // 1. Initialize Layout (Navbar & Footer)
@@ -11,7 +10,7 @@ export async function initJoinApp() {
 
     const academicYearDisplay = document.getElementById('academic-year-display');
     if (academicYearDisplay) {
-        academicYearDisplay.textContent = config.academicYear + ' academic year';
+        academicYearDisplay.textContent = getCurrentAcademicYear() + ' academic year';
     }
 
     // 2. Initialize Auth State (in case user is logged in, though join page is semi-public)

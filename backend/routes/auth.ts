@@ -51,8 +51,9 @@ function getMembershipTypeIds(callback: (err: Error | null, ids: string[]) => vo
 router.post('/register', authLimiter, async (req, res) => {
     const { firstName, lastName, email, registrationNumber, password, passwordConfirm, membershipTypes } = req.body;
     const normalizedEmail = (email || '').toString().trim().toLowerCase();
+    const normalizedRegistrationNumber = (registrationNumber || '').toString().trim();
 
-    if (!firstName || !lastName || !normalizedEmail || !password || !passwordConfirm || !registrationNumber) {
+    if (!firstName || !lastName || !normalizedEmail || !password || !passwordConfirm || !normalizedRegistrationNumber) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -77,6 +78,17 @@ router.post('/register', authLimiter, async (req, res) => {
         if (types.length === 0) types = [defaultMembership];
 
         try {
+            const preApproved: any = await new Promise((resolve, reject) => {
+                db.get(
+                    'SELECT registrationNumber, membershipYear FROM preapproved_members WHERE registrationNumber = ?',
+                    [normalizedRegistrationNumber],
+                    (err, row: any) => {
+                        if (err) return reject(err);
+                        resolve(row || null);
+                    }
+                );
+            });
+
             const passwordHash = await bcrypt.hash(password, 10);
             const id = 'user_' + Date.now() + Math.random().toString(36).substr(2, 5);
 
@@ -94,7 +106,11 @@ router.post('/register', authLimiter, async (req, res) => {
 
             const currentYear = new Date().getFullYear();
             const currentMonth = new Date().getMonth();
-            const membershipYear = currentMonth < 8 ? `${currentYear - 1}/${currentYear}` : `${currentYear}/${currentYear + 1}`;
+            let membershipYear = currentMonth < 8 ? `${currentYear - 1}/${currentYear}` : `${currentYear}/${currentYear + 1}`;
+            if (preApproved?.membershipYear) {
+                membershipStatus = 'active';
+                membershipYear = preApproved.membershipYear;
+            }
 
             const calendarToken = crypto.randomUUID();
             // In test env or for root admin, mark as verified immediately
@@ -102,7 +118,7 @@ router.post('/register', authLimiter, async (req, res) => {
 
             db.run(
                 'INSERT INTO users (id, firstName, lastName, name, email, passwordHash, registrationNumber, role, membershipStatus, membershipYear, calendarToken, emailVerified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [id, firstName, lastName, `${firstName} ${lastName}`, normalizedEmail, passwordHash, registrationNumber, role, membershipStatus, membershipYear, calendarToken, emailVerified],
+                [id, firstName, lastName, `${firstName} ${lastName}`, normalizedEmail, passwordHash, normalizedRegistrationNumber, role, membershipStatus, membershipYear, calendarToken, emailVerified],
                 function (err) {
                     if (err) {
                         if (err.message.includes('UNIQUE constraint failed')) {
@@ -112,14 +128,18 @@ router.post('/register', authLimiter, async (req, res) => {
                     }
 
                     // Insert user_memberships rows
-                    const membershipRowStatus = (IS_TEST || isRootAdmin) ? 'active' : 'pending';
+                    const membershipRowStatus = (IS_TEST || isRootAdmin || preApproved) ? 'active' : 'pending';
                     const stmt = db.prepare('INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)');
                     types.forEach((t: string) => {
                         stmt.run(['umem_' + Date.now() + Math.random().toString(36).substr(2, 5), id, t, membershipRowStatus, membershipYear]);
                     });
                     stmt.finalize();
 
-                    const user = { id, firstName, lastName, email: normalizedEmail, registrationNumber, role, committeeRole: null, membershipStatus, membershipYear, calendarToken };
+                    if (preApproved) {
+                        db.run('DELETE FROM preapproved_members WHERE registrationNumber = ?', [normalizedRegistrationNumber]);
+                    }
+
+                    const user = { id, firstName, lastName, email: normalizedEmail, registrationNumber: normalizedRegistrationNumber, role, committeeRole: null, membershipStatus, membershipYear, calendarToken };
 
                     if (IS_TEST || isRootAdmin) {
                         // In test environment or for root admin: skip email verification, return token immediately

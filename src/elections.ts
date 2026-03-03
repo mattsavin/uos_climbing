@@ -1,5 +1,5 @@
 import './style.css';
-import { authState, votingApi, adminApi } from './auth';
+import { authState, votingApi, adminApi, getCurrentAcademicYear } from './auth';
 import { initApp } from './main';
 import { escapeHTML, showToast, showConfirmModal } from './utils';
 import { config } from './config';
@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const user = authState.getUser();
 
         const yearSpan = document.getElementById('election-year');
-        if (yearSpan) yearSpan.textContent = config.academicYear;
+        if (yearSpan) yearSpan.textContent = getCurrentAcademicYear();
 
         if (candidateRole) {
             candidateRole.innerHTML = '<option value="" disabled selected>Select a role...</option>' +

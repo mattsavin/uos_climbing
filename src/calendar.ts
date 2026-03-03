@@ -239,7 +239,10 @@ function renderSessionChip(
     const visibilityBadge = (session as any).visibility === 'committee_only'
         ? `<span class="text-[8px] font-black uppercase tracking-widest opacity-90 bg-amber-500/25 text-amber-200 px-1 rounded border border-amber-500/30">Committee</span>`
         : '';
-    const badges = [visibilityBadge, membBadge].filter(Boolean).join('');
+    const registrationBadge = (session as any).registrationVisibility === 'committee_only'
+        ? `<span class="text-[8px] font-black uppercase tracking-widest opacity-90 bg-cyan-500/25 text-cyan-200 px-1 rounded border border-cyan-500/30">Committee Reg</span>`
+        : '';
+    const badges = [visibilityBadge, registrationBadge, membBadge].filter(Boolean).join('');
 
     return `
         <div class="session-chip mt-1 border rounded p-2 text-xs font-medium leading-tight w-full overflow-hidden ${clickable ? 'cursor-pointer hover:opacity-80 transition-opacity' : 'cursor-default'} flex flex-col gap-1 ${bg}" data-id="${session.id}">

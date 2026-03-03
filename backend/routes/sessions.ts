@@ -137,9 +137,10 @@ router.get('/ical/:calendarToken/all', (req, res) => {
 });
 
 router.post('/', authenticateToken, requireCommittee, (req, res) => {
-    const { title, type, date, capacity, requiredMembership, visibility } = req.body;
+    const { title, type, date, capacity, requiredMembership, visibility, registrationVisibility } = req.body;
     const id = 'sess_' + Date.now();
     const eventVisibility = visibility === 'committee_only' ? 'committee_only' : 'all';
+    const eventRegistrationVisibility = registrationVisibility === 'committee_only' ? 'committee_only' : 'all';
     getDefaultMembershipType((typeErr, defaultMembershipType) => {
         if (typeErr) return res.status(500).json({ error: 'Database error' });
         if (!defaultMembershipType) return res.status(500).json({ error: 'No membership types configured' });
@@ -150,11 +151,21 @@ router.post('/', authenticateToken, requireCommittee, (req, res) => {
             if (!exists) return res.status(400).json({ error: 'Invalid required membership type' });
 
             db.run(
-                'INSERT INTO sessions (id, type, title, date, capacity, bookedSlots, requiredMembership, visibility) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-                [id, type, title, date, capacity, 0, reqMemb, eventVisibility],
+                'INSERT INTO sessions (id, type, title, date, capacity, bookedSlots, requiredMembership, visibility, registrationVisibility) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [id, type, title, date, capacity, 0, reqMemb, eventVisibility, eventRegistrationVisibility],
                 function (err) {
                     if (err) return res.status(500).json({ error: 'Database error' });
-                    res.json({ id, type, title, date, capacity, bookedSlots: 0, requiredMembership: reqMemb, visibility: eventVisibility });
+                    res.json({
+                        id,
+                        type,
+                        title,
+                        date,
+                        capacity,
+                        bookedSlots: 0,
+                        requiredMembership: reqMemb,
+                        visibility: eventVisibility,
+                        registrationVisibility: eventRegistrationVisibility
+                    });
                 }
             );
         });
@@ -162,8 +173,9 @@ router.post('/', authenticateToken, requireCommittee, (req, res) => {
 });
 
 router.put('/:id', authenticateToken, requireCommittee, (req, res) => {
-    const { title, type, date, capacity, bookedSlots, requiredMembership, visibility } = req.body;
+    const { title, type, date, capacity, bookedSlots, requiredMembership, visibility, registrationVisibility } = req.body;
     const eventVisibility = visibility === 'committee_only' ? 'committee_only' : 'all';
+    const eventRegistrationVisibility = registrationVisibility === 'committee_only' ? 'committee_only' : 'all';
     getDefaultMembershipType((typeErr, defaultMembershipType) => {
         if (typeErr) return res.status(500).json({ error: 'Database error' });
         if (!defaultMembershipType) return res.status(500).json({ error: 'No membership types configured' });
@@ -174,8 +186,8 @@ router.put('/:id', authenticateToken, requireCommittee, (req, res) => {
             if (!exists) return res.status(400).json({ error: 'Invalid required membership type' });
 
             db.run(
-                'UPDATE sessions SET title = ?, type = ?, date = ?, capacity = ?, bookedSlots = ?, requiredMembership = ?, visibility = ? WHERE id = ?',
-                [title, type, date, capacity, bookedSlots, reqMemb, eventVisibility, req.params.id],
+                'UPDATE sessions SET title = ?, type = ?, date = ?, capacity = ?, bookedSlots = ?, requiredMembership = ?, visibility = ?, registrationVisibility = ? WHERE id = ?',
+                [title, type, date, capacity, bookedSlots, reqMemb, eventVisibility, eventRegistrationVisibility, req.params.id],
                 function (err) {
                     if (err) return res.status(500).json({ error: 'Database error' });
                     res.json({ success: true });
@@ -199,7 +211,7 @@ router.post('/:id/book', authenticateToken, (req: any, res) => {
     db.get('SELECT * FROM bookings WHERE userId = ? AND sessionId = ?', [userId, sessionId], (err, booking) => {
         if (booking) return res.status(400).json({ error: 'Already booked this session' });
 
-        db.get('SELECT capacity, bookedSlots, requiredMembership, visibility, date FROM sessions WHERE id = ?', [sessionId], (err, session: any) => {
+        db.get('SELECT capacity, bookedSlots, requiredMembership, visibility, registrationVisibility, date FROM sessions WHERE id = ?', [sessionId], (err, session: any) => {
             if (err || !session) return res.status(404).json({ error: 'Session not found' });
 
             const sessionDate = new Date(session.date);
@@ -212,9 +224,9 @@ router.post('/:id/book', authenticateToken, (req: any, res) => {
             const isCommittee = req.user.role === 'committee'
                 || !!req.user.committeeRole
                 || (Array.isArray(req.user.committeeRoles) && req.user.committeeRoles.length > 0);
-            const isCommitteeOnly = (session.visibility || 'all') === 'committee_only';
-            if (isCommitteeOnly && !isCommittee) {
-                return res.status(403).json({ error: 'This session is for committee members only.' });
+            const registrationIsCommitteeOnly = (session.registrationVisibility || 'all') === 'committee_only';
+            if (registrationIsCommitteeOnly && !isCommittee) {
+                return res.status(403).json({ error: 'Registration for this session is for committee members only.' });
             }
 
             const reqMemb = session.requiredMembership || 'basic';
@@ -222,7 +234,7 @@ router.post('/:id/book', authenticateToken, (req: any, res) => {
             db.get('SELECT * FROM user_memberships WHERE userId = ? AND membershipType = ? AND status = "active"', [userId, reqMemb], (err2, userMemb) => {
                 if (err2) return res.status(500).json({ error: 'Database error checking membership' });
                 // Enforce requirement unless they are root admin testing it
-                if (!isCommitteeOnly && !userMemb && req.user.email !== 'committee@sheffieldclimbing.org') {
+                if (!registrationIsCommitteeOnly && !userMemb && req.user.email !== 'committee@sheffieldclimbing.org') {
                     return getMembershipTypeLabel(reqMemb, (typeLabel) => {
                         return res.status(403).json({ error: `This session requires an active ${typeLabel} membership.` });
                     });

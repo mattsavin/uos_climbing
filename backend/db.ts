@@ -54,6 +54,15 @@ function initializeDatabase() {
             PRIMARY KEY (userId)
         )`);
 
+        // Pre-approved membership imports (keyed by registration number)
+        db.run(`CREATE TABLE IF NOT EXISTS preapproved_members (
+            registrationNumber TEXT PRIMARY KEY,
+            fullName TEXT,
+            membershipYear TEXT NOT NULL,
+            source TEXT,
+            createdAt INTEGER NOT NULL
+        )`);
+
         // Password Reset Tokens Table
         db.run(`CREATE TABLE IF NOT EXISTS password_resets (
             token TEXT PRIMARY KEY,
@@ -159,11 +168,13 @@ function initializeDatabase() {
             capacity INTEGER NOT NULL,
             bookedSlots INTEGER DEFAULT 0,
             requiredMembership TEXT DEFAULT 'basic',
-            visibility TEXT DEFAULT 'all'
+            visibility TEXT DEFAULT 'all',
+            registrationVisibility TEXT DEFAULT 'all'
         )`);
 
         db.run('ALTER TABLE sessions ADD COLUMN requiredMembership TEXT DEFAULT "basic"', (err) => { });
         db.run('ALTER TABLE sessions ADD COLUMN visibility TEXT DEFAULT "all"', (err) => { });
+        db.run('ALTER TABLE sessions ADD COLUMN registrationVisibility TEXT DEFAULT "all"', (err) => { });
 
         // Bookings Table
         db.run(`CREATE TABLE IF NOT EXISTS bookings (
@@ -300,6 +311,34 @@ function initializeDatabase() {
                         }
                     }
                 );
+            }
+        });
+
+        // Available Committee Roles Table
+        db.run(`CREATE TABLE IF NOT EXISTS available_roles (
+            id TEXT PRIMARY KEY,
+            label TEXT NOT NULL
+        )`);
+
+        // Seed default available roles if table is empty
+        db.get('SELECT COUNT(*) as count FROM available_roles', (err, row: any) => {
+            if (row && row.count === 0) {
+                console.log('Seeding default available roles...');
+                const defaultRoles = [
+                    ['Chair', 'Chair'],
+                    ['Secretary', 'Secretary'],
+                    ['Treasurer', 'Treasurer'],
+                    ['Welfare & Inclusions', 'Welfare & Inclusions'],
+                    ['Team Captain', 'Team Captain'],
+                    ['Social Sec', 'Social Sec'],
+                    ["Women's Captain", "Women's Captain"],
+                    ["Men's Captain", "Men's Captain"],
+                    ['Publicity', 'Publicity'],
+                    ['Kit & Safety Sec', 'Kit & Safety Sec']
+                ];
+                const stmt = db.prepare('INSERT INTO available_roles (id, label) VALUES (?, ?)');
+                defaultRoles.forEach(r => stmt.run(r));
+                stmt.finalize();
             }
         });
 
