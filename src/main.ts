@@ -165,7 +165,7 @@ const createFooter = () => `
             <li><a href="https://www.instagram.com/uos_climb/" target="_blank" class="text-slate-400 hover:text-brand-gold transition-colors">Follow Us</a></li>
           </ul>
         </div>
-      </div>
+        <div>
           <p class="text-slate-400 mb-3">Reach out for questions or collaborations.</p>
           <div class="flex flex-col gap-3">
             <a href="mailto:committee@sheffieldclimbing.org" class="inline-flex items-center text-brand-gold hover:text-brand-gold-muted transition-colors font-semibold">
@@ -183,9 +183,9 @@ const createFooter = () => `
           </div>
         </div>
       </div>
-      <div class="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center">
-        <p class="text-slate-500 text-sm mb-4 md:mb-0">&copy; ${new Date().getFullYear()} University of Sheffield Climbing Club.</p>
-        <p class="text-slate-500 text-sm">Forged in South Yorkshire.</p>
+      <div class="border-t border-white/5 pt-8 flex flex-col gap-3 md:flex-row md:justify-between md:items-center">
+        <p class="text-slate-500 text-sm text-center md:text-left">&copy; ${new Date().getFullYear()} University of Sheffield Climbing Club.</p>
+        <p class="text-slate-500 text-sm text-center md:text-right">Forged in South Yorkshire.</p>
       </div>
     </div>
   </footer>
