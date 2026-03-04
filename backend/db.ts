@@ -278,7 +278,7 @@ function initializeDatabase() {
         // Create root admin if not exists
         db.get('SELECT id, membershipYear FROM users WHERE email = ?', [ROOT_ADMIN_EMAIL], async (err, row: any) => {
             if (!row) {
-                const rootHash = await bcrypt.hash('SuperSecret123!', 10);
+                const rootHash = await bcrypt.hash('SuperSecret123!', 12);
                 const currentYear = new Date().getFullYear();
                 const currentMonth = new Date().getMonth();
                 const membershipYear = currentMonth < 8 ? `${currentYear - 1}/${currentYear}` : `${currentYear}/${currentYear + 1}`;
@@ -300,7 +300,7 @@ function initializeDatabase() {
                 db.run('UPDATE users SET emailVerified = 1, membershipStatus = ? WHERE email = ?', ['active', ROOT_ADMIN_EMAIL]);
                 // In non-production, keep local root credentials stable for troubleshooting/dev access
                 if (process.env.NODE_ENV !== 'production') {
-                    const rootHash = await bcrypt.hash('SuperSecret123!', 10);
+                    const rootHash = await bcrypt.hash('SuperSecret123!', 12);
                     db.run(
                         'UPDATE users SET passwordHash = ?, role = ?, firstName = ?, lastName = ?, name = ? WHERE email = ?',
                         [rootHash, 'committee', 'Root', 'Admin', 'Root Admin', ROOT_ADMIN_EMAIL]

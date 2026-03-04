@@ -1,6 +1,6 @@
 import express from 'express';
 import { db } from '../db';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken, requireCommittee } from '../middleware/auth';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -19,7 +19,7 @@ const storage = multer.memoryStorage();
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit for high-res photos
+    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit for high-res photos
     fileFilter: (req, file, cb) => {
         const filetypes = /jpeg|jpg|png|webp|heic|heif/;
         const mimetype = filetypes.test(file.mimetype);
@@ -41,61 +41,72 @@ router.get('/', (req, res) => {
 });
 
 // POST /api/gallery - Upload a new gallery image (Committee Only)
-router.post('/', authenticateToken, (req: any, res) => {
-    if (req.user.role !== 'committee') {
-        return res.status(403).json({ error: 'Unauthorized' });
-    }
+router.post('/', authenticateToken, requireCommittee, (req: any, res) => {
 
-    upload.single('photo')(req, res, async (uploadErr: any) => {
+    upload.array('photos', 50)(req, res, async (uploadErr: any) => {
         if (uploadErr instanceof multer.MulterError && uploadErr.code === 'LIMIT_FILE_SIZE') {
-            return res.status(400).json({ error: 'Photo too large. Max size is 10MB.' });
+            return res.status(400).json({ error: 'One or more photos are too large. Max size is 50MB per file.' });
         }
         if (uploadErr) {
             return res.status(400).json({ error: uploadErr.message || 'Invalid image upload.' });
         }
 
-        if (!req.file) {
-            return res.status(400).json({ error: 'No file uploaded' });
+        const files = req.files as Express.Multer.File[];
+        if (!files || files.length === 0) {
+            return res.status(400).json({ error: 'No files uploaded' });
         }
 
         try {
-            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-            const filename = 'gallery-' + uniqueSuffix + '.webp';
-            const filepath = `/uploads/gallery/${filename}`;
-            const fullPath = path.join(process.cwd(), filepath);
+            const uploadedImages = [];
+            const captionsInput = req.body.caption;
+            const captions = Array.isArray(captionsInput) ? captionsInput : (captionsInput ? [captionsInput] : []);
+            const uploaderId = req.user.id;
 
-            // Process image with sharp
-            await sharp(req.file.buffer)
-                .resize(1920, 1920, {
-                    fit: sharp.fit.inside,
-                    withoutEnlargement: true
-                })
-                .webp({ quality: 90 })
-                .toFile(fullPath);
+            let fileIndex = 0;
 
-            const id = 'gal_' + crypto.randomUUID();
-            const caption = req.body.caption || '';
+            for (const file of files) {
+                const caption = captions[fileIndex] || '';
+                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+                const filename = 'gallery-' + uniqueSuffix + '.webp';
+                const filepath = `/uploads/gallery/${filename}`;
+                const fullPath = path.join(process.cwd(), filepath);
 
-            db.run(
-                'INSERT INTO gallery (id, filename, filepath, caption, uploadedBy) VALUES (?, ?, ?, ?, ?)',
-                [id, filename, filepath, caption, req.user.id],
-                function (err) {
-                    if (err) return res.status(500).json({ error: 'Database error' });
-                    res.json({ success: true, id, filename, filepath, caption });
-                }
-            );
+                // Process image with sharp
+                await sharp(file.buffer)
+                    .resize(1920, 1920, {
+                        fit: sharp.fit.inside,
+                        withoutEnlargement: true
+                    })
+                    .webp({ quality: 90 })
+                    .toFile(fullPath);
+
+                const id = 'gal_' + crypto.randomUUID();
+
+                await new Promise<void>((resolve, reject) => {
+                    db.run(
+                        'INSERT INTO gallery (id, filename, filepath, caption, uploadedBy) VALUES (?, ?, ?, ?, ?)',
+                        [id, filename, filepath, caption, uploaderId],
+                        function (err) {
+                            if (err) return reject(err);
+                            resolve();
+                        }
+                    );
+                });
+
+                uploadedImages.push({ id, filename, filepath, caption });
+                fileIndex++;
+            }
+
+            res.json({ success: true, uploaded: uploadedImages });
         } catch (error: any) {
             console.error('Sharp processing error:', error);
-            res.status(500).json({ error: 'Failed to process image' });
+            res.status(500).json({ error: 'Failed to process images' });
         }
     });
 });
 
 // DELETE /api/gallery/:id - Delete an image (Committee Only)
-router.delete('/:id', authenticateToken, (req: any, res) => {
-    if (req.user.role !== 'committee') {
-        return res.status(403).json({ error: 'Unauthorized' });
-    }
+router.delete('/:id', authenticateToken, requireCommittee, (req: any, res) => {
 
     const { id } = req.params;
 
@@ -119,10 +130,7 @@ router.delete('/:id', authenticateToken, (req: any, res) => {
 });
 
 // PUT /api/gallery/:id - Update caption (Committee Only)
-router.put('/:id', authenticateToken, (req: any, res) => {
-    if (req.user.role !== 'committee') {
-        return res.status(403).json({ error: 'Unauthorized' });
-    }
+router.put('/:id', authenticateToken, requireCommittee, (req: any, res) => {
 
     const { id } = req.params;
     const { caption } = req.body;

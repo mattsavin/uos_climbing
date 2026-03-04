@@ -608,9 +608,10 @@
                             <form id="gallery-upload-form" class="w-full space-y-3 hidden flex-col">
                                 <input type="file" id="gallery-photo-input"
                                     class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-pink-500/10 file:text-pink-400 hover:file:bg-pink-500/20"
-                                    accept="image/*" required>
-                                <input type="text" id="gallery-caption-input" placeholder="Image Caption (Optional)"
-                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-pink-500">
+                                    accept="image/*" multiple required>
+                                <div id="gallery-staging-area"
+                                    class="w-full max-h-60 overflow-y-auto space-y-2 hidden border border-slate-700/50 rounded-lg p-2 bg-slate-900/50">
+                                </div>
                                 <div class="flex gap-2 w-full mt-2">
                                     <button type="button" id="cancel-gallery-upload-btn"
                                         class="flex-1 text-xs text-slate-400 hover:text-white transition-colors">Cancel</button>
@@ -641,6 +642,30 @@
                 </div> <!-- End of lg:grid-cols-3 -->
             </div>
         </main>
+    </div>
+
+    <!-- Edit Caption Modal -->
+    <div id="edit-caption-modal" class="hidden fixed inset-0 z-[160] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="edit-caption-backdrop"></div>
+        <div
+            class="relative glass-card !p-0 w-full max-w-sm shadow-2xl border border-white/10 animate-[fade-in-up_0.2s_ease-out] flex flex-col overflow-hidden">
+            <div class="p-6 bg-slate-800/50 pb-4">
+                <h3 class="text-xl font-bold text-white mb-2 text-center">Edit Caption</h3>
+                <p class="text-sm text-slate-400 mb-4 text-center">Update the public caption for this image.</p>
+                <form id="edit-caption-form" class="w-full flex flex-col gap-3">
+                    <input type="hidden" id="edit-caption-id" value="">
+                    <input type="text" id="edit-caption-input"
+                        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-pink-500"
+                        placeholder="Enter caption...">
+                </form>
+            </div>
+            <div class="flex border-t border-white/10 mt-auto">
+                <button type="button" id="edit-caption-cancel-btn"
+                    class="flex-1 py-3 text-sm font-bold text-slate-400 hover:text-white hover:bg-white/5 transition-colors border-r border-white/10">Cancel</button>
+                <button type="submit" form="edit-caption-form" id="edit-caption-save-btn"
+                    class="flex-1 py-3 text-sm font-bold text-brand-gold hover:text-amber-400 hover:bg-brand-gold/10 transition-colors">Save</button>
+            </div>
+        </div>
     </div>
 
     <!-- Toast Notification -->

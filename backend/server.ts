@@ -5,6 +5,8 @@ import { db } from './db';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import adminRoutes from './routes/admin';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import sessionRoutes from './routes/sessions';
 import sessionTypeRoutes from './routes/session-types';
 import membershipTypeRoutes from './routes/membership-types';
@@ -28,9 +30,26 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors({
-    origin: process.env.NODE_ENV === 'production' ? true : ['http://localhost:5173', 'http://127.0.0.1:5173'],
+    origin: process.env.NODE_ENV === 'production' ? (process.env.APP_URL || false) : ['http://localhost:5173', 'http://127.0.0.1:5173'],
     credentials: true,
 }));
+
+// Apply security headers
+app.use(helmet({
+    contentSecurityPolicy: false, // Vite/React needs inline scripts in dev, can configure properly for prod if needed
+    crossOriginEmbedderPolicy: false,
+}));
+
+// Global rate limiting
+const globalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 1000, // 1000 requests per IP
+    message: { error: 'Too many requests from this IP, please try again after 15 minutes' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+app.use(globalLimiter);
+
 app.use(express.json());
 app.use(cookieParser());
 
