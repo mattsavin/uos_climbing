@@ -12,6 +12,7 @@ import votingRoutes from './routes/voting';
 import gearRoutes from './routes/gear';
 import committeeRoutes from './routes/committee';
 import verifyRoutes from './routes/verify';
+import galleryRoutes from './routes/gallery';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import history from 'connect-history-api-fallback';
@@ -76,6 +77,7 @@ app.use('/api/voting', votingRoutes);
 app.use('/api/gear', gearRoutes);
 app.use('/api/committee', committeeRoutes);
 app.use('/api/verify', verifyRoutes);
+app.use('/api/gallery', galleryRoutes);
 
 // Shared route for iCal (also registered in sessions.ts but keeping here for backward compatibility if needed, 
 // though /api/sessions/ical/:userId is preferred now. The original was /api/ical/:userId)

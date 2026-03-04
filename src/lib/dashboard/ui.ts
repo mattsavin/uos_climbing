@@ -2,6 +2,7 @@ import { adminApi, authState, getCurrentAcademicYear, type MembershipType } from
 import { renderSessions } from './sessions';
 import { getVerificationWord, showToast } from '../../utils';
 import QRCode from 'qrcode';
+import { renderGalleryList } from './gallery';
 
 async function copyTextWithFallback(text: string): Promise<boolean> {
     try {
@@ -51,6 +52,7 @@ export async function updateUI() {
         const icalLinkAll = document.getElementById('ical-link-all') as HTMLAnchorElement | null;
         const icalLinkBooked = document.getElementById('ical-link-booked') as HTMLAnchorElement | null;
         const adminPortalCard = document.getElementById('admin-portal-card'); // Element to toggle
+        const galleryCard = document.getElementById('gallery-management-card');
 
         let membershipTypes: MembershipType[] = [];
         try {
@@ -270,6 +272,10 @@ export async function updateUI() {
 
         if (isCommittee) {
             if (adminPortalCard) adminPortalCard.classList.remove('hidden');
+            if (galleryCard) {
+                galleryCard.classList.remove('hidden');
+                renderGalleryList();
+            }
             if (manageTypesShortcut) {
                 manageTypesShortcut.classList.remove('hidden');
                 manageTypesShortcut.onclick = () => {
@@ -279,6 +285,7 @@ export async function updateUI() {
             if (addSessionToggleBtn) addSessionToggleBtn.classList.remove('hidden');
         } else {
             if (adminPortalCard) adminPortalCard.classList.add('hidden');
+            if (galleryCard) galleryCard.classList.add('hidden');
             if (manageTypesShortcut) manageTypesShortcut.classList.add('hidden');
             if (addSessionToggleBtn) addSessionToggleBtn.classList.add('hidden');
             if (addSessionFormContainer) addSessionFormContainer.classList.add('hidden');

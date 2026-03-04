@@ -1,5 +1,6 @@
 import { authState } from '../../auth';
 import { showToast, showPromptModal } from '../../utils';
+import imageCompression from 'browser-image-compression';
 
 export function initProfileHandlers() {
     const profileForm = document.getElementById('profile-form');
@@ -122,6 +123,24 @@ export function initAccountModalHandlers() {
             const file = photoInput.files?.[0];
             if (!file) return;
 
+            if (uploadStatus) {
+                uploadStatus.textContent = 'Compressing...';
+                uploadStatus.classList.remove('hidden');
+            }
+
+            let fileToUpload = file;
+            try {
+                const options = {
+                    maxSizeMB: 1,
+                    maxWidthOrHeight: 500,
+                    useWebWorker: true,
+                };
+                fileToUpload = await imageCompression(file, options);
+            } catch (err) {
+                console.error('Image compression error:', err);
+                // Fallback to original file if compression fails
+            }
+
             // Local preview
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -131,14 +150,14 @@ export function initAccountModalHandlers() {
                     photoPlaceholder?.classList.add('hidden');
                 }
             };
-            reader.readAsDataURL(file);
+            reader.readAsDataURL(fileToUpload);
 
             // Upload
             try {
-                if (uploadStatus) uploadStatus.classList.remove('hidden');
+                if (uploadStatus) uploadStatus.textContent = 'Uploading...';
 
                 const formData = new FormData();
-                formData.append('photo', file);
+                formData.append('photo', fileToUpload, fileToUpload.name);
 
                 const res = await fetch('/api/users/me/photo', {
                     method: 'POST',

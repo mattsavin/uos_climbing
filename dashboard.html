@@ -414,8 +414,7 @@
                                     <div>
                                         <label
                                             class="block text-xs font-bold text-slate-400 mb-1 uppercase">Location</label>
-                                        <input type="text" id="session-location"
-                                            placeholder="e.g. The Foundry"
+                                        <input type="text" id="session-location" placeholder="e.g. The Foundry"
                                             class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-gold">
                                     </div>
                                     <div class="grid grid-cols-2 gap-4">
@@ -587,6 +586,55 @@
                                 class="w-full btn-outline text-center border-amber-400 text-amber-400 hover:bg-amber-400 hover:text-white transition-colors py-2 text-sm font-bold shadow-lg shadow-amber-400/10 block">
                                 Open Committee Portal
                             </a>
+                        </div>
+
+                        <!-- Gallery Management Portal Card (Hidden by default, shown for committee) -->
+                        <div id="gallery-management-card"
+                            class="hidden glass-card !p-6 flex flex-col justify-center items-center text-center border border-pink-500/20 mt-8">
+                            <div
+                                class="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mb-4 text-pink-400 shadow-lg shadow-pink-500/20">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <h3
+                                class="text-lg font-bold text-white mb-2 uppercase tracking-wider flex items-center gap-2">
+                                Gallery Management</h3>
+                            <p class="text-xs text-slate-400 mb-6">Upload, edit, and manage images visible on the public
+                                gallery.</p>
+
+                            <form id="gallery-upload-form" class="w-full space-y-3 hidden flex-col">
+                                <input type="file" id="gallery-photo-input"
+                                    class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-pink-500/10 file:text-pink-400 hover:file:bg-pink-500/20"
+                                    accept="image/*" required>
+                                <input type="text" id="gallery-caption-input" placeholder="Image Caption (Optional)"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-pink-500">
+                                <div class="flex gap-2 w-full mt-2">
+                                    <button type="button" id="cancel-gallery-upload-btn"
+                                        class="flex-1 text-xs text-slate-400 hover:text-white transition-colors">Cancel</button>
+                                    <button type="submit" id="submit-gallery-upload-btn"
+                                        class="flex-1 btn-primary !bg-pink-500 hover:!bg-pink-600 !py-1.5 !px-2 !text-xs">Upload</button>
+                                </div>
+                                <div id="gallery-upload-status" class="text-xs text-pink-400 hidden mt-2">Uploading...
+                                </div>
+                            </form>
+
+                            <button id="open-gallery-upload-btn"
+                                class="w-full btn-outline text-center border-pink-400 text-pink-400 hover:bg-pink-400 hover:text-white transition-colors py-2 text-sm font-bold shadow-lg shadow-pink-400/10 block mb-4">
+                                Upload Photo
+                            </button>
+
+                            <div
+                                class="w-full border-t border-white/10 pt-4 mt-2 flex flex-col items-start w-full text-left">
+                                <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Existing
+                                    Photos</h4>
+                                <div id="gallery-management-list"
+                                    class="space-y-2 max-h-60 overflow-y-auto pr-2 w-full">
+                                    <p class="text-xs text-slate-500 text-center">Loading gallery...</p>
+                                </div>
+                            </div>
                         </div>
 
                     </div>

@@ -265,6 +265,16 @@ function initializeDatabase() {
             FOREIGN KEY (gearId) REFERENCES gear(id)
         )`);
 
+        // Gallery Table
+        db.run(`CREATE TABLE IF NOT EXISTS gallery (
+            id TEXT PRIMARY KEY,
+            filename TEXT NOT NULL,
+            filepath TEXT NOT NULL,
+            caption TEXT,
+            uploadedBy TEXT,
+            uploadedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`);
+
         // Create root admin if not exists
         db.get('SELECT id, membershipYear FROM users WHERE email = ?', [ROOT_ADMIN_EMAIL], async (err, row: any) => {
             if (!row) {

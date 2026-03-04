@@ -4,6 +4,7 @@ import { updateUI, initGeneralHandlers } from './lib/dashboard/ui';
 import { initSessionHandlers } from './lib/dashboard/sessions';
 import { initAdminConfirm } from './lib/dashboard/admin';
 import { initProfileHandlers, initAccountModalHandlers } from './lib/dashboard/profile';
+import { initGalleryHandlers } from './lib/dashboard/gallery';
 import { initCommitteeProfileHandlers } from './lib/dashboard/committee';
 import { membershipRenewalModalHtml, accountManagerModalHtml, adminConfirmModalHtml, membershipCardModalHtml } from './components';
 
@@ -27,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initAdminConfirm();
     initProfileHandlers();
     initAccountModalHandlers();
+    initGalleryHandlers();
 
     // Initial Boot
     authState.init().then(() => {
