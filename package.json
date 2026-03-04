@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "server": "tsx --watch backend/server.ts",
+    "start": "tsx backend/server.ts",
+    "server": "tsx watch --ignore \"uploads/**\" backend/server.ts",
     "dev:all": "concurrently \"npm run server\" \"npm run dev\"",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
