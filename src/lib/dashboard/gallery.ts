@@ -243,8 +243,17 @@ export function initGalleryHandlers() {
                     body: formData
                 });
 
-                const result = await res.json();
-                if (!res.ok) throw new Error(result.error || 'Upload failed');
+                let result: any = {};
+                const contentType = res.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    result = await res.json();
+                } else {
+                    const errorText = await res.text();
+                    console.error('Server returned non-JSON response:', errorText);
+                    throw new Error(`Server Error: ${res.status} ${res.statusText}`);
+                }
+
+                if (!res.ok) throw new Error(result.error || `Upload failed: ${res.status}`);
 
                 showToast(files.length > 1 ? `${files.length} images uploaded!` : 'Gallery image uploaded!', 'success');
                 (form as HTMLFormElement).reset();
