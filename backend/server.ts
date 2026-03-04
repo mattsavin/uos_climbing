@@ -21,6 +21,7 @@ import history from 'connect-history-api-fallback';
 import cookieParser from 'cookie-parser';
 import { betaGate } from './middleware/beta-gate';
 import jwt from 'jsonwebtoken';
+import { UPLOAD_BASE_DIR } from './config';
 
 // ESM dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
@@ -54,7 +55,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Serve profile photos
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+app.use('/uploads', express.static(UPLOAD_BASE_DIR));
 
 // Beta Gate Middleware
 app.use(betaGate);

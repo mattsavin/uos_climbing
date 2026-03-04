@@ -5,13 +5,14 @@ import fs from 'fs';
 import { db } from '../db';
 import { authenticateToken, requireCommittee } from '../middleware/auth';
 import crypto from 'crypto';
+import { UPLOAD_BASE_DIR } from '../config';
 
 const router = express.Router();
 
 // Configure multer for profile photo uploads
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const uploadDir = path.join(process.cwd(), 'uploads/profile-photos');
+        const uploadDir = path.join(UPLOAD_BASE_DIR, 'profile-photos');
         if (!fs.existsSync(uploadDir)) {
             fs.mkdirSync(uploadDir, { recursive: true });
         }
@@ -95,7 +96,7 @@ router.post('/me/photo', authenticateToken, (req: any, res) => {
         // Get old photo to delete it
         db.get('SELECT profilePhoto FROM users WHERE id = ?', [req.user.id], (err, user: any) => {
             if (!err && user && user.profilePhoto) {
-                const oldPath = path.join(process.cwd(), user.profilePhoto);
+                const oldPath = path.join(UPLOAD_BASE_DIR, user.profilePhoto.replace(/^\/uploads\//, ''));
                 if (fs.existsSync(oldPath)) {
                     fs.unlinkSync(oldPath);
                 }

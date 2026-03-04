@@ -7,6 +7,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import sharp from 'sharp';
+import { UPLOAD_BASE_DIR } from '../config';
 
 const router = express.Router();
 
@@ -18,7 +19,7 @@ function getMembershipTypeIds(callback: (err: Error | null, ids: string[]) => vo
 }
 
 // Configure multer for profile photo uploads
-const uploadDir = path.join(process.cwd(), 'uploads/profile-photos');
+const uploadDir = path.join(UPLOAD_BASE_DIR, 'profile-photos');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -74,7 +75,7 @@ router.post('/me/photo', authenticateToken, (req: any, res) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         const filename = 'profile-' + uniqueSuffix + '.webp';
         const photoPath = `/uploads/profile-photos/${filename}`;
-        const fullPath = path.join(process.cwd(), photoPath);
+        const fullPath = path.join(UPLOAD_BASE_DIR, 'profile-photos', filename);
 
         // Transcode with sharp to strip metadata and prevent polyglot/infected images
         try {
@@ -90,7 +91,7 @@ router.post('/me/photo', authenticateToken, (req: any, res) => {
         // Get old photo to delete it
         db.get('SELECT profilePhoto FROM users WHERE id = ?', [req.user.id], (err, user: any) => {
             if (!err && user && user.profilePhoto) {
-                const oldPath = path.join(process.cwd(), user.profilePhoto);
+                const oldPath = path.join(UPLOAD_BASE_DIR, user.profilePhoto.replace(/^\/uploads\//, ''));
                 if (fs.existsSync(oldPath)) {
                     try {
                         fs.unlinkSync(oldPath);

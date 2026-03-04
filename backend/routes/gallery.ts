@@ -4,18 +4,27 @@ import { authenticateToken, requireCommittee } from '../middleware/auth';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 import crypto from 'crypto';
 import sharp from 'sharp';
+import { UPLOAD_BASE_DIR } from '../config';
 
 const router = express.Router();
 
-const uploadDir = path.join(process.cwd(), 'uploads/gallery');
+const uploadDir = path.join(UPLOAD_BASE_DIR, 'gallery');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Memory storage for multer so we can process it with sharp before saving
-const storage = multer.memoryStorage();
+// Disk storage for multer so we don't hold the entire batch of files in memory
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, os.tmpdir());
+    },
+    filename: (req, file, cb) => {
+        cb(null, 'tmp-gallery-' + Date.now() + '-' + crypto.randomBytes(4).toString('hex') + path.extname(file.originalname));
+    }
+});
 
 const upload = multer({
     storage: storage,
@@ -69,16 +78,23 @@ router.post('/', authenticateToken, requireCommittee, (req: any, res) => {
                 const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
                 const filename = 'gallery-' + uniqueSuffix + '.webp';
                 const filepath = `/uploads/gallery/${filename}`;
-                const fullPath = path.join(process.cwd(), filepath);
+                const fullPath = path.join(UPLOAD_BASE_DIR, 'gallery', filename);
 
-                // Process image with sharp
-                await sharp(file.buffer)
+                // Process image with sharp from the temporary file
+                await sharp(file.path)
                     .resize(1920, 1920, {
                         fit: sharp.fit.inside,
                         withoutEnlargement: true
                     })
                     .webp({ quality: 90 })
                     .toFile(fullPath);
+
+                // Remove the temporary file
+                try {
+                    fs.unlinkSync(file.path);
+                } catch (e) {
+                    console.error('Failed to cleanup temp file:', e);
+                }
 
                 const id = 'gal_' + crypto.randomUUID();
 
@@ -113,7 +129,7 @@ router.delete('/:id', authenticateToken, requireCommittee, (req: any, res) => {
     db.get('SELECT filepath FROM gallery WHERE id = ?', [id], (err, row: any) => {
         if (err || !row) return res.status(404).json({ error: 'Image not found' });
 
-        const fullPath = path.join(process.cwd(), row.filepath);
+        const fullPath = path.join(UPLOAD_BASE_DIR, row.filepath.replace(/^\/uploads\//, ''));
         if (fs.existsSync(fullPath)) {
             try {
                 fs.unlinkSync(fullPath);
