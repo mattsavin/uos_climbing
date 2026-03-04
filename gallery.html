@@ -41,6 +41,27 @@
                 </div>
             </section>
         </main>
+
+        <!-- Image Fullscreen Modal -->
+        <div id="image-modal"
+            class="fixed inset-0 z-50 hidden bg-black/95 flex-col items-center justify-center p-4 sm:p-8 backdrop-blur-sm opacity-0 transition-opacity duration-300">
+            <!-- Close Button -->
+            <button id="close-image-modal"
+                class="absolute top-4 right-4 sm:top-8 sm:right-8 text-white/50 hover:text-white transition-colors bg-white/5 hover:bg-white/10 rounded-full p-2 w-12 h-12 flex items-center justify-center z-50">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
+            </button>
+
+            <!-- Image Container -->
+            <div class="relative w-full h-full flex flex-col items-center justify-center">
+                <img id="modal-image" src="" alt="Enlarged Gallery Image"
+                    class="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl filter drop-shadow-2xl">
+                <!-- Optional Caption -->
+                <p id="modal-caption" class="text-white/90 text-center mt-6 text-lg tracking-wide hidden"></p>
+            </div>
+        </div>
     </div>
     <script type="module" src="/src/gallery.ts"></script>
     <script type="module">
