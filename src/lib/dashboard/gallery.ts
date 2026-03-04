@@ -201,11 +201,22 @@ export function initGalleryHandlers() {
                 return;
             }
 
+            let totalSize = 0;
             for (let i = 0; i < files.length; i++) {
+                totalSize += files[i].size;
                 if (files[i].size > 50 * 1024 * 1024) {
                     showToast(`The image ${files[i].name} is too large (max 50MB). Please select smaller files.`, 'error');
                     return;
                 }
+            }
+
+            // Cloudflare has a hard limit of 100MB for the free/pro tiers. 
+            // We set a safe limit of 90MB to account for multipart form overhead.
+            const MAX_BATCH_SIZE = 90 * 1024 * 1024;
+            if (totalSize > MAX_BATCH_SIZE) {
+                const totalMB = (totalSize / (1024 * 1024)).toFixed(1);
+                showToast(`Total upload size is ${totalMB}MB. Cloudflare limits uploads to 100MB at once. Please upload fewer photos at a time.`, 'error');
+                return;
             }
 
             const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
