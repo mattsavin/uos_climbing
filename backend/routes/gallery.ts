@@ -34,7 +34,7 @@ const upload = multer({
         const mimetype = filetypes.test(file.mimetype);
         const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
 
-        if (mimetype || extname) {
+        if (mimetype && extname) {
             return cb(null, true);
         }
         cb(new Error('Only images are allowed!'));
@@ -56,6 +56,16 @@ router.get('/', (req, res) => {
 // POST /api/gallery - Upload a new gallery image (Committee Only)
 router.post('/', authenticateToken, requireCommittee, (req: any, res) => {
 
+    // Enforce a maximum total batch size for the request to avoid excessive disk/CPU usage.
+    // This is in addition to the per-file 50MB limit enforced by Multer above.
+    const contentLengthHeader = req.headers['content-length'];
+    const MAX_BATCH_BYTES = 50 * 1024 * 1024 * 5; // 250MB total for all files in this request
+    if (typeof contentLengthHeader === 'string') {
+        const totalBytes = parseInt(contentLengthHeader, 10);
+        if (!Number.isNaN(totalBytes) && totalBytes > MAX_BATCH_BYTES) {
+            return res.status(413).json({ error: 'Total upload size exceeds the 250MB limit for gallery uploads.' });
+        }
+    }
     upload.array('photos', 50)(req, res, async (uploadErr: any) => {
         if (uploadErr instanceof multer.MulterError && uploadErr.code === 'LIMIT_FILE_SIZE') {
             return res.status(400).json({ error: 'One or more photos are too large. Max size is 50MB per file.' });
@@ -120,6 +130,42 @@ router.post('/', authenticateToken, requireCommittee, (req: any, res) => {
             res.json({ success: true, uploaded: uploadedImages });
         } catch (error: any) {
             console.error('Sharp processing error:', error);
+
+        if (err) {
+            console.error('Database error fetching gallery item for deletion:', err);
+            return res.status(500).json({ error: 'Database error' });
+        }
+        if (!row) {
+            return res.status(404).json({ error: 'Image not found' });
+        }
+            if (files && Array.isArray(files)) {
+                for (const file of files) {
+                    if (file && file.path) {
+                        try {
+                            if (fs.existsSync(file.path)) {
+                                fs.unlinkSync(file.path);
+                            }
+                        } catch (cleanupErr) {
+                            console.error('Failed to clean up temp upload file:', cleanupErr);
+                        }
+                    }
+                }
+            }
+
+            // Cleanup any temporary files left in req.files to avoid filling os.tmpdir()
+            if (files && Array.isArray(files)) {
+                for (const file of files) {
+                    if (file && file.path) {
+                        try {
+                            if (fs.existsSync(file.path)) {
+                                fs.unlinkSync(file.path);
+                            }
+                        } catch (cleanupErr) {
+                            console.error('Failed to clean up temp upload file:', cleanupErr);
+                        }
+                    }
+                }
+            }
             res.status(500).json({ error: 'Failed to process images' });
         }
     });
@@ -228,7 +274,10 @@ router.put('/:id', authenticateToken, requireCommittee, (req: any, res) => {
     if (heroMobileX !== undefined) {
         const value = toCropValue(heroMobileX);
         if (value === null) return res.status(400).json({ error: 'Invalid heroMobileX (must be 0-100)' });
-        updates.push('heroMobileX = ?');
+            if (err) return res.status(500).json({ error: 'Database error' });
+            if (this.changes === 0) {
+                return res.status(404).json({ error: 'Gallery item not found' });
+            }
         params.push(value);
     }
     if (heroMobileY !== undefined) {
