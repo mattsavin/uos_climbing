@@ -44,6 +44,21 @@ export function initCropEditor(options: InitCropEditorOptions) {
     let draftBoxCenterX = 50;
     let draftBoxCenterY = 50;
 
+    const persistDraftCropState = () => {
+        if (!activeCropContext) return;
+        const image = getCurrentImage();
+        if (!image || image.id === undefined || image.id === null) return;
+
+        cropEditorStateByImageContext.set(getCropStateKey(image.id, activeCropContext), {
+            cropX: draftCropX,
+            cropY: draftCropY,
+            zoom: draftZoom,
+            boxScale: draftBoxScale,
+            boxCenterX: draftBoxCenterX,
+            boxCenterY: draftBoxCenterY
+        });
+    };
+
     const applyCropEditorVisuals = () => {
         if (!activeCropContext || !cropStage || !cropImage || !cropBox || !cropZoomInput) return;
 
@@ -80,9 +95,12 @@ export function initCropEditor(options: InitCropEditorOptions) {
         cropBox.style.top = `${boxTop}px`;
         cropBox.style.width = `${boxWidth}px`;
         cropBox.style.height = `${boxHeight}px`;
+
+        persistDraftCropState();
     };
 
     const closeCropEditor = () => {
+        persistDraftCropState();
         if (cropModal) cropModal.classList.add('hidden');
         activeCropContext = null;
     };

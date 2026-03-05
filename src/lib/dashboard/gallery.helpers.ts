@@ -1,3 +1,5 @@
+import { GALLERY_LANDSCAPE_ASPECT } from '../gallery.config';
+
 export type CropContextKey = 'heroDesktop' | 'heroMobile' | 'galleryLandscape';
 
 export type CropEditorState = {
@@ -32,7 +34,7 @@ export const CROP_CONTEXT_CONFIG: Record<CropContextKey, {
     },
     galleryLandscape: {
         title: 'Gallery Landscape',
-        aspect: 16 / 9,
+        aspect: GALLERY_LANDSCAPE_ASPECT,
         xKey: 'galleryLandscapeX',
         yKey: 'galleryLandscapeY',
         zoomKey: 'galleryLandscapeZoom'
