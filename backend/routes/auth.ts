@@ -7,6 +7,7 @@ import { db } from '../db';
 import { SECRET_KEY } from '../config';
 import { authenticateToken } from '../middleware/auth';
 import { sendEmail } from '../services/email';
+import { getAcademicYear, isSheffieldEmail } from './auth.helpers';
 
 const IS_TEST = process.env.NODE_ENV === 'test';
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
@@ -99,7 +100,7 @@ router.post('/register', authLimiter, async (req, res) => {
 
             let role = 'member';
             let membershipStatus = 'pending';
-            if (!IS_TEST && !normalizedEmail.endsWith('@sheffield.ac.uk')) {
+            if (!IS_TEST && !isSheffieldEmail(normalizedEmail)) {
                 return res.status(400).json({ error: 'Please register with your @sheffield.ac.uk email address.' });
             }
             const isRootAdminTestBypass = IS_TEST && normalizedEmail === ROOT_ADMIN_EMAIL;
@@ -108,9 +109,7 @@ router.post('/register', authLimiter, async (req, res) => {
                 membershipStatus = 'active';
             }
 
-            const currentYear = new Date().getFullYear();
-            const currentMonth = new Date().getMonth();
-            let membershipYear = currentMonth < 8 ? `${currentYear - 1}/${currentYear}` : `${currentYear}/${currentYear + 1}`;
+            let membershipYear = getAcademicYear();
             if (preApproved?.membershipYear) {
                 membershipStatus = 'active';
                 membershipYear = preApproved.membershipYear;

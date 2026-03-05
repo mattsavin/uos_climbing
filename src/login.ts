@@ -1,5 +1,7 @@
 import './style.css';
 import { adminApi, authState } from './auth';
+import { createDomainEmailPopupController } from './lib/auth/domainEmailPopup';
+import { renderRegistrationMembershipTypes } from './lib/auth/membershipOptions';
 
 export async function initLoginApp() {
     // If the user happens to hit this page while already logged in, redirect them
@@ -56,49 +58,7 @@ export async function initLoginApp() {
     // In-memory state for active verification
     let pendingUserId: string | null = null;
     let defaultMembershipType = 'basic';
-    let popupResolve: ((confirmed: boolean) => void) | null = null;
-    let popupExpectedRegistrationNumber: string | null = null;
-
-    function toMembershipOptionMarkup(typeId: string, label: string, checked: boolean): string {
-        return `
-            <label class="flex items-start gap-3 cursor-pointer group">
-                <input type="checkbox" name="membershipType" value="${typeId}" ${checked ? 'checked' : ''}
-                    class="mt-0.5 accent-brand-gold w-4 h-4 shrink-0" />
-                <div>
-                    <span class="text-white text-xs font-bold">${label}</span>
-                    <p class="text-slate-500 text-[10px]">Select this membership type for your account</p>
-                </div>
-            </label>
-        `;
-    }
-
-    async function renderRegistrationMembershipTypes() {
-        const optionsContainer = document.getElementById('registration-membership-types');
-        if (!optionsContainer) return;
-
-        try {
-            const membershipTypes = await adminApi.getMembershipTypes();
-            if (!membershipTypes.length) {
-                optionsContainer.innerHTML = '<p class="text-xs text-red-400">No membership types configured.</p>';
-                return;
-            }
-            defaultMembershipType = membershipTypes.some(t => t.id === 'basic')
-                ? 'basic'
-                : membershipTypes[0].id;
-            optionsContainer.innerHTML = membershipTypes
-                .map(t => toMembershipOptionMarkup(t.id, t.label, t.id === defaultMembershipType))
-                .join('');
-        } catch {
-            optionsContainer.innerHTML = [
-                toMembershipOptionMarkup('basic', 'Basic Membership', true),
-                toMembershipOptionMarkup('bouldering', 'Bouldering Add-on', false),
-                toMembershipOptionMarkup('comp_team', 'Competition Team', false)
-            ].join('');
-            defaultMembershipType = 'basic';
-        }
-    }
-
-    await renderRegistrationMembershipTypes();
+    defaultMembershipType = await renderRegistrationMembershipTypes(() => adminApi.getMembershipTypes());
 
     // Fade in layout
     setTimeout(() => {
@@ -138,85 +98,17 @@ export async function initLoginApp() {
         resetPasswordInput?.focus();
     }
 
-    function closeDomainEmailPopup(confirmed = false) {
-        domainEmailPopup?.classList.add('hidden');
-        if (popupResolve) {
-            const resolve = popupResolve;
-            popupResolve = null;
-            resolve(confirmed);
-        }
-    }
-
-    function showDomainEmailPopup(message: string, title = 'University Email Required') {
-        if (popupResolve) {
-            popupResolve(false);
-            popupResolve = null;
-        }
-        popupExpectedRegistrationNumber = null;
-        if (domainEmailPopupTitle) domainEmailPopupTitle.textContent = title;
-        if (domainEmailPopupMessage) domainEmailPopupMessage.textContent = message;
-        if (domainEmailPopupConfirmWrap) domainEmailPopupConfirmWrap.classList.add('hidden');
-        if (domainEmailPopupConfirmInput) domainEmailPopupConfirmInput.value = '';
-        if (domainEmailPopupConfirmError) {
-            domainEmailPopupConfirmError.classList.add('hidden');
-            domainEmailPopupConfirmError.textContent = '';
-        }
-        if (domainEmailPopupConfirm) domainEmailPopupConfirm.classList.add('hidden');
-        if (domainEmailPopupClose) domainEmailPopupClose.textContent = 'Got it';
-        domainEmailPopup?.classList.remove('hidden');
-    }
-
-    [domainEmailPopupBackdrop, domainEmailPopupClose].forEach(el => {
-        el?.addEventListener('click', () => closeDomainEmailPopup(false));
+    const { showDomainEmailPopup, showRegistrationNumberOverridePopup } = createDomainEmailPopupController({
+        popup: domainEmailPopup,
+        backdrop: domainEmailPopupBackdrop as HTMLElement | null,
+        title: domainEmailPopupTitle,
+        closeButton: domainEmailPopupClose as HTMLElement | null,
+        confirmButton: domainEmailPopupConfirm,
+        message: domainEmailPopupMessage,
+        confirmWrap: domainEmailPopupConfirmWrap,
+        confirmInput: domainEmailPopupConfirmInput,
+        confirmError: domainEmailPopupConfirmError
     });
-
-    domainEmailPopupConfirm?.addEventListener('click', () => closeDomainEmailPopup(true));
-
-    domainEmailPopupConfirmInput?.addEventListener('input', () => {
-        if (!popupExpectedRegistrationNumber || !domainEmailPopupConfirm || !domainEmailPopupConfirmError) return;
-        const typed = domainEmailPopupConfirmInput.value.trim();
-        const matches = typed === popupExpectedRegistrationNumber;
-        domainEmailPopupConfirm.disabled = !matches;
-        if (!typed || matches) {
-            domainEmailPopupConfirmError.classList.add('hidden');
-            domainEmailPopupConfirmError.textContent = '';
-            return;
-        }
-        domainEmailPopupConfirmError.textContent = 'Registration numbers do not match yet.';
-        domainEmailPopupConfirmError.classList.remove('hidden');
-    });
-
-    function showRegistrationNumberOverridePopup(registrationNumber: string): Promise<boolean> {
-        if (popupResolve) {
-            popupResolve(false);
-            popupResolve = null;
-        }
-        popupExpectedRegistrationNumber = registrationNumber;
-        if (domainEmailPopupTitle) domainEmailPopupTitle.textContent = 'Check Registration Number';
-        if (domainEmailPopupMessage) {
-            domainEmailPopupMessage.textContent =
-                'Registration numbers normally start with 2 (for example: 2xxxxxxxx). If you continue, your membership may not link properly and you will not be able to change this value later. Please double-check before continuing.';
-        }
-        if (domainEmailPopupClose) domainEmailPopupClose.textContent = 'Go back';
-        if (domainEmailPopupConfirm) {
-            domainEmailPopupConfirm.textContent = 'Continue anyway';
-            domainEmailPopupConfirm.disabled = true;
-            domainEmailPopupConfirm.classList.remove('hidden');
-        }
-        if (domainEmailPopupConfirmWrap) domainEmailPopupConfirmWrap.classList.remove('hidden');
-        if (domainEmailPopupConfirmInput) {
-            domainEmailPopupConfirmInput.value = '';
-            domainEmailPopupConfirmInput.focus();
-        }
-        if (domainEmailPopupConfirmError) {
-            domainEmailPopupConfirmError.classList.add('hidden');
-            domainEmailPopupConfirmError.textContent = '';
-        }
-        domainEmailPopup?.classList.remove('hidden');
-        return new Promise(resolve => {
-            popupResolve = resolve;
-        });
-    }
 
     // Check if page loaded with a reset token in the URL
     const urlParams = new URLSearchParams(window.location.search);
