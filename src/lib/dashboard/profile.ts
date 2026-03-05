@@ -98,7 +98,7 @@ export function initProfileHandlers() {
                 deleteSelfAccountBtn.textContent = 'Deleting...';
                 (deleteSelfAccountBtn as HTMLButtonElement).disabled = true;
                 authState.deleteAccount(pwd).then(() => {
-                    window.location.href = '/login.html';
+                    window.location.href = '/login';
                 }).catch(err => {
                     showToast(err.message || "Failed to delete account", 'error');
                     deleteSelfAccountBtn.textContent = 'Delete Account';

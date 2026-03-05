@@ -5,7 +5,7 @@ export async function initLoginApp() {
     // If the user happens to hit this page while already logged in, redirect them
     await authState.init();
     if (authState.user) {
-        window.location.href = '/dashboard.html';
+        window.location.href = '/dashboard';
         return;
     }
 
@@ -273,7 +273,7 @@ export async function initLoginApp() {
 
         try {
             await authState.login(email, password);
-            window.location.href = '/dashboard.html';
+            window.location.href = '/dashboard';
         } catch (error: any) {
             if (error.pendingVerification && error.userId) {
                 showVerifyPanel(error.userId);
@@ -355,7 +355,7 @@ export async function initLoginApp() {
             }
 
             // No verification needed (test env / root admin) — already logged in
-            window.location.href = '/dashboard.html';
+            window.location.href = '/dashboard';
         } catch (error: any) {
             const msg = error.message || 'Registration failed.';
             registerError.textContent = msg;
@@ -385,7 +385,7 @@ export async function initLoginApp() {
 
         try {
             await authState.verifyEmail(pendingUserId, code);
-            window.location.href = '/dashboard.html';
+            window.location.href = '/dashboard';
         } catch (error: any) {
             verifyError.textContent = error.message || 'Verification failed. Please try again.';
             verifyError.classList.remove('hidden');
@@ -484,7 +484,7 @@ export async function initLoginApp() {
             resetSuccess.classList.remove('hidden');
             resetBtn.classList.add('hidden');
             setTimeout(() => {
-                window.location.href = '/login.html';
+                window.location.href = '/login';
             }, 2000);
         } catch (error: any) {
             resetError.textContent = error.message || 'Failed to reset password. The link may have expired.';

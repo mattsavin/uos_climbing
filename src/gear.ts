@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const user = authState.getUser();
 
     if (!user) {
-        window.location.href = '/login.html';
+        window.location.href = '/login';
         return;
     }
 

@@ -1,5 +1,17 @@
 import './style.css';
 
+function normalizeCrop(value: any, fallback = 50): number {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return fallback;
+    return Math.min(100, Math.max(0, parsed));
+}
+
+function normalizeZoom(value: any, fallback = 1): number {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return fallback;
+    return Math.min(3, Math.max(1, parsed));
+}
+
 async function fetchGalleryImages() {
     try {
         const res = await fetch('/api/gallery');
@@ -30,9 +42,9 @@ async function initGallery() {
 
     grid.innerHTML = images.map((img: any) => `
         <div class="glass-card aspect-video flex items-center justify-center border border-white/10 group overflow-hidden relative cursor-pointer gallery-item" data-src="${img.filepath}" data-caption="${img.caption || ''}">
-            <img src="${img.filepath}" alt="${img.caption || 'Gallery Image'}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
+            <img src="${img.filepath}" alt="${img.caption || 'Gallery Image'}" class="w-full h-full object-cover transition-transform duration-700" style="object-position: ${normalizeCrop(img.galleryLandscapeX, 50)}% ${normalizeCrop(img.galleryLandscapeY, 50)}%; transform-origin: ${normalizeCrop(img.galleryLandscapeX, 50)}% ${normalizeCrop(img.galleryLandscapeY, 50)}%; transform: scale(${normalizeZoom(img.galleryLandscapeZoom, 1)});">
             ${img.caption ? `
-            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+            <div class="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/80 to-transparent p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
                 <p class="text-white text-sm font-bold text-center">${img.caption}</p>
             </div>
             ` : ''}

@@ -41,9 +41,13 @@ const upload = multer({
     }
 });
 
-// GET /api/gallery - Fetch all gallery images
+// GET /api/gallery - Fetch all gallery images (or only featured with ?featured=1)
 router.get('/', (req, res) => {
-    db.all('SELECT * FROM gallery ORDER BY uploadedAt DESC', [], (err, rows) => {
+    const featuredOnly = req.query.featured === '1';
+    const sql = featuredOnly
+        ? 'SELECT * FROM gallery WHERE featured = 1 ORDER BY CASE WHEN featuredOrder IS NULL THEN 1 ELSE 0 END, featuredOrder ASC, uploadedAt DESC'
+        : 'SELECT * FROM gallery ORDER BY uploadedAt DESC';
+    db.all(sql, [], (err, rows) => {
         if (err) return res.status(500).json({ error: 'Database error' });
         res.json(rows || []);
     });
@@ -145,16 +149,141 @@ router.delete('/:id', authenticateToken, requireCommittee, (req: any, res) => {
     });
 });
 
-// PUT /api/gallery/:id - Update caption (Committee Only)
+// PUT /api/gallery/:id - Update caption and/or featured status (Committee Only)
 router.put('/:id', authenticateToken, requireCommittee, (req: any, res) => {
 
     const { id } = req.params;
-    const { caption } = req.body;
+    const {
+        caption,
+        featured,
+        featuredOrder,
+        heroDesktopX,
+        heroDesktopY,
+        heroDesktopZoom,
+        heroMobileX,
+        heroMobileY,
+        heroMobileZoom,
+        galleryLandscapeX,
+        galleryLandscapeY,
+        galleryLandscapeZoom
+    } = req.body;
 
-    db.run('UPDATE gallery SET caption = ? WHERE id = ?', [caption || '', id], function (err) {
-        if (err) return res.status(500).json({ error: 'Database error' });
-        res.json({ success: true });
-    });
+    const updates: string[] = [];
+    const params: any[] = [];
+    const toCropValue = (value: any) => {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) return null;
+        return parsed;
+    };
+    const toZoomValue = (value: any) => {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed) || parsed < 1 || parsed > 3) return null;
+        return parsed;
+    };
+
+    if (caption !== undefined) {
+        updates.push('caption = ?');
+        params.push(caption || '');
+    }
+    if (featured !== undefined) {
+        updates.push('featured = ?');
+        params.push(featured ? 1 : 0);
+
+        if (!featured) {
+            updates.push('featuredOrder = NULL');
+        }
+    }
+
+    if (featuredOrder !== undefined) {
+        if (featuredOrder === null || featuredOrder === '') {
+            updates.push('featuredOrder = NULL');
+        } else {
+            const parsed = Number(featuredOrder);
+            if (!Number.isFinite(parsed) || parsed < 1) {
+                return res.status(400).json({ error: 'Invalid featuredOrder (must be >= 1 or null)' });
+            }
+            updates.push('featuredOrder = ?');
+            params.push(Math.floor(parsed));
+        }
+    }
+
+    if (heroDesktopX !== undefined) {
+        const value = toCropValue(heroDesktopX);
+        if (value === null) return res.status(400).json({ error: 'Invalid heroDesktopX (must be 0-100)' });
+        updates.push('heroDesktopX = ?');
+        params.push(value);
+    }
+    if (heroDesktopY !== undefined) {
+        const value = toCropValue(heroDesktopY);
+        if (value === null) return res.status(400).json({ error: 'Invalid heroDesktopY (must be 0-100)' });
+        updates.push('heroDesktopY = ?');
+        params.push(value);
+    }
+    if (heroDesktopZoom !== undefined) {
+        const value = toZoomValue(heroDesktopZoom);
+        if (value === null) return res.status(400).json({ error: 'Invalid heroDesktopZoom (must be 1-3)' });
+        updates.push('heroDesktopZoom = ?');
+        params.push(value);
+    }
+    if (heroMobileX !== undefined) {
+        const value = toCropValue(heroMobileX);
+        if (value === null) return res.status(400).json({ error: 'Invalid heroMobileX (must be 0-100)' });
+        updates.push('heroMobileX = ?');
+        params.push(value);
+    }
+    if (heroMobileY !== undefined) {
+        const value = toCropValue(heroMobileY);
+        if (value === null) return res.status(400).json({ error: 'Invalid heroMobileY (must be 0-100)' });
+        updates.push('heroMobileY = ?');
+        params.push(value);
+    }
+    if (heroMobileZoom !== undefined) {
+        const value = toZoomValue(heroMobileZoom);
+        if (value === null) return res.status(400).json({ error: 'Invalid heroMobileZoom (must be 1-3)' });
+        updates.push('heroMobileZoom = ?');
+        params.push(value);
+    }
+    if (galleryLandscapeX !== undefined) {
+        const value = toCropValue(galleryLandscapeX);
+        if (value === null) return res.status(400).json({ error: 'Invalid galleryLandscapeX (must be 0-100)' });
+        updates.push('galleryLandscapeX = ?');
+        params.push(value);
+    }
+    if (galleryLandscapeY !== undefined) {
+        const value = toCropValue(galleryLandscapeY);
+        if (value === null) return res.status(400).json({ error: 'Invalid galleryLandscapeY (must be 0-100)' });
+        updates.push('galleryLandscapeY = ?');
+        params.push(value);
+    }
+    if (galleryLandscapeZoom !== undefined) {
+        const value = toZoomValue(galleryLandscapeZoom);
+        if (value === null) return res.status(400).json({ error: 'Invalid galleryLandscapeZoom (must be 1-3)' });
+        updates.push('galleryLandscapeZoom = ?');
+        params.push(value);
+    }
+
+    if (updates.length === 0) return res.status(400).json({ error: 'Nothing to update' });
+
+    const executeUpdate = () => {
+        params.push(id);
+        db.run(`UPDATE gallery SET ${updates.join(', ')} WHERE id = ?`, params, function (err) {
+            if (err) return res.status(500).json({ error: 'Database error' });
+            res.json({ success: true });
+        });
+    };
+
+    const shouldAutoAssignFeaturedOrder = featured === true && featuredOrder === undefined;
+    if (shouldAutoAssignFeaturedOrder) {
+        db.get('SELECT COALESCE(MAX(featuredOrder), 0) + 1 AS nextOrder FROM gallery WHERE featured = 1 AND id != ?', [id], (orderErr, row: any) => {
+            if (orderErr) return res.status(500).json({ error: 'Database error' });
+            updates.push('featuredOrder = ?');
+            params.push(row?.nextOrder || 1);
+            executeUpdate();
+        });
+        return;
+    }
+
+    executeUpdate();
 });
 
 export default router;

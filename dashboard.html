@@ -526,146 +526,93 @@
                             <div id="calendar-legend" class="hidden"></div>
                         </div>
 
-                        <!-- Committee Elections Portal Link -->
-                        <div
-                            class="glass-card !p-6 flex flex-col justify-center items-center text-center border border-amber-500/20 mt-8">
+                        <!-- Sub-portals Grid -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-8">
+                            <!-- Committee Elections Portal Link -->
                             <div
-                                class="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mb-4 text-amber-500 shadow-lg shadow-amber-500/20">
-                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
-                                    </path>
-                                </svg>
-                            </div>
-                            <h3 class="text-lg font-bold text-white mb-2 uppercase tracking-wider">Committee Elections
-                            </h3>
-                            <p class="text-xs text-slate-400 mb-6">Vote for the upcoming committee or submit your
-                                manifesto.</p>
-                            <a href="/elections.html"
-                                class="w-full btn-outline text-center border-amber-500 text-amber-500 hover:bg-amber-500 hover:text-white transition-colors py-2 text-sm font-bold shadow-lg shadow-amber-500/10 block">
-                                Open Elections Portal
-                            </a>
-                        </div>
-
-                        <!-- Gear Hire Portal Link -->
-                        <div
-                            class="glass-card !p-6 flex flex-col justify-center items-center text-center border border-emerald-500/20 mt-8">
-                            <div
-                                class="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mb-4 text-emerald-500 shadow-lg shadow-emerald-500/20">
-                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
-                                    </path>
-                                </svg>
-                            </div>
-                            <h3 class="text-lg font-bold text-white mb-2 uppercase tracking-wider">Gear Hire
-                            </h3>
-                            <p class="text-xs text-slate-400 mb-6">Browse and request available climbing gear for your
-                                own trips.</p>
-                            <a href="/gear.html"
-                                class="w-full btn-outline text-center border-emerald-500 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-colors py-2 text-sm font-bold shadow-lg shadow-emerald-500/10 block">
-                                Open Gear Portal
-                            </a>
-                        </div>
-
-                        <!-- Admin Portal Card (Hidden by default, shown for committee) -->
-                        <div id="admin-portal-card"
-                            class="hidden glass-card !p-6 flex flex-col justify-center items-center text-center border border-amber-400/20 mt-8">
-                            <div
-                                class="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mb-4 text-amber-400 shadow-lg shadow-amber-400/20">
-                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4">
-                                    </path>
-                                </svg>
-                            </div>
-                            <h3 class="text-lg font-bold text-white mb-2 uppercase tracking-wider">Committee Portal</h3>
-                            <p class="text-xs text-slate-400 mb-6">Manage member approvals, committee access, and
-                                configurable session and membership types.</p>
-                            <a href="/admin.html"
-                                class="w-full btn-outline text-center border-amber-400 text-amber-400 hover:bg-amber-400 hover:text-white transition-colors py-2 text-sm font-bold shadow-lg shadow-amber-400/10 block">
-                                Open Committee Portal
-                            </a>
-                        </div>
-
-                        <!-- Gallery Management Portal Card (Hidden by default, shown for committee) -->
-                        <div id="gallery-management-card"
-                            class="hidden glass-card !p-6 flex flex-col justify-center items-center text-center border border-pink-500/20 mt-8">
-                            <div
-                                class="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mb-4 text-pink-400 shadow-lg shadow-pink-500/20">
-                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z">
-                                    </path>
-                                </svg>
-                            </div>
-                            <h3
-                                class="text-lg font-bold text-white mb-2 uppercase tracking-wider flex items-center gap-2">
-                                Gallery Management</h3>
-                            <p class="text-xs text-slate-400 mb-6">Upload, edit, and manage images visible on the public
-                                gallery.</p>
-
-                            <form id="gallery-upload-form" class="w-full space-y-3 hidden flex-col">
-                                <input type="file" id="gallery-photo-input"
-                                    class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-pink-500/10 file:text-pink-400 hover:file:bg-pink-500/20"
-                                    accept="image/*" multiple required>
-                                <div id="gallery-staging-area"
-                                    class="w-full max-h-60 overflow-y-auto space-y-2 hidden border border-slate-700/50 rounded-lg p-2 bg-slate-900/50">
+                                class="glass-card !p-6 flex flex-col justify-center items-center text-center border border-amber-500/20 h-full">
+                                <div
+                                    class="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mb-4 text-amber-500 shadow-lg shadow-amber-500/20">
+                                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
+                                        </path>
+                                    </svg>
                                 </div>
-                                <div class="flex gap-2 w-full mt-2">
-                                    <button type="button" id="cancel-gallery-upload-btn"
-                                        class="flex-1 text-xs text-slate-400 hover:text-white transition-colors">Cancel</button>
-                                    <button type="submit" id="submit-gallery-upload-btn"
-                                        class="flex-1 btn-primary !bg-pink-500 hover:!bg-pink-600 !py-1.5 !px-2 !text-xs">Upload</button>
-                                </div>
-                                <div id="gallery-upload-status" class="text-xs text-pink-400 hidden mt-2">Uploading...
-                                </div>
-                            </form>
+                                <h3 class="text-lg font-bold text-white mb-2 uppercase tracking-wider">Committee
+                                    Elections</h3>
+                                <p class="text-xs text-slate-400 mb-6 flex-grow">Vote for the upcoming committee or
+                                    submit your manifesto.</p>
+                                <a href="/dashboard/elections"
+                                    class="w-full btn-outline text-center border-amber-500 text-amber-500 hover:bg-amber-500 hover:text-white transition-colors py-2 text-sm font-bold shadow-lg shadow-amber-500/10 mt-auto">
+                                    Open Elections Portal
+                                </a>
+                            </div>
 
-                            <button id="open-gallery-upload-btn"
-                                class="w-full btn-outline text-center border-pink-400 text-pink-400 hover:bg-pink-400 hover:text-white transition-colors py-2 text-sm font-bold shadow-lg shadow-pink-400/10 block mb-4">
-                                Upload Photo
-                            </button>
-
+                            <!-- Gear Hire Portal Link -->
                             <div
-                                class="w-full border-t border-white/10 pt-4 mt-2 flex flex-col items-start w-full text-left">
-                                <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Existing
-                                    Photos</h4>
-                                <div id="gallery-management-list"
-                                    class="space-y-2 max-h-60 overflow-y-auto pr-2 w-full">
-                                    <p class="text-xs text-slate-500 text-center">Loading gallery...</p>
+                                class="glass-card !p-6 flex flex-col justify-center items-center text-center border border-emerald-500/20 h-full">
+                                <div
+                                    class="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mb-4 text-emerald-500 shadow-lg shadow-emerald-500/20">
+                                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
+                                        </path>
+                                    </svg>
                                 </div>
+                                <h3 class="text-lg font-bold text-white mb-2 uppercase tracking-wider">Gear Hire</h3>
+                                <p class="text-xs text-slate-400 mb-6 flex-grow">Browse and request available climbing
+                                    gear for your own trips.</p>
+                                <a href="/dashboard/gear"
+                                    class="w-full btn-outline text-center border-emerald-500 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-colors py-2 text-sm font-bold shadow-lg shadow-emerald-500/10 mt-auto">
+                                    Open Gear Portal
+                                </a>
+                            </div>
+
+                            <!-- Admin Portal Card (Hidden by default, shown for committee) -->
+                            <div id="admin-portal-card"
+                                class="hidden glass-card !p-6 flex flex-col justify-center items-center text-center border border-amber-400/20 h-full">
+                                <div
+                                    class="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mb-4 text-amber-400 shadow-lg shadow-amber-400/20">
+                                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4">
+                                        </path>
+                                    </svg>
+                                </div>
+                                <h3 class="text-lg font-bold text-white mb-2 uppercase tracking-wider">Committee Portal
+                                </h3>
+                                <p class="text-xs text-slate-400 mb-6 flex-grow lg:max-w-md mx-auto">Manage member
+                                    approvals, committee access, and configurable session and membership types.</p>
+                                <a href="/dashboard/admin"
+                                    class="w-full sm:w-auto sm:px-12 btn-outline text-center border-amber-400 text-amber-400 hover:bg-amber-400 hover:text-white transition-colors py-2 text-sm font-bold shadow-lg shadow-amber-400/10 mt-auto">
+                                    Open Committee Portal
+                                </a>
+                            </div>
+
+                            <!-- Gallery Portal Link (Hidden by default, shown for committee) -->
+                            <div id="gallery-portal-card"
+                                class="hidden glass-card !p-6 flex flex-col justify-center items-center text-center border border-pink-500/20 h-full">
+                                <div
+                                    class="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mb-4 text-pink-400 shadow-lg shadow-pink-500/20">
+                                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                        </path>
+                                    </svg>
+                                </div>
+                                <h3 class="text-lg font-bold text-white mb-2 uppercase tracking-wider">Gallery Manager</h3>
+                                <p class="text-xs text-slate-400 mb-6 flex-grow lg:max-w-md mx-auto">Upload and manage
+                                    images for the public gallery.</p>
+                                <a href="/dashboard/gallery-manager"
+                                    class="w-full sm:w-auto sm:px-8 btn-outline text-center border-pink-500 text-pink-500 hover:bg-pink-500 hover:text-white transition-colors py-2 text-sm font-bold shadow-lg shadow-pink-500/10 mt-auto">
+                                    Open Gallery Manager
+                                </a>
                             </div>
                         </div>
-
-                    </div>
-                </div> <!-- End of lg:grid-cols-3 -->
-            </div>
+                    </div> <!-- End of lg:grid-cols-3 -->
+                </div>
         </main>
-    </div>
-
-    <!-- Edit Caption Modal -->
-    <div id="edit-caption-modal" class="hidden fixed inset-0 z-[160] flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="edit-caption-backdrop"></div>
-        <div
-            class="relative glass-card !p-0 w-full max-w-sm shadow-2xl border border-white/10 animate-[fade-in-up_0.2s_ease-out] flex flex-col overflow-hidden">
-            <div class="p-6 bg-slate-800/50 pb-4">
-                <h3 class="text-xl font-bold text-white mb-2 text-center">Edit Caption</h3>
-                <p class="text-sm text-slate-400 mb-4 text-center">Update the public caption for this image.</p>
-                <form id="edit-caption-form" class="w-full flex flex-col gap-3">
-                    <input type="hidden" id="edit-caption-id" value="">
-                    <input type="text" id="edit-caption-input"
-                        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-pink-500"
-                        placeholder="Enter caption...">
-                </form>
-            </div>
-            <div class="flex border-t border-white/10 mt-auto">
-                <button type="button" id="edit-caption-cancel-btn"
-                    class="flex-1 py-3 text-sm font-bold text-slate-400 hover:text-white hover:bg-white/5 transition-colors border-r border-white/10">Cancel</button>
-                <button type="submit" form="edit-caption-form" id="edit-caption-save-btn"
-                    class="flex-1 py-3 text-sm font-bold text-brand-gold hover:text-amber-400 hover:bg-brand-gold/10 transition-colors">Save</button>
-            </div>
-        </div>
     </div>
 
     <!-- Toast Notification -->

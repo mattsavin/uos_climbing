@@ -272,8 +272,30 @@ function initializeDatabase() {
             filepath TEXT NOT NULL,
             caption TEXT,
             uploadedBy TEXT,
-            uploadedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+            uploadedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+            featured INTEGER DEFAULT 0,
+            featuredOrder INTEGER,
+            heroDesktopX REAL DEFAULT 50,
+            heroDesktopY REAL DEFAULT 50,
+            heroDesktopZoom REAL DEFAULT 1,
+            heroMobileX REAL DEFAULT 50,
+            heroMobileY REAL DEFAULT 50,
+            heroMobileZoom REAL DEFAULT 1,
+            galleryLandscapeX REAL DEFAULT 50,
+            galleryLandscapeY REAL DEFAULT 50,
+            galleryLandscapeZoom REAL DEFAULT 1
         )`);
+        db.run('ALTER TABLE gallery ADD COLUMN featured INTEGER DEFAULT 0', (err) => { });
+        db.run('ALTER TABLE gallery ADD COLUMN featuredOrder INTEGER', (err) => { });
+        db.run('ALTER TABLE gallery ADD COLUMN heroDesktopX REAL DEFAULT 50', (err) => { });
+        db.run('ALTER TABLE gallery ADD COLUMN heroDesktopY REAL DEFAULT 50', (err) => { });
+        db.run('ALTER TABLE gallery ADD COLUMN heroDesktopZoom REAL DEFAULT 1', (err) => { });
+        db.run('ALTER TABLE gallery ADD COLUMN heroMobileX REAL DEFAULT 50', (err) => { });
+        db.run('ALTER TABLE gallery ADD COLUMN heroMobileY REAL DEFAULT 50', (err) => { });
+        db.run('ALTER TABLE gallery ADD COLUMN heroMobileZoom REAL DEFAULT 1', (err) => { });
+        db.run('ALTER TABLE gallery ADD COLUMN galleryLandscapeX REAL DEFAULT 50', (err) => { });
+        db.run('ALTER TABLE gallery ADD COLUMN galleryLandscapeY REAL DEFAULT 50', (err) => { });
+        db.run('ALTER TABLE gallery ADD COLUMN galleryLandscapeZoom REAL DEFAULT 1', (err) => { });
 
         // Create root admin if not exists
         db.get('SELECT id, membershipYear FROM users WHERE email = ?', [ROOT_ADMIN_EMAIL], async (err, row: any) => {

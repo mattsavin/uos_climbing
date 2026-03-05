@@ -2,7 +2,6 @@ import { adminApi, authState, getCurrentAcademicYear, type MembershipType } from
 import { renderSessions } from './sessions';
 import { getVerificationWord, showToast } from '../../utils';
 import QRCode from 'qrcode';
-import { renderGalleryList } from './gallery';
 
 async function copyTextWithFallback(text: string): Promise<boolean> {
     try {
@@ -52,7 +51,7 @@ export async function updateUI() {
         const icalLinkAll = document.getElementById('ical-link-all') as HTMLAnchorElement | null;
         const icalLinkBooked = document.getElementById('ical-link-booked') as HTMLAnchorElement | null;
         const adminPortalCard = document.getElementById('admin-portal-card'); // Element to toggle
-        const galleryCard = document.getElementById('gallery-management-card');
+        const galleryCard = document.getElementById('gallery-portal-card');
 
         let membershipTypes: MembershipType[] = [];
         try {
@@ -274,12 +273,11 @@ export async function updateUI() {
             if (adminPortalCard) adminPortalCard.classList.remove('hidden');
             if (galleryCard) {
                 galleryCard.classList.remove('hidden');
-                renderGalleryList();
             }
             if (manageTypesShortcut) {
                 manageTypesShortcut.classList.remove('hidden');
                 manageTypesShortcut.onclick = () => {
-                    window.location.href = '/admin.html';
+                    window.location.href = '/dashboard/admin';
                 };
             }
             if (addSessionToggleBtn) addSessionToggleBtn.classList.remove('hidden');
@@ -414,7 +412,7 @@ export async function updateUI() {
         initSkillsTracker(user.id || user.email);
 
     } else {
-        window.location.href = '/login.html';
+        window.location.href = '/login';
     }
 }
 
@@ -424,11 +422,11 @@ function initSkillsTracker(userId: string) {
 
     const storageKey = `uos_climb_skills_${userId}`;
     const skills = [
-        { id: 'registered', label: 'Registered at Local Wall' },
-        { id: 'belay', label: 'Learned to Belay (Ropes)' },
-        { id: 'first_blue', label: 'Sent first Blue V1-V2' },
-        { id: 'first_lead', label: 'First Outdoor Lead (Peak)' },
-        { id: 'v5', label: 'Sent a Purple (V4-V5)' },
+        { id: 'registered', label: 'Registered at a Wall' },
+        { id: 'belay', label: 'Learned to Belay' },
+        { id: 'first_blue', label: 'Sent first V2' },
+        { id: 'first_lead', label: 'First Lead Climb' },
+        { id: 'v5', label: 'Sent V5' },
         { id: 'comp', label: 'Entered First Competition' }
     ];
 
@@ -499,7 +497,7 @@ export function initGeneralHandlers() {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
             await authState.logout();
-            window.location.href = '/login.html';
+            window.location.href = '/login';
         });
     }
 

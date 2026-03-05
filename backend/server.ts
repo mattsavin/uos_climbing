@@ -128,13 +128,25 @@ if (process.env.NODE_ENV === 'production') {
 
             // Re-route Vite's HTML entrypoints
             { from: /^\/dashboard$/, to: '/dashboard.html' },
+            { from: /^\/dashboard\/$/, to: '/dashboard.html' },
+            { from: /^\/dashboard\/elections$/, to: '/elections.html' },
+            { from: /^\/dashboard\/gear$/, to: '/gear.html' },
+            { from: /^\/dashboard\/admin$/, to: '/admin.html' },
+            { from: /^\/dashboard\/gallery-manager$/, to: '/gallery-manager.html' },
             { from: /^\/about$/, to: '/about.html' },
             { from: /^\/schedule$/, to: '/schedule.html' },
             { from: /^\/competitions$/, to: '/competitions.html' },
+            { from: /^\/beginners$/, to: '/beginners.html' },
+            { from: /^\/walls$/, to: '/walls.html' },
+            { from: /^\/faq$/, to: '/faq.html' },
             { from: /^\/gear$/, to: '/gear.html' },
+            { from: /^\/admin$/, to: '/admin.html' },
             { from: /^\/login$/, to: '/login.html' },
             { from: /^\/elections$/, to: '/elections.html' },
+            { from: /^\/gallery$/, to: '/gallery.html' },
+            { from: /^\/gallery-manager$/, to: '/gallery-manager.html' },
             { from: /^\/beta-gate$/, to: '/beta-gate.html' },
+            { from: /^\/verify$/, to: '/verify.html' },
             { from: /^\/verify\/.*$/, to: '/verify.html' }
         ]
     }));
