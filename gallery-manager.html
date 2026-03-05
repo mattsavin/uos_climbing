@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/climbing%20team%20logo.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <title>Gallery Manager | USCC</title>
+</head>
+
+<body>
+    <div id="app">
+        <main class="flex-grow pt-32 pb-20 relative px-4" id="gallery-manager-content">
+            <div class="max-w-7xl mx-auto">
+                <div class="mb-8 flex justify-between items-center border-b border-white/10 pb-6">
+                    <div>
+                        <h1 class="text-3xl font-black text-white mb-2 flex items-center gap-3">
+                            <div
+                                class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-pink-400 shadow-lg shadow-pink-500/20">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                    </path>
+                                </svg>
+                            </div>
+                            Gallery Management
+                        </h1>
+                        <p class="text-slate-400 max-w-2xl">Upload, edit, and manage images visible on the public
+                            gallery.</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <a href="/dashboard"
+                            class="text-sm font-bold text-slate-400 hover:text-brand-gold transition-colors flex items-center gap-2">
+                            &larr; Back to Dashboard
+                        </a>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-8">
+                    <div id="gallery-management-card" class="glass-card !p-0 overflow-hidden border border-pink-500/20 w-full relative">
+
+                        <div class="p-6 border-b border-pink-500/20 bg-pink-500/5 flex justify-between items-center gap-4">
+                            <div>
+                                <h2 class="text-xl font-bold text-white uppercase tracking-wider">Photo Library</h2>
+                                <p class="text-sm text-slate-400 mt-1">Manage public-facing website photos and homepage features.</p>
+                            </div>
+                            <button id="open-gallery-upload-btn"
+                                class="btn-primary !bg-pink-500 hover:!bg-pink-600 border border-pink-400 text-white transition-colors py-2 px-4 text-sm font-bold shadow-lg shadow-pink-500/20 flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                                </svg>
+                                Upload Photos
+                            </button>
+                        </div>
+                        <div class="p-6 w-full flex flex-col items-start text-left">
+                            <div id="gallery-management-list" class="w-full">
+                                <p
+                                    class="text-sm text-slate-500 text-center py-12 border border-dashed border-white/10 rounded-xl">
+                                    Loading gallery...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Upload Gallery Modal -->
+    <div id="upload-gallery-modal" class="hidden fixed inset-0 z-[165] flex items-center justify-center p-4">
+        <div id="upload-gallery-backdrop" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+        <div
+            class="relative glass-card !p-0 w-full max-w-2xl shadow-2xl border border-pink-500/20 animate-[fade-in-up_0.2s_ease-out] flex flex-col overflow-hidden max-h-[90vh]">
+            <div class="p-6 bg-slate-800/50 border-b border-white/10 flex items-center justify-between">
+                <div>
+                    <h3 class="text-xl font-bold text-white">Upload New Photos</h3>
+                    <p class="text-sm text-slate-400 mt-1">Select one or more images and add optional captions.</p>
+                </div>
+                <button type="button" id="cancel-gallery-upload-btn"
+                    class="text-slate-400 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <form id="gallery-upload-form" class="p-6 flex flex-col gap-4 overflow-y-auto">
+                <input type="file" id="gallery-photo-input"
+                    class="w-full text-sm text-slate-300 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-pink-500/10 file:text-pink-400 hover:file:bg-pink-500/20 transition-colors cursor-pointer"
+                    accept="image/*" multiple required>
+
+                <div id="gallery-staging-area"
+                    class="w-full max-h-[45vh] overflow-y-auto space-y-3 hidden border border-slate-700/50 rounded-lg p-4 bg-slate-900/50">
+                </div>
+
+                <div class="flex items-center justify-between gap-3 mt-2 pt-4 border-t border-white/5">
+                    <div id="gallery-upload-status" class="text-sm font-bold text-pink-400 hidden">Uploading...</div>
+                    <button type="submit" id="submit-gallery-upload-btn"
+                        class="btn-primary !bg-pink-500 hover:!bg-pink-600 !py-2 !px-6 !text-sm">
+                        Upload to Gallery
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Gallery Viewer Modal -->
+    <div id="gallery-viewer-modal" class="hidden fixed inset-0 z-[170] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" id="gallery-viewer-backdrop"></div>
+        <div
+            class="relative w-full max-w-2xl glass-card p-0! border border-white/10 shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
+            <button id="gallery-viewer-close"
+                class="absolute top-3 right-3 z-20 p-2 rounded-lg bg-black/55 hover:bg-black/80 text-slate-300 hover:text-white transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+            <!-- Image -->
+            <div class="relative bg-black flex items-center justify-center max-h-[55vh] overflow-hidden">
+                <img id="gallery-viewer-img" src="" alt="" class="max-w-full max-h-[55vh] object-contain">
+                <button id="gallery-viewer-prev"
+                    class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/50 hover:bg-black/80 text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <button id="gallery-viewer-next"
+                    class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/50 hover:bg-black/80 text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+                <span id="gallery-viewer-counter"
+                    class="absolute bottom-2 right-3 text-[10px] text-white/60 bg-black/40 px-2 py-0.5 rounded-full font-mono"></span>
+            </div>
+            <!-- Meta -->
+            <div class="p-5 flex flex-col gap-3 overflow-y-auto">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex flex-col gap-1 min-w-0">
+                        <p id="gallery-viewer-caption" class="text-white font-bold text-sm truncate"></p>
+                        <p id="gallery-viewer-filename" class="text-slate-500 text-xs font-mono truncate"></p>
+                        <p id="gallery-viewer-date" class="text-slate-500 text-xs"></p>
+                    </div>
+                    <span id="gallery-viewer-featured-badge"
+                        class="hidden shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-brand-gold/15 text-brand-gold border border-brand-gold/30">Featured</span>
+                </div>
+                <!-- Actions -->
+                <div class="flex flex-wrap gap-2 pt-2 border-t border-white/10">
+                    <button id="gallery-viewer-toggle-featured"
+                        class="flex-1 min-w-30 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-colors"
+                        data-id="" data-featured="">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z">
+                            </path>
+                        </svg>
+                        <span id="gallery-viewer-featured-label"></span>
+                    </button>
+                    <button id="gallery-viewer-featured-up"
+                        class="hidden flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs font-bold bg-slate-700/40 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                        data-direction="up">
+                        ↑ Reel
+                    </button>
+                    <button id="gallery-viewer-featured-down"
+                        class="hidden flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs font-bold bg-slate-700/40 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                        data-direction="down">
+                        ↓ Reel
+                    </button>
+                    <button id="gallery-viewer-edit-caption"
+                        class="flex-1 min-w-30 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                        data-id="" data-caption="">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
+                            </path>
+                        </svg>
+                        Edit Caption
+                    </button>
+                    <button id="gallery-viewer-delete"
+                        class="flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors"
+                        data-id="">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                            </path>
+                        </svg>
+                        Delete
+                    </button>
+                </div>
+                <p id="gallery-viewer-featured-order" class="hidden text-[11px] text-slate-400 -mt-1"></p>
+
+                <div class="pt-3 border-t border-white/10 space-y-3">
+                    <h4 class="text-xs font-bold uppercase tracking-widest text-slate-400">Crop Presets</h4>
+                    <p class="text-[11px] text-slate-500">Open a crop editor for each context. Drag image, resize crop frame, zoom, then save.</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div class="bg-slate-900/50 border border-white/5 rounded-lg p-3 space-y-2">
+                            <p class="text-xs font-bold text-white">Homepage Desktop</p>
+                            <p id="crop-summary-hero-desktop" class="text-[10px] text-slate-400">Center • 1.00x</p>
+                            <button id="open-crop-hero-desktop" class="w-full btn-outline !py-1.5 !text-xs">Edit Desktop Crop</button>
+                        </div>
+
+                        <div class="bg-slate-900/50 border border-white/5 rounded-lg p-3 space-y-2">
+                            <p class="text-xs font-bold text-white">Homepage Mobile</p>
+                            <p id="crop-summary-hero-mobile" class="text-[10px] text-slate-400">Center • 1.00x</p>
+                            <button id="open-crop-hero-mobile" class="w-full btn-outline !py-1.5 !text-xs">Edit Mobile Crop</button>
+                        </div>
+
+                        <div class="bg-slate-900/50 border border-white/5 rounded-lg p-3 space-y-2">
+                            <p class="text-xs font-bold text-white">Gallery Landscape</p>
+                            <p id="crop-summary-gallery" class="text-[10px] text-slate-400">Center • 1.00x</p>
+                            <button id="open-crop-gallery" class="w-full btn-outline !py-1.5 !text-xs">Edit Gallery Crop</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Crop Editor Modal -->
+    <div id="crop-editor-modal" class="hidden fixed inset-0 z-[175] flex items-center justify-center p-4">
+        <div id="crop-editor-backdrop" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+        <div class="relative w-full max-w-5xl glass-card !p-0 border border-white/10 shadow-2xl overflow-hidden">
+            <div class="p-4 md:p-5 border-b border-white/10 bg-slate-800/50 flex items-center justify-between gap-3">
+                <div>
+                    <h3 id="crop-editor-title" class="text-lg md:text-xl font-bold text-white">Crop Editor</h3>
+                    <p id="crop-editor-subtitle" class="text-xs text-slate-400">Drag image, resize crop frame, zoom, then save.</p>
+                </div>
+                <button id="crop-editor-close" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-white/5">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="p-4 md:p-5 grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
+                <div id="crop-editor-stage" class="relative w-full h-[52vh] min-h-[320px] rounded-xl border border-white/10 bg-black overflow-hidden select-none">
+                    <img id="crop-editor-image" src="" alt="Crop editor image" class="absolute inset-0 w-full h-full object-contain" style="object-position: 50% 50%; transform: scale(1);">
+
+                    <div id="crop-editor-box" class="absolute border-2 border-white" style="box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);">
+                        <div class="absolute -top-2 -left-2 w-4 h-4 rounded-full bg-white/90 cursor-nwse-resize" data-crop-handle="nw"></div>
+                        <div class="absolute -top-2 -right-2 w-4 h-4 rounded-full bg-white/90 cursor-nesw-resize" data-crop-handle="ne"></div>
+                        <div class="absolute -bottom-2 -left-2 w-4 h-4 rounded-full bg-white/90 cursor-nesw-resize" data-crop-handle="sw"></div>
+                        <div class="absolute -bottom-2 -right-2 w-4 h-4 rounded-full bg-white/90 cursor-nwse-resize" data-crop-handle="se"></div>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <div class="bg-slate-900/50 border border-white/5 rounded-lg p-3 space-y-3">
+                        <p class="text-xs font-bold text-white uppercase tracking-wider">Zoom</p>
+                        <div class="flex items-center justify-between text-[11px] text-slate-400">
+                            <span>Scale</span>
+                            <span id="crop-editor-zoom-value">1.00x</span>
+                        </div>
+                        <input id="crop-editor-zoom" type="range" min="1" max="3" step="0.01" value="1" class="w-full accent-pink-500">
+                        <p class="text-[11px] text-slate-500">Scroll mouse wheel on image to zoom faster.</p>
+                    </div>
+
+                    <div class="bg-slate-900/50 border border-white/5 rounded-lg p-3 space-y-2 text-[11px] text-slate-400">
+                        <p>Drag image to pan inside crop frame.</p>
+                        <p>Drag crop corners to resize frame (aspect ratio locked).</p>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2 justify-end pt-2">
+                        <button id="crop-editor-reset" class="btn-outline !py-1.5 !px-3 !text-xs">Reset</button>
+                        <button id="crop-editor-cancel" class="btn-outline !py-1.5 !px-3 !text-xs">Cancel</button>
+                        <button id="crop-editor-save" class="btn-primary !py-1.5 !px-3 !text-xs">Save Crop</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Caption Modal -->
+    <div id="edit-caption-modal" class="hidden fixed inset-0 z-[160] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="edit-caption-backdrop"></div>
+        <div
+            class="relative glass-card !p-0 w-full max-w-sm shadow-2xl border border-white/10 animate-[fade-in-up_0.2s_ease-out] flex flex-col overflow-hidden">
+            <div class="p-6 bg-slate-800/50 pb-4">
+                <h3 class="text-xl font-bold text-white mb-2 text-center">Edit Caption</h3>
+                <p class="text-sm text-slate-400 mb-4 text-center">Update the public caption for this image.</p>
+                <form id="edit-caption-form" class="w-full flex flex-col gap-3">
+                    <input type="hidden" id="edit-caption-id" value="">
+                    <input type="text" id="edit-caption-input"
+                        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-pink-500"
+                        placeholder="Enter caption...">
+                </form>
+            </div>
+            <div class="flex border-t border-white/10 mt-auto">
+                <button type="button" id="edit-caption-cancel-btn"
+                    class="flex-1 py-3 text-sm font-bold text-slate-400 hover:text-white hover:bg-white/5 transition-colors border-r border-white/10">Cancel</button>
+                <button type="submit" form="edit-caption-form" id="edit-caption-save-btn"
+                    class="flex-1 py-3 text-sm font-bold text-brand-gold hover:text-amber-400 hover:bg-brand-gold/10 transition-colors">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast-notification"
+        class="fixed bottom-6 right-6 bg-brand-gold text-brand-darker px-5 py-3 rounded-lg shadow-2xl border border-brand-gold/50 transform translate-y-10 opacity-0 transition-all duration-300 z-[250] pointer-events-none flex items-center gap-2 font-bold text-sm">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+        <span>Notification</span>
+    </div>
+
+    <script type="module" src="/src/gallery-manager.ts"></script>
+    <script type="module">
+        import { initApp } from '/src/main.ts';
+        initApp();
+    </script>
+</body>
+
+</html>

@@ -44,4 +44,6 @@ playwright/.cache/
 cookies.txt
 tsconfig.tsbuildinfo
 coverage_output.txt
-uploads/profile-photos/*
+
+# Uploads
+uploads/*

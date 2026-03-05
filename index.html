@@ -8,20 +8,27 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-  <title>USCC | University of Sheffield Climbing Club</title>
+  <title>USCC | University of Sheffield Mountaineering and Climbing Club</title>
 </head>
 
 <body>
   <div id="app">
     <main>
       <!-- Hero Section -->
-      <section class="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
+      <section class="relative min-h-[calc(100vh-5rem)] flex items-center justify-center overflow-hidden">
         <div class="absolute inset-0 z-0">
-          <!-- Simulated background image with overlay -->
+          <!-- Hero carousel -->
+          <div id="hero-carousel" class="absolute inset-0"></div>
           <div class="absolute inset-0 bg-brand-darker/70 z-10"></div>
-          <img src="/src/assets/NUBS_Finals_015.jpg" alt="Climbing" class="w-full h-full object-cover"
-            fetchpriority="high"
-            onerror="this.src='https://images.unsplash.com/photo-1522163182402-834f871fd851?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80'" />
+          <!-- Prev / Next arrows -->
+          <button id="hero-carousel-prev" class="hidden absolute left-4 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-black/30 hover:bg-black/60 text-white transition-colors" aria-label="Previous slide">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <button id="hero-carousel-next" class="hidden absolute right-4 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-black/30 hover:bg-black/60 text-white transition-colors" aria-label="Next slide">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </button>
+          <!-- Dot indicators -->
+          <div id="hero-carousel-dots" class="hidden absolute bottom-10 left-1/2 -translate-x-1/2 z-20 items-center gap-2"></div>
           <!-- Decorative bottom gradient -->
           <div class="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-brand-darker to-transparent z-20">
           </div>
@@ -29,21 +36,21 @@
 
         <div class="relative z-30 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mt-16">
           <span
-            class="inline-block py-1 px-3 rounded-full bg-brand-gold/20 text-brand-gold border border-brand-gold/30 text-sm font-bold uppercase tracking-widest mb-6 animate-pulse">New
-            Era • New Club</span>
+            class="inline-block py-1 px-3 rounded-full bg-brand-gold/20 text-brand-gold border border-brand-gold/30 text-sm font-bold uppercase tracking-widest mb-6">Indoor
+            Climbing • USMCC</span>
           <h1 class="heading-xl mb-6 text-white drop-shadow-2xl">
             Defy <span class="text-gradient">Gravity.</span>
           </h1>
           <p class="mt-4 max-w-2xl text-xl text-slate-300 mx-auto mb-10 font-light">
-            Welcome to the University of Sheffield Climbing Club. We are a fresh sport club with a simple ethos: from
-            first-time climbers trying their first boulder, to elite athletes competing at BUCS—we are better when we
-            climb together.
+            Welcome to USCC, Sheffield's indoor climbing club within the University of Sheffield Mountaineering and
+            Climbing Club. Social sessions, structured training, and a full competition programme — from your first
+            visit to the wall to BUCS finals.
           </p>
           <div class="flex flex-col sm:flex-row justify-center items-center gap-6">
-            <a href="/schedule.html" class="btn-primary w-full sm:w-auto">
+            <a href="/schedule" class="btn-primary w-full sm:w-auto">
               View Schedule
             </a>
-            <a href="/about.html" class="btn-outline w-full sm:w-auto">
+            <a href="/about" class="btn-outline w-full sm:w-auto">
               Our Story
             </a>
           </div>
@@ -60,45 +67,46 @@
 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div class="glass-card group content-center text-center">
+            <div class="glass-card group flex flex-col items-center text-center">
               <div
-                class="w-16 h-16 mx-auto bg-brand-gold-muted/10 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                <svg class="w-8 h-8 text-brand-gold-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z">
+                class="w-16 h-16 bg-brand-gold/10 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <svg class="w-8 h-8 text-brand-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
                   </path>
                 </svg>
               </div>
-              <h3 class="text-2xl font-bold text-white mb-4">Complete Beginners</h3>
-              <p class="text-slate-400">Never climbed? No problem. Our weekly social meets are the perfect relaxed place
-                to learn the basics, borrow some shoes, and make new mates.</p>
+              <h3 class="text-2xl font-bold text-white mb-4">Open to Everyone</h3>
+              <p class="text-slate-400">Never touched a wall before? Perfect. Our weekly social sessions are relaxed,
+                friendly, and free from pressure — just turn up and give it a go.</p>
             </div>
 
-            <div class="glass-card group content-center text-center">
+            <div class="glass-card group flex flex-col items-center text-center">
               <div
-                class="w-16 h-16 mx-auto bg-brand-gold/10 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                class="w-16 h-16 bg-brand-gold/10 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <svg class="w-8 h-8 text-brand-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M13 10V3L4 14h7v7l9-11h-7z">
+                  </path>
+                </svg>
+              </div>
+              <h3 class="text-2xl font-bold text-white mb-4">Structured Training</h3>
+              <p class="text-slate-400">Regular coached sessions to build technique, strength, and movement — whether
+                you're working on your first V3 or chasing V8.</p>
+            </div>
+
+            <div class="glass-card group flex flex-col items-center text-center">
+              <div
+                class="w-16 h-16 bg-brand-gold/10 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                 <svg class="w-8 h-8 text-brand-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z">
                   </path>
                 </svg>
               </div>
-              <h3 class="text-2xl font-bold text-white mb-4">Competition Squad</h3>
-              <p class="text-slate-400">Competing at the highest university levels in NUBS, BUCS, NULSCC, MUCC, and
-                Varsity.</p>
-            </div>
-
-            <div class="glass-card group content-center text-center">
-              <div
-                class="w-16 h-16 mx-auto bg-purple-500/10 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                <svg class="w-8 h-8 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
-                  </path>
-                </svg>
-              </div>
-              <h3 class="text-2xl font-bold text-white mb-4">Autonomy</h3>
-              <p class="text-slate-400">A new structure giving us the freedom to organize weekly meets and shape the
-                club's future our way.</p>
+              <h3 class="text-2xl font-bold text-white mb-4">Competition Pathway</h3>
+              <p class="text-slate-400">Compete at the highest university level — NUBS, BUCS, NULSCC, Varsity, and
+                more. A clear route from your first comp to the national finals.</p>
             </div>
           </div>
         </div>
@@ -110,14 +118,16 @@
           <h2 class="heading-lg mb-8 text-white">Ready to send?</h2>
           <p class="text-xl text-slate-400 mb-10">Whether you're looking to push your limits in BUCS or just looking for
             a friendly group to boulder with on Tuesdays, there's a place for you.</p>
-          <a href="/schedule.html" class="btn-primary">View Weekly Meets</a>
+          <a href="/schedule" class="btn-primary">View Weekly Meets</a>
         </div>
       </section>
     </main>
   </div>
   <script type="module">
     import { initApp } from '/src/main.ts';
+    import { initHeroCarousel } from '/src/hero-carousel.ts';
     initApp();
+    initHeroCarousel();
   </script>
 </body>
 

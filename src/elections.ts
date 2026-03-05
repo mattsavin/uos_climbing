@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (!user) {
-            window.location.href = '/login.html';
+            window.location.href = '/login';
             return;
         }
 

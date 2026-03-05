@@ -34,4 +34,4 @@ ENV NODE_ENV=production
 ENV PORT=3000
 
 # Run the backend server
-CMD ["npm", "run", "server"]
+CMD ["npm", "start"]

@@ -136,10 +136,11 @@ describe('Users Route Branches', () => {
             return originalRun(sql, params as any, cb as any);
         });
 
+        const validImage = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
         const res = await request(app)
             .post('/api/users/me/photo')
             .set('Authorization', `Bearer ${userToken}`)
-            .attach('photo', Buffer.from('dummy'), 'dummy.png');
+            .attach('photo', validImage, 'dummy.png');
 
         expect(res.status).toBe(500);
         expect(res.body.error).toBe('Database error');
@@ -156,10 +157,11 @@ describe('Users Route Branches', () => {
             throw new Error('unlink failed');
         });
 
+        const validImage = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
         const res = await request(app)
             .post('/api/users/me/photo')
             .set('Authorization', `Bearer ${userToken}`)
-            .attach('photo', Buffer.from('dummy'), 'dummy2.png');
+            .attach('photo', validImage, 'dummy2.png');
 
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);

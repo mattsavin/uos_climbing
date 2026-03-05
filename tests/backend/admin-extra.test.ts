@@ -20,13 +20,13 @@ describe('Admin Extra API', () => {
 
         // Create a non-root committee member
         const res = await request(app).post('/api/auth/register').send({
-            firstName: 'Non', lastName: 'Root', email: 'nonroot_admin@example.com', password: 'pwd', passwordConfirm: 'pwd', registrationNumber: 'NRA1'
+            firstName: 'Non', lastName: 'Root', email: 'nonroot_admin@example.com', password: 'Password12345!', passwordConfirm: 'Password12345!', registrationNumber: 'NRA1'
         });
         const nonRootId = res.body.user.id;
         await request(app).post(`/api/admin/users/${nonRootId}/promote`).set('Authorization', `Bearer ${rootToken}`);
 
         const loginRes = await request(app).post('/api/auth/login').send({
-            email: 'nonroot_admin@example.com', password: 'pwd'
+            email: 'nonroot_admin@example.com', password: 'Password12345!'
         });
         committeeToken = (loginRes.headers['set-cookie'] || []).find((c: string) => c.startsWith('uscc_token='))?.split(';')[0].split('=')[1] || '';
     });
@@ -81,7 +81,7 @@ describe('Admin Extra API', () => {
         it('should fail to delete a role if assigned to users', async () => {
             // Assign role to a user
             const userRes = await request(app).post('/api/auth/register').send({
-                firstName: 'Role', lastName: 'Holder', email: 'roleholder@example.com', password: 'pwd', passwordConfirm: 'pwd', registrationNumber: 'RH1'
+                firstName: 'Role', lastName: 'Holder', email: 'roleholder@example.com', password: 'Password12345!', passwordConfirm: 'Password12345!', registrationNumber: 'RH1'
             });
             await request(app).post(`/api/admin/users/${userRes.body.user.id}/committee-role`)
                 .set('Authorization', `Bearer ${rootToken}`)
@@ -112,7 +112,7 @@ describe('Admin Extra API', () => {
         it('should mark user as pending if their only active basic membership is deleted', async () => {
             // Create user and approve basic membership
             const res = await request(app).post('/api/auth/register').send({
-                firstName: 'Pend', lastName: 'Test', email: 'pend@example.com', password: 'pwd', passwordConfirm: 'pwd', registrationNumber: 'PT1'
+                firstName: 'Pend', lastName: 'Test', email: 'pend@example.com', password: 'Password12345!', passwordConfirm: 'Password12345!', registrationNumber: 'PT1'
             });
             const userId = res.body.user.id;
             await request(app).post(`/api/admin/users/${userId}/approve`).set('Authorization', `Bearer ${rootToken}`);

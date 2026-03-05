@@ -5,6 +5,8 @@ import { db } from './db';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import adminRoutes from './routes/admin';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import sessionRoutes from './routes/sessions';
 import sessionTypeRoutes from './routes/session-types';
 import membershipTypeRoutes from './routes/membership-types';
@@ -12,29 +14,55 @@ import votingRoutes from './routes/voting';
 import gearRoutes from './routes/gear';
 import committeeRoutes from './routes/committee';
 import verifyRoutes from './routes/verify';
+import galleryRoutes from './routes/gallery';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import history from 'connect-history-api-fallback';
 import cookieParser from 'cookie-parser';
 import { betaGate } from './middleware/beta-gate';
 import jwt from 'jsonwebtoken';
+import { UPLOAD_BASE_DIR } from './config';
 
 // ESM dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+// If running behind a reverse proxy (nginx, Cloudflare, load balancer),
+// enable `trust proxy` so Express reads the `X-Forwarded-*` headers.
+// This is required for correct client IP detection (used by express-rate-limit).
+if (process.env.TRUST_PROXY || process.env.NODE_ENV === 'production') {
+    // If TRUST_PROXY is set to a specific value use it, otherwise trust the first proxy.
+    app.set('trust proxy', process.env.TRUST_PROXY || 1);
+}
 const PORT = process.env.PORT || 3000;
 
 app.use(cors({
-    origin: process.env.NODE_ENV === 'production' ? true : ['http://localhost:5173', 'http://127.0.0.1:5173'],
+    origin: process.env.NODE_ENV === 'production' ? (process.env.APP_URL || false) : ['http://localhost:5173', 'http://127.0.0.1:5173'],
     credentials: true,
 }));
+
+// Apply security headers
+app.use(helmet({
+    contentSecurityPolicy: false, // Vite/React needs inline scripts in dev, can configure properly for prod if needed
+    crossOriginEmbedderPolicy: false,
+}));
+
+// Global rate limiting
+const globalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 1000, // 1000 requests per IP
+    message: { error: 'Too many requests from this IP, please try again after 15 minutes' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+app.use(globalLimiter);
+
 app.use(express.json());
 app.use(cookieParser());
 
 // Serve profile photos
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+app.use('/uploads', express.static(UPLOAD_BASE_DIR));
 
 // Beta Gate Middleware
 app.use(betaGate);
@@ -76,6 +104,7 @@ app.use('/api/voting', votingRoutes);
 app.use('/api/gear', gearRoutes);
 app.use('/api/committee', committeeRoutes);
 app.use('/api/verify', verifyRoutes);
+app.use('/api/gallery', galleryRoutes);
 
 // Shared route for iCal (also registered in sessions.ts but keeping here for backward compatibility if needed, 
 // though /api/sessions/ical/:userId is preferred now. The original was /api/ical/:userId)
@@ -99,13 +128,25 @@ if (process.env.NODE_ENV === 'production') {
 
             // Re-route Vite's HTML entrypoints
             { from: /^\/dashboard$/, to: '/dashboard.html' },
+            { from: /^\/dashboard\/$/, to: '/dashboard.html' },
+            { from: /^\/dashboard\/elections$/, to: '/elections.html' },
+            { from: /^\/dashboard\/gear$/, to: '/gear.html' },
+            { from: /^\/dashboard\/admin$/, to: '/admin.html' },
+            { from: /^\/dashboard\/gallery-manager$/, to: '/gallery-manager.html' },
             { from: /^\/about$/, to: '/about.html' },
             { from: /^\/schedule$/, to: '/schedule.html' },
             { from: /^\/competitions$/, to: '/competitions.html' },
+            { from: /^\/beginners$/, to: '/beginners.html' },
+            { from: /^\/walls$/, to: '/walls.html' },
+            { from: /^\/faq$/, to: '/faq.html' },
             { from: /^\/gear$/, to: '/gear.html' },
+            { from: /^\/admin$/, to: '/admin.html' },
             { from: /^\/login$/, to: '/login.html' },
             { from: /^\/elections$/, to: '/elections.html' },
+            { from: /^\/gallery$/, to: '/gallery.html' },
+            { from: /^\/gallery-manager$/, to: '/gallery-manager.html' },
             { from: /^\/beta-gate$/, to: '/beta-gate.html' },
+            { from: /^\/verify$/, to: '/verify.html' },
             { from: /^\/verify\/.*$/, to: '/verify.html' }
         ]
     }));

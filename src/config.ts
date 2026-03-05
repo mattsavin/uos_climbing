@@ -1,5 +1,6 @@
 /**
  * Central configuration for the USCC Web Application.
+ * USCC is the climbing committee of the University of Sheffield Mountaineering and Climbing Club (USMCC).
  * This file contains data that is dynamically rendered across the site to avoid hardcoding.
  */
 
@@ -65,14 +66,16 @@ export const config = {
     membershipTypes: [
         { id: "basic", label: "Basic Membership (All Members)" },
         { id: "bouldering", label: "Bouldering Add-on" },
-        { id: "comp_team", label: "Competition Team Only" }
+        { id: "comp_team", label: "Competition Team" },
+        { id: "joint", label: "Joint Membership (USCC + USMCC)" }
     ],
 
     // Membership Add-on Options (for Dashboard additional membership requests)
     membershipAddons: [
         { id: "basic", label: "Basic Membership" },
         { id: "bouldering", label: "Bouldering Add-on" },
-        { id: "comp_team", label: "Competition Team" }
+        { id: "comp_team", label: "Competition Team" },
+        { id: "joint", label: "Joint Membership (USCC + USMCC)" }
     ],
 
     // Calendar Filters
@@ -80,7 +83,8 @@ export const config = {
         { id: "all", label: "All", default: true },
         { id: "basic", label: "Basic" },
         { id: "bouldering", label: "Bouldering" },
-        { id: "comp_team", label: "Comp Team" }
+        { id: "comp_team", label: "Comp Team" },
+        { id: "joint", label: "Joint" }
     ],
 
     // Committee Members (Actual People)
@@ -97,12 +101,16 @@ export const config = {
     // FAQ Data
     faqs: [
         {
+            question: "What is USMCC and how does USCC fit in?",
+            answer: "USMCC stands for the University of Sheffield Mountaineering and Climbing Club — the renamed version of the former USMC. USCC is the climbing club within USMCC, with its own committee, membership, and programme. A joint membership is also available if you want to be part of both sides of the club."
+        },
+        {
             question: "Do I need my own gear to start?",
             answer: "No! We provide climbing shoes and harnesses for hire during our weekly meets. Most beginners start with just a pair of comfortable gym clothes."
         },
         {
             question: "How do I join the competition team?",
-            answer: "Team trials are held at the start of each semester. We look for both technical ability and potential. Keep an eye on our Instagram for trial dates!"
+            answer: "The comp team is open to USCC members. Keep an eye on our Instagram and schedule for training sessions and any trial announcements. You don't need to be an experienced competitor to get involved."
         },
         {
             question: "Are memberships refundable?",

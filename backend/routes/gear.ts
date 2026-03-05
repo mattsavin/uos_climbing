@@ -101,8 +101,9 @@ router.post('/requests/:request_id/approve', authenticateToken, requireKitSec, (
 
         db.serialize(() => {
             db.run('BEGIN TRANSACTION');
-            db.run("UPDATE gear_requests SET status = 'approved' WHERE id = ?", [requestId], function (err) {
+            db.run("UPDATE gear_requests SET status = 'approved' WHERE id = ? AND status = 'pending'", [requestId], function (err) {
                 if (err) { db.run('ROLLBACK'); return res.status(500).json({ error: 'DB Error' }); }
+                if (this.changes === 0) { db.run('ROLLBACK'); return res.status(400).json({ error: 'Request is no longer pending' }); }
 
                 db.run('UPDATE gear SET availableQuantity = availableQuantity - 1 WHERE id = ?', [request.gearId], function (err) {
                     if (err) { db.run('ROLLBACK'); return res.status(500).json({ error: 'DB Error' }); }
@@ -132,8 +133,9 @@ router.post('/requests/:request_id/reject', authenticateToken, requireKitSec, (r
         if (!request) return res.status(404).json({ error: 'Request not found' });
         if (request.status !== 'pending') return res.status(400).json({ error: 'Request is not pending' });
 
-        db.run("UPDATE gear_requests SET status = 'rejected' WHERE id = ?", [requestId], function (err) {
+        db.run("UPDATE gear_requests SET status = 'rejected' WHERE id = ? AND status = 'pending'", [requestId], function (err) {
             if (err) return res.status(500).json({ error: 'Database error' });
+            if (this.changes === 0) return res.status(400).json({ error: 'Request is no longer pending' });
 
             if (request.email) {
                 sendEmail(
@@ -159,8 +161,9 @@ router.post('/requests/:request_id/return', authenticateToken, requireKitSec, (r
 
         db.serialize(() => {
             db.run('BEGIN TRANSACTION');
-            db.run("UPDATE gear_requests SET status = 'returned', returnDate = ? WHERE id = ?", [returnDate, requestId], function (err) {
+            db.run("UPDATE gear_requests SET status = 'returned', returnDate = ? WHERE id = ? AND status = 'approved'", [returnDate, requestId], function (err) {
                 if (err) { db.run('ROLLBACK'); return res.status(500).json({ error: 'DB Error' }); }
+                if (this.changes === 0) { db.run('ROLLBACK'); return res.status(400).json({ error: 'Request is no longer approved' }); }
 
                 db.run('UPDATE gear SET availableQuantity = availableQuantity + 1 WHERE id = ?', [request.gearId], function (err) {
                     if (err) { db.run('ROLLBACK'); return res.status(500).json({ error: 'DB Error' }); }
