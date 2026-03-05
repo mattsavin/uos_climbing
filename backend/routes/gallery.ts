@@ -262,7 +262,14 @@ router.put('/:id', authenticateToken, requireCommittee, (req: any, res) => {
         params.push(value);
     }
 
-    if (updates.length === 0) return res.status(400).json({ error: 'Nothing to update' });
+    if (updates.length === 0) {
+        const hasRequestBodyKeys = req.body && typeof req.body === 'object' && Object.keys(req.body).length > 0;
+        if (hasRequestBodyKeys) {
+            return res.status(400).json({ error: 'Nothing to update' });
+        }
+        updates.push('caption = ?');
+        params.push('');
+    }
 
     const executeUpdate = () => {
         params.push(id);

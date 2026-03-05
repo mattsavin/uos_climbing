@@ -7,7 +7,7 @@ test.describe('Gear Hire Workflow', () => {
         await page.fill('#login-email', 'committee@sheffieldclimbing.org');
         await page.fill('#login-password', 'SuperSecret123!');
         await page.click('#login-btn');
-        await expect(page).toHaveURL(/.*dashboard.html/, { timeout: 10000 });
+        await expect(page).toHaveURL(/.*dashboard(?:\.html)?$/, { timeout: 10000 });
     });
 
     test('should allow user to request gear checkout', async ({ page }) => {

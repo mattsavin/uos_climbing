@@ -221,6 +221,140 @@ describe('Gallery API', () => {
             expect(res.body.error).toBe('Database error');
             spy.mockRestore();
         });
+
+        it('should return 400 for unknown non-empty update payload', async () => {
+            const res = await request(app)
+                .put(`/api/gallery/${imageId}`)
+                .set('Authorization', `Bearer ${committeeToken}`)
+                .send({ unsupportedField: true });
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toBe('Nothing to update');
+        });
+
+        it('should reject invalid featured order values', async () => {
+            const res = await request(app)
+                .put(`/api/gallery/${imageId}`)
+                .set('Authorization', `Bearer ${committeeToken}`)
+                .send({ featuredOrder: 0 });
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toBe('Invalid featuredOrder (must be >= 1 or null)');
+        });
+
+        it('should reject invalid crop and zoom values', async () => {
+            const badCrop = await request(app)
+                .put(`/api/gallery/${imageId}`)
+                .set('Authorization', `Bearer ${committeeToken}`)
+                .send({ heroDesktopX: 101 });
+
+            expect(badCrop.status).toBe(400);
+            expect(badCrop.body.error).toBe('Invalid heroDesktopX (must be 0-100)');
+
+            const badZoom = await request(app)
+                .put(`/api/gallery/${imageId}`)
+                .set('Authorization', `Bearer ${committeeToken}`)
+                .send({ galleryLandscapeZoom: 0.5 });
+
+            expect(badZoom.status).toBe(400);
+            expect(badZoom.body.error).toBe('Invalid galleryLandscapeZoom (must be 1-3)');
+        });
+
+        it('should auto-assign featured order and support featured-only listing', async () => {
+            const uploadSecond = await request(app)
+                .post('/api/gallery')
+                .set('Authorization', `Bearer ${committeeToken}`)
+                .field('caption', 'Second for featured')
+                .attach('photos', mockImageBuffer, 'featured-second.jpg');
+            const secondId = uploadSecond.body.uploaded[0].id;
+
+            const firstFeatured = await request(app)
+                .put(`/api/gallery/${imageId}`)
+                .set('Authorization', `Bearer ${committeeToken}`)
+                .send({ featured: true });
+            expect(firstFeatured.status).toBe(200);
+
+            const secondFeatured = await request(app)
+                .put(`/api/gallery/${secondId}`)
+                .set('Authorization', `Bearer ${committeeToken}`)
+                .send({ featured: true });
+            expect(secondFeatured.status).toBe(200);
+
+            const featuredOnly = await request(app).get('/api/gallery?featured=1');
+            expect(featuredOnly.status).toBe(200);
+            expect(featuredOnly.body.length).toBeGreaterThanOrEqual(2);
+
+            const first = featuredOnly.body.find((img: any) => img.id === imageId);
+            const second = featuredOnly.body.find((img: any) => img.id === secondId);
+            expect(first.featured).toBe(1);
+            expect(second.featured).toBe(1);
+            expect(first.featuredOrder).toBe(1);
+            expect(second.featuredOrder).toBe(2);
+        });
+
+        it('should clear featured order when image is unfeatured', async () => {
+            const makeFeatured = await request(app)
+                .put(`/api/gallery/${imageId}`)
+                .set('Authorization', `Bearer ${committeeToken}`)
+                .send({ featured: true, featuredOrder: 1 });
+            expect(makeFeatured.status).toBe(200);
+
+            const unfeature = await request(app)
+                .put(`/api/gallery/${imageId}`)
+                .set('Authorization', `Bearer ${committeeToken}`)
+                .send({ featured: false });
+            expect(unfeature.status).toBe(200);
+
+            const all = await request(app).get('/api/gallery');
+            const item = all.body.find((img: any) => img.id === imageId);
+            expect(item.featured).toBe(0);
+            expect(item.featuredOrder).toBeNull();
+        });
+
+        it('should update all crop and zoom fields with valid values', async () => {
+            const res = await request(app)
+                .put(`/api/gallery/${imageId}`)
+                .set('Authorization', `Bearer ${committeeToken}`)
+                .send({
+                    heroDesktopX: 10,
+                    heroDesktopY: 20,
+                    heroDesktopZoom: 1.5,
+                    heroMobileX: 30,
+                    heroMobileY: 40,
+                    heroMobileZoom: 2,
+                    galleryLandscapeX: 50,
+                    galleryLandscapeY: 60,
+                    galleryLandscapeZoom: 2.5,
+                    featuredOrder: null
+                });
+            expect(res.status).toBe(200);
+
+            const all = await request(app).get('/api/gallery');
+            const item = all.body.find((img: any) => img.id === imageId);
+            expect(item.heroDesktopX).toBe(10);
+            expect(item.heroDesktopY).toBe(20);
+            expect(item.heroDesktopZoom).toBe(1.5);
+            expect(item.heroMobileX).toBe(30);
+            expect(item.heroMobileY).toBe(40);
+            expect(item.heroMobileZoom).toBe(2);
+            expect(item.galleryLandscapeX).toBe(50);
+            expect(item.galleryLandscapeY).toBe(60);
+            expect(item.galleryLandscapeZoom).toBe(2.5);
+            expect(item.featuredOrder).toBeNull();
+        });
+
+        it('should return 500 when featured auto-order lookup fails', async () => {
+            const spy = vi.spyOn(db, 'get').mockImplementationOnce((query, params, cb) => cb(new Error('DB error'), null));
+
+            const res = await request(app)
+                .put(`/api/gallery/${imageId}`)
+                .set('Authorization', `Bearer ${committeeToken}`)
+                .send({ featured: true });
+
+            expect(res.status).toBe(500);
+            expect(res.body.error).toBe('Database error');
+            spy.mockRestore();
+        });
     });
 
     describe('DELETE /api/gallery/:id', () => {
