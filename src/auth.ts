@@ -3,6 +3,11 @@
  * Interfaces with the Express Backend API.
  */
 
+import { adminApi } from './lib/api/admin';
+import { committeeApi } from './lib/api/committee';
+import { gearApi } from './lib/api/gear';
+import { votingApi } from './lib/api/voting';
+
 export interface User {
     id: string;
     email: string;
@@ -61,6 +66,22 @@ export function getCurrentAcademicYear() {
     return `${year}/${year + 1}`;
 }
 
+async function parseJsonSafely<T = any>(res: Response, fallback: T): Promise<T> {
+    try {
+        return await res.json();
+    } catch {
+        return fallback;
+    }
+}
+
+async function parseJsonOrThrow<T = any>(res: Response, fallbackMessage: string): Promise<T> {
+    const data = await parseJsonSafely<any>(res, {});
+    if (!res.ok) {
+        throw new Error(data?.error || fallbackMessage);
+    }
+    return data as T;
+}
+
 export interface SessionType {
     id: string;
     label: string;
@@ -107,10 +128,8 @@ export const authState = {
             body: JSON.stringify({ email, password })
         });
 
-        let data: any = {};
-        try { data = await res.json(); } catch {
-            throw new Error('Server returned an unexpected response. Please try again.');
-        }
+        const data = await parseJsonSafely<any>(res, null);
+        if (!data) throw new Error('Server returned an unexpected response. Please try again.');
 
         if (!res.ok) {
             // Surface pendingVerification info so the UI can show the OTP panel
@@ -132,10 +151,8 @@ export const authState = {
             body: JSON.stringify({ userId, code })
         });
 
-        let data: any = {};
-        try { data = await res.json(); } catch {
-            throw new Error('Server returned an unexpected response. Please try again.');
-        }
+        const data = await parseJsonSafely<any>(res, null);
+        if (!data) throw new Error('Server returned an unexpected response. Please try again.');
         if (!res.ok) throw new Error(data.error || 'Verification failed');
 
         this.user = data.user;
@@ -148,12 +165,7 @@ export const authState = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId })
         });
-        let data: any = {};
-        try { data = await res.json(); } catch {
-            throw new Error('Server returned an unexpected response. Please try again.');
-        }
-        if (!res.ok) throw new Error(data.error || 'Failed to resend code');
-        return data;
+        return parseJsonOrThrow(res, 'Failed to resend code');
     },
 
     async register(firstName: string, lastName: string, email: string, passwordHash: string, passwordConfirm: string, registrationNumber: string, membershipTypes: string[]) {
@@ -164,10 +176,8 @@ export const authState = {
             body: JSON.stringify({ firstName, lastName, email, password: passwordHash, passwordConfirm, registrationNumber, membershipTypes })
         });
 
-        let data: any = {};
-        try { data = await res.json(); } catch {
-            throw new Error('Server returned an unexpected response. Please try again.');
-        }
+        const data = await parseJsonSafely<any>(res, null);
+        if (!data) throw new Error('Server returned an unexpected response. Please try again.');
         if (!res.ok) {
             throw new Error(data.error || "Registration failed");
         }
@@ -255,9 +265,8 @@ export const authState = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email })
         });
-        let data: any = {};
-        try { data = await res.json(); } catch { /* ignore */ }
-        if (!res.ok) throw new Error(data.error || 'Request failed');
+        const data = await parseJsonSafely<any>(res, {});
+        if (!res.ok) throw new Error(data?.error || 'Request failed');
         return data;
     },
 
@@ -267,17 +276,15 @@ export const authState = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token, newPassword })
         });
-        let data: any = {};
-        try { data = await res.json(); } catch { /* ignore */ }
-        if (!res.ok) throw new Error(data.error || 'Reset failed');
+        const data = await parseJsonSafely<any>(res, {});
+        if (!res.ok) throw new Error(data?.error || 'Reset failed');
         return data;
     },
 
     async getMyMemberships(): Promise<MembershipRow[]> {
         const res = await fetch('/api/users/me/memberships', { credentials: 'include' });
-        let data: any = [];
-        try { data = await res.json(); } catch { /* ignore */ }
-        if (!res.ok) throw new Error(data.error || 'Failed to fetch memberships');
+        const data = await parseJsonSafely<any>(res, []);
+        if (!res.ok) throw new Error(data?.error || 'Failed to fetch memberships');
         return data;
     },
 
@@ -288,9 +295,8 @@ export const authState = {
             credentials: 'include',
             body: JSON.stringify({ membershipType, membershipYear })
         });
-        let data: any = {};
-        try { data = await res.json(); } catch { /* ignore */ }
-        if (!res.ok) throw new Error(data.error || 'Request failed');
+        const data = await parseJsonSafely<any>(res, {});
+        if (!res.ok) throw new Error(data?.error || 'Request failed');
         return data;
     },
 
@@ -301,9 +307,8 @@ export const authState = {
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include'
         });
-        let data: any = {};
-        try { data = await res.json(); } catch { /* ignore */ }
-        if (!res.ok) throw new Error(data.error || 'Request failed');
+        const data = await parseJsonSafely<any>(res, {});
+        if (!res.ok) throw new Error(data?.error || 'Request failed');
         this.user.membershipStatus = data.membershipStatus;
         this.user.membershipYear = data.membershipYear;
         return data;
@@ -346,423 +351,6 @@ export const authState = {
         return this.user;
     }
 };
-
-// Helper for authenticated fetch
-async function apiFetch(endpoint: string, options: RequestInit = {}) {
-    const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        ...((options.headers as Record<string, string>) || {})
-    };
-
-    const res = await fetch(endpoint, { ...options, headers, credentials: 'include' });
-    const text = await res.text();
-    let data: any = null;
-
-    if (text) {
-        try {
-            data = JSON.parse(text);
-        } catch {
-            if (!res.ok) {
-                throw new Error(`API Request Failed (${res.status})`);
-            }
-            return text;
-        }
-    }
-
-    if (!res.ok) throw new Error(data?.error || `API Request Failed (${res.status})`);
-    return data;
-}
-
-// Admin API
-export const adminApi = {
-    async getAllUsers(): Promise<User[]> {
-        const users = await apiFetch('/api/admin/users');
-        return users.filter((u: User) => u.membershipStatus === 'pending');
-    },
-
-    /** Returns all users without filtering — used for pending membership scans */
-    async getAllUsersRaw(): Promise<User[]> {
-        return apiFetch('/api/admin/users');
-    },
-
-    async getActiveMembers(): Promise<User[]> {
-        const users = await apiFetch('/api/admin/users');
-        return users.filter((u: User) => u.membershipStatus === 'active' && u.email !== 'committee@sheffieldclimbing.org');
-    },
-
-    async approveMember(id: string) {
-        return apiFetch(`/api/admin/users/${id}/approve`, { method: 'POST' });
-    },
-
-    async rejectMember(id: string) {
-        return apiFetch(`/api/admin/users/${id}/reject`, { method: 'POST' });
-    },
-
-    async promoteToCommittee(id: string) {
-        return apiFetch(`/api/admin/users/${id}/promote`, { method: 'POST' });
-    },
-
-    async demoteToMember(id: string) {
-        return apiFetch(`/api/admin/users/${id}/demote`, { method: 'POST' });
-    },
-
-    async deleteUser(id: string) {
-        return apiFetch(`/api/users/${id}`, { method: 'DELETE' });
-    },
-
-    async approveMembershipRow(id: string) {
-        return apiFetch(`/api/admin/memberships/${id}/approve`, { method: 'POST' });
-    },
-
-    async rejectMembershipRow(id: string) {
-        return apiFetch(`/api/admin/memberships/${id}/reject`, { method: 'POST' });
-    },
-
-    async deleteMembershipRow(id: string) {
-        return apiFetch(`/api/admin/memberships/${id}`, { method: 'DELETE' });
-    },
-
-    async setCommitteeRole(id: string, committeeRoles: string[]) {
-        return apiFetch(`/api/admin/users/${id}/committee-role`, {
-            method: 'POST',
-            body: JSON.stringify({ committeeRoles })
-        });
-    },
-
-    async getElectionsConfig() {
-        return apiFetch('/api/admin/config/elections');
-    },
-
-    async setElectionsConfig(open: boolean) {
-        return apiFetch('/api/admin/config/elections', {
-            method: 'POST',
-            body: JSON.stringify({ open })
-        });
-    },
-
-    async sendTestEmail() {
-        return apiFetch('/api/admin/test-email', { method: 'POST' });
-    },
-
-    async importSuRoster(raw: string) {
-        return apiFetch('/api/admin/memberships/import-su-roster', {
-            method: 'POST',
-            body: JSON.stringify({ raw })
-        });
-    },
-
-    // Session Management API
-    async getSessions(): Promise<Session[]> {
-        return apiFetch('/api/sessions');
-    },
-
-    async addSession(session: Omit<Session, 'id' | 'bookedSlots'>): Promise<Session> {
-        return apiFetch('/api/sessions', {
-            method: 'POST',
-            body: JSON.stringify(session)
-        });
-    },
-
-    async updateSession(id: string, updates: Partial<Session>): Promise<void> {
-        return apiFetch(`/api/sessions/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify(updates)
-        });
-    },
-
-    async deleteSession(id: string) {
-        return apiFetch(`/api/sessions/${id}`, { method: 'DELETE' });
-    },
-
-    async getMyBookings(): Promise<string[]> {
-        return apiFetch('/api/sessions/me/bookings');
-    },
-
-    async bookSession(id: string) {
-        return apiFetch(`/api/sessions/${id}/book`, { method: 'POST' });
-    },
-
-    async cancelSession(id: string) {
-        return apiFetch(`/api/sessions/${id}/cancel`, { method: 'POST' });
-    },
-
-    async getSessionAttendees(id: string): Promise<User[]> {
-        return apiFetch(`/api/sessions/${id}/attendees`);
-    },
-
-    async removeAttendee(sessionId: string, userId: string) {
-        return apiFetch(`/api/sessions/${sessionId}/attendees/${userId}`, { method: 'DELETE' });
-    },
-
-    // Session Type Management API
-    async getSessionTypes(): Promise<SessionType[]> {
-        return apiFetch('/api/session-types');
-    },
-
-    async addSessionType(label: string): Promise<SessionType> {
-        return apiFetch('/api/session-types', {
-            method: 'POST',
-            body: JSON.stringify({ label })
-        });
-    },
-
-    async updateSessionType(id: string, label: string): Promise<SessionType> {
-        return apiFetch(`/api/session-types/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify({ label })
-        });
-    },
-
-    async deleteSessionType(id: string): Promise<void> {
-        return apiFetch(`/api/session-types/${id}`, { method: 'DELETE' });
-    },
-
-    // Membership Type Management API
-    async getMembershipTypes(): Promise<MembershipType[]> {
-        return apiFetch('/api/membership-types');
-    },
-
-    async addMembershipType(label: string, id?: string): Promise<MembershipType> {
-        return apiFetch('/api/membership-types', {
-            method: 'POST',
-            body: JSON.stringify({ label, id })
-        });
-    },
-
-    async updateMembershipType(id: string, label: string, deprecated?: boolean): Promise<MembershipType> {
-        return apiFetch(`/api/membership-types/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify({ label, deprecated })
-        });
-    },
-
-    async deleteMembershipType(id: string): Promise<void> {
-        return apiFetch(`/api/membership-types/${id}`, { method: 'DELETE' });
-    },
-
-    // Committee Roles Management API
-    async getAvailableRoles() {
-        return apiFetch('/api/admin/committee-roles');
-    },
-
-    async addCommitteeRole(id: string, label: string) {
-        return apiFetch('/api/admin/committee-roles', {
-            method: 'POST',
-            body: JSON.stringify({ id, label })
-        });
-    },
-
-    async updateCommitteeRole(id: string, label: string) {
-        return apiFetch(`/api/admin/committee-roles/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify({ label })
-        });
-    },
-
-    async deleteCommitteeRole(id: string): Promise<void> {
-        return apiFetch(`/api/admin/committee-roles/${id}`, { method: 'DELETE' });
-    }
-};
-
-export interface Candidate {
-    id: string;
-    name: string;
-    manifesto: string;
-    role: string;
-    presentationLink?: string;
-    voteCount: number;
-}
-
-export const votingApi = {
-    async getCandidates(): Promise<Candidate[]> {
-        return apiFetch('/api/voting/candidates');
-    },
-
-    async applyCandidate(manifesto: string, role: string, presentationLink?: string) {
-        return apiFetch('/api/voting/apply', {
-            method: 'POST',
-            body: JSON.stringify({ manifesto, role, presentationLink })
-        });
-    },
-
-    async getStatus() {
-        return apiFetch('/api/voting/status');
-    },
-
-    async castVote(candidateId: string) {
-        return apiFetch('/api/voting/vote', {
-            method: 'POST',
-            body: JSON.stringify({ candidateId })
-        });
-    },
-
-    async withdrawCandidate() {
-        return apiFetch('/api/voting/withdraw', { method: 'POST' });
-    },
-
-    async resetElections() {
-        return apiFetch('/api/voting/reset', { method: 'POST' });
-    },
-
-    async getReferendums(): Promise<Referendum[]> {
-        return apiFetch('/api/voting/referendums');
-    },
-
-    async createReferendum(title: string, description: string) {
-        return apiFetch('/api/voting/referendums', {
-            method: 'POST',
-            body: JSON.stringify({ title, description })
-        });
-    },
-
-    async deleteReferendum(id: string) {
-        return apiFetch(`/api/voting/referendums/${id}`, { method: 'DELETE' });
-    },
-
-    async voteReferendum(id: string, choice: 'yes' | 'no' | 'abstain') {
-        return apiFetch(`/api/voting/referendums/${id}/vote`, {
-            method: 'POST',
-            body: JSON.stringify({ choice })
-        });
-    }
-};
-
-export interface Referendum {
-    id: string;
-    title: string;
-    description: string;
-    createdAt: number;
-    yesCount: number;
-    noCount: number;
-    abstainCount: number;
-    myVote?: 'yes' | 'no' | 'abstain';
-}
-
-export interface GearItem {
-    id: string;
-    name: string;
-    description?: string;
-    totalQuantity: number;
-    availableQuantity: number;
-}
-
-export interface GearRequest {
-    id: string;
-    gearId: string;
-    gearName: string;
-    userId: string;
-    userName: string;
-    userEmail: string;
-    requestDate: string;
-    status: 'pending' | 'approved' | 'rejected' | 'returned';
-}
-
-export const gearApi = {
-    async getGear(): Promise<GearItem[]> {
-        return apiFetch('/api/gear');
-    },
-
-    async addGear(gear: Omit<GearItem, 'id'>) {
-        return apiFetch('/api/gear', {
-            method: 'POST',
-            body: JSON.stringify(gear)
-        });
-    },
-
-    async updateGear(id: string, gear: Partial<GearItem>) {
-        return apiFetch(`/api/gear/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify(gear)
-        });
-    },
-
-    async deleteGear(id: string) {
-        return apiFetch(`/api/gear/${id}`, { method: 'DELETE' });
-    },
-
-    async requestGear(gearId: string) {
-        return apiFetch(`/api/gear/${gearId}/request`, { method: 'POST' });
-    },
-
-    async getAllRequests(): Promise<GearRequest[]> {
-        return apiFetch('/api/gear/requests');
-    },
-
-    async getMyRequests(): Promise<GearRequest[]> {
-        return apiFetch('/api/gear/me/requests');
-    },
-
-    async approveRequest(id: string) {
-        return apiFetch(`/api/gear/requests/${id}/approve`, { method: 'POST' });
-    },
-
-    async rejectRequest(id: string) {
-        return apiFetch(`/api/gear/requests/${id}/reject`, { method: 'POST' });
-    },
-
-    async returnRequest(id: string) {
-        return apiFetch(`/api/gear/requests/${id}/return`, { method: 'POST' });
-    }
-};
-
-export const committeeApi = {
-    async getCommitteeMembers() {
-        return apiFetch('/api/committee');
-    },
-
-    async updateMyProfile(profile: { instagram?: string; faveCrag?: string; bio?: string }) {
-        return apiFetch('/api/committee/me', {
-            method: 'PUT',
-            body: JSON.stringify(profile)
-        });
-    },
-
-    async uploadPhoto(file: File) {
-        const formData = new FormData();
-        formData.append('photo', file);
-
-        const res = await fetch('/api/committee/me/photo', {
-            method: 'POST',
-            credentials: 'include',
-            body: formData
-        });
-
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Photo upload failed');
-        return data;
-    },
-
-    async exportMembersCSV(membershipType: string): Promise<void> {
-        const url = `/api/committee/export/members?membershipType=${encodeURIComponent(membershipType)}`;
-        const res = await fetch(url, {
-            credentials: 'include'
-        });
-
-        if (!res.ok) {
-            const data = await res.json();
-            throw new Error(data.error || 'Export failed');
-        }
-
-        // Get the filename from the Content-Disposition header
-        const contentDisposition = res.headers.get('content-disposition');
-        let filename = `members-${membershipType}.csv`;
-        if (contentDisposition) {
-            const match = contentDisposition.match(/filename="(.+?)"/);
-            if (match) filename = match[1];
-        }
-
-        // Create blob and download
-        const blob = await res.blob();
-        const downloadUrl = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(downloadUrl);
-    }
-};
-
-
-// Initialize session asynchronously will be handled in dashboard.ts
+export { adminApi, committeeApi, gearApi, votingApi };
+export type { GearItem, GearRequest } from './lib/api/gear';
+export type { Candidate, Referendum } from './lib/api/voting';

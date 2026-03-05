@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "server": "tsx --watch backend/server.ts",
+    "start": "tsx backend/server.ts",
+    "server": "tsx watch --ignore \"uploads/**\" backend/server.ts",
     "dev:all": "concurrently \"npm run server\" \"npm run dev\"",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
@@ -43,6 +44,7 @@
     "@supabase/supabase-js": "^2.97.0",
     "@types/qrcode": "^1.5.6",
     "bcrypt": "^6.0.0",
+    "browser-image-compression": "^2.0.2",
     "connect-history-api-fallback": "^2.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
@@ -50,10 +52,12 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.2.1",
     "googleapis": "^171.4.0",
+    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.0",
     "nodemailer": "^8.0.1",
     "qrcode": "^1.5.4",
+    "sharp": "^0.34.5",
     "sqlite3": "^5.1.7"
   },
   "overrides": {

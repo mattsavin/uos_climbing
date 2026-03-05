@@ -251,10 +251,14 @@ router.post('/:id/book', authenticateToken, (req: any, res) => {
                             db.run('ROLLBACK');
                             return res.status(500).json({ error: 'Database error on booking' });
                         }
-                        db.run('UPDATE sessions SET bookedSlots = bookedSlots + 1 WHERE id = ?', [sessionId], function (err) {
+                        db.run('UPDATE sessions SET bookedSlots = bookedSlots + 1 WHERE id = ? AND bookedSlots < capacity', [sessionId], function (err) {
                             if (err) {
                                 db.run('ROLLBACK');
                                 return res.status(500).json({ error: 'Database error on update' });
+                            }
+                            if (this.changes === 0) {
+                                db.run('ROLLBACK');
+                                return res.status(400).json({ error: 'Session is full' });
                             }
                             db.run('COMMIT');
                             res.json({ success: true, bookedSlots: session.bookedSlots + 1 });
@@ -280,7 +284,11 @@ router.post('/:id/cancel', authenticateToken, (req: any, res) => {
                     db.run('ROLLBACK');
                     return res.status(500).json({ error: 'Database error on cancel' });
                 }
-                db.run('UPDATE sessions SET bookedSlots = bookedSlots - 1 WHERE id = ?', [sessionId], function (err) {
+                if (this.changes === 0) {
+                    db.run('ROLLBACK');
+                    return res.status(400).json({ error: 'You have not booked this session' });
+                }
+                db.run('UPDATE sessions SET bookedSlots = bookedSlots - 1 WHERE id = ? AND bookedSlots > 0', [sessionId], function (err) {
                     if (err) {
                         db.run('ROLLBACK');
                         return res.status(500).json({ error: 'Database error on update' });
@@ -320,7 +328,7 @@ router.delete('/:id/attendees/:userId', authenticateToken, requireCommittee, (re
                 db.run('ROLLBACK');
                 return res.status(404).json({ error: 'Booking not found' });
             }
-            db.run('UPDATE sessions SET bookedSlots = bookedSlots - 1 WHERE id = ?', [sessionId], function (err) {
+            db.run('UPDATE sessions SET bookedSlots = bookedSlots - 1 WHERE id = ? AND bookedSlots > 0', [sessionId], function (err) {
                 if (err) {
                     db.run('ROLLBACK');
                     return res.status(500).json({ error: 'Database error' });
