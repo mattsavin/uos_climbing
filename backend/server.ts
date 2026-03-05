@@ -28,6 +28,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+// If running behind a reverse proxy (nginx, Cloudflare, load balancer),
+// enable `trust proxy` so Express reads the `X-Forwarded-*` headers.
+// This is required for correct client IP detection (used by express-rate-limit).
+if (process.env.TRUST_PROXY || process.env.NODE_ENV === 'production') {
+    // If TRUST_PROXY is set to a specific value use it, otherwise trust the first proxy.
+    app.set('trust proxy', process.env.TRUST_PROXY || 1);
+}
 const PORT = process.env.PORT || 3000;
 
 app.use(cors({
