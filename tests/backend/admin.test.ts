@@ -194,7 +194,7 @@ describe('Admin API', () => {
 
     it('should reject invalid committee role', async () => {
         const targetRes = await request(app).post('/api/auth/register').send({
-            firstName: 'Role', lastName: 'Test', email: 'role@example.com', password: 'Password12345!', passwordConfirm: 'Password12345!', registrationNumber: 'R1'
+            firstName: 'Role', lastName: 'Test', email: 'role@example.com', password: 'pwd', passwordConfirm: 'pwd', registrationNumber: 'R1'
         });
         const res = await request(app)
             .post(`/api/admin/users/${targetRes.body.user.id}/committee-role`)
@@ -207,7 +207,7 @@ describe('Admin API', () => {
 
     it('should clear committee role if none provided', async () => {
         const targetRes = await request(app).post('/api/auth/register').send({
-            firstName: 'Role', lastName: 'Clear', email: 'clear@example.com', password: 'Password12345!', passwordConfirm: 'Password12345!', registrationNumber: 'RC1'
+            firstName: 'Role', lastName: 'Clear', email: 'clear@example.com', password: 'pwd', passwordConfirm: 'pwd', registrationNumber: 'RC1'
         });
         const res = await request(app)
             .post(`/api/admin/users/${targetRes.body.user.id}/committee-role`)
@@ -458,7 +458,7 @@ describe('Admin API', () => {
 
         beforeAll(async () => {
             const res = await request(app).post('/api/auth/register').send({
-                firstName: 'Non', lastName: 'Root', email: 'roster_test@example.com', password: 'Password12345!', passwordConfirm: 'Password12345!', registrationNumber: 'RT1'
+                firstName: 'Non', lastName: 'Root', email: 'roster_test@example.com', password: 'pwd', passwordConfirm: 'pwd', registrationNumber: 'RT1'
             });
             const userId = res.body.user.id;
             // Only assign role, don't "promote" to committee role='committee' to test fallback
@@ -467,7 +467,7 @@ describe('Admin API', () => {
                 .send({ committeeRoles: ['Secretary'] });
 
             const loginRes = await request(app).post('/api/auth/login').send({
-                email: 'roster_test@example.com', password: 'Password12345!'
+                email: 'roster_test@example.com', password: 'pwd'
             });
             const cookies = loginRes.headers['set-cookie'] as unknown as string[] | undefined;
             const cookie = (cookies || []).find(c => c.startsWith('uscc_token='));

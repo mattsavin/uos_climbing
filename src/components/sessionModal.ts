@@ -277,7 +277,7 @@ export function openSessionModal(options: SessionModalOptions) {
     if (!user) {
         // Not logged in
         const btn = document.createElement('a');
-        btn.href = '/login';
+        btn.href = '/login.html';
         btn.className = 'w-full px-4 py-3 bg-brand-gold text-brand-darker hover:bg-white rounded-lg transition-colors text-sm font-bold uppercase shadow-lg shadow-brand-gold/20 text-center flex items-center justify-center gap-2 block';
         btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg> Sign In to Book`;
         actionsEl.appendChild(btn);

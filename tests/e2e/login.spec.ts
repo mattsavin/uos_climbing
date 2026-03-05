@@ -9,7 +9,7 @@ test.describe('Authentication Flow', () => {
         await page.click('#login-btn');
 
         // Should be redirected to dashboard
-        await expect(page).toHaveURL(/.*dashboard(?:\.html)?$/, { timeout: 10000 });
+        await expect(page).toHaveURL(/.*dashboard.html/, { timeout: 10000 });
         await expect(page.locator('h1')).toContainText(/Welcome back/i);
     });
 
@@ -24,7 +24,7 @@ test.describe('Authentication Flow', () => {
         await expect(error).toContainText('Invalid email or password');
     });
 
-    test('should complete registration and redirect to login or dashboard', async ({ page }) => {
+    test('should redirect to dashboard after registration in test environment', async ({ page }) => {
         await page.goto('/login.html');
 
         await page.click('#toggle-register');
@@ -40,6 +40,8 @@ test.describe('Authentication Flow', () => {
 
         await page.click('#register-btn');
 
-        await expect(page).toHaveURL(/.*(?:dashboard(?:\.html)?|login\.html)$/, { timeout: 10000 });
+        // In test environment, email verification is bypassed, so it goes straight to dashboard
+        await expect(page).toHaveURL(/.*dashboard.html/, { timeout: 10000 });
+        await expect(page.locator('h1')).toContainText(/Welcome/i);
     });
 });

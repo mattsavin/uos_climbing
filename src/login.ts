@@ -1,13 +1,11 @@
 import './style.css';
 import { adminApi, authState } from './auth';
-import { createDomainEmailPopupController } from './lib/auth/domainEmailPopup';
-import { renderRegistrationMembershipTypes } from './lib/auth/membershipOptions';
 
 export async function initLoginApp() {
     // If the user happens to hit this page while already logged in, redirect them
     await authState.init();
     if (authState.user) {
-        window.location.href = '/dashboard';
+        window.location.href = '/dashboard.html';
         return;
     }
 
@@ -58,7 +56,49 @@ export async function initLoginApp() {
     // In-memory state for active verification
     let pendingUserId: string | null = null;
     let defaultMembershipType = 'basic';
-    defaultMembershipType = await renderRegistrationMembershipTypes(() => adminApi.getMembershipTypes());
+    let popupResolve: ((confirmed: boolean) => void) | null = null;
+    let popupExpectedRegistrationNumber: string | null = null;
+
+    function toMembershipOptionMarkup(typeId: string, label: string, checked: boolean): string {
+        return `
+            <label class="flex items-start gap-3 cursor-pointer group">
+                <input type="checkbox" name="membershipType" value="${typeId}" ${checked ? 'checked' : ''}
+                    class="mt-0.5 accent-brand-gold w-4 h-4 shrink-0" />
+                <div>
+                    <span class="text-white text-xs font-bold">${label}</span>
+                    <p class="text-slate-500 text-[10px]">Select this membership type for your account</p>
+                </div>
+            </label>
+        `;
+    }
+
+    async function renderRegistrationMembershipTypes() {
+        const optionsContainer = document.getElementById('registration-membership-types');
+        if (!optionsContainer) return;
+
+        try {
+            const membershipTypes = await adminApi.getMembershipTypes();
+            if (!membershipTypes.length) {
+                optionsContainer.innerHTML = '<p class="text-xs text-red-400">No membership types configured.</p>';
+                return;
+            }
+            defaultMembershipType = membershipTypes.some(t => t.id === 'basic')
+                ? 'basic'
+                : membershipTypes[0].id;
+            optionsContainer.innerHTML = membershipTypes
+                .map(t => toMembershipOptionMarkup(t.id, t.label, t.id === defaultMembershipType))
+                .join('');
+        } catch {
+            optionsContainer.innerHTML = [
+                toMembershipOptionMarkup('basic', 'Basic Membership', true),
+                toMembershipOptionMarkup('bouldering', 'Bouldering Add-on', false),
+                toMembershipOptionMarkup('comp_team', 'Competition Team', false)
+            ].join('');
+            defaultMembershipType = 'basic';
+        }
+    }
+
+    await renderRegistrationMembershipTypes();
 
     // Fade in layout
     setTimeout(() => {
@@ -98,17 +138,85 @@ export async function initLoginApp() {
         resetPasswordInput?.focus();
     }
 
-    const { showDomainEmailPopup, showRegistrationNumberOverridePopup } = createDomainEmailPopupController({
-        popup: domainEmailPopup,
-        backdrop: domainEmailPopupBackdrop as HTMLElement | null,
-        title: domainEmailPopupTitle,
-        closeButton: domainEmailPopupClose as HTMLElement | null,
-        confirmButton: domainEmailPopupConfirm,
-        message: domainEmailPopupMessage,
-        confirmWrap: domainEmailPopupConfirmWrap,
-        confirmInput: domainEmailPopupConfirmInput,
-        confirmError: domainEmailPopupConfirmError
+    function closeDomainEmailPopup(confirmed = false) {
+        domainEmailPopup?.classList.add('hidden');
+        if (popupResolve) {
+            const resolve = popupResolve;
+            popupResolve = null;
+            resolve(confirmed);
+        }
+    }
+
+    function showDomainEmailPopup(message: string, title = 'University Email Required') {
+        if (popupResolve) {
+            popupResolve(false);
+            popupResolve = null;
+        }
+        popupExpectedRegistrationNumber = null;
+        if (domainEmailPopupTitle) domainEmailPopupTitle.textContent = title;
+        if (domainEmailPopupMessage) domainEmailPopupMessage.textContent = message;
+        if (domainEmailPopupConfirmWrap) domainEmailPopupConfirmWrap.classList.add('hidden');
+        if (domainEmailPopupConfirmInput) domainEmailPopupConfirmInput.value = '';
+        if (domainEmailPopupConfirmError) {
+            domainEmailPopupConfirmError.classList.add('hidden');
+            domainEmailPopupConfirmError.textContent = '';
+        }
+        if (domainEmailPopupConfirm) domainEmailPopupConfirm.classList.add('hidden');
+        if (domainEmailPopupClose) domainEmailPopupClose.textContent = 'Got it';
+        domainEmailPopup?.classList.remove('hidden');
+    }
+
+    [domainEmailPopupBackdrop, domainEmailPopupClose].forEach(el => {
+        el?.addEventListener('click', () => closeDomainEmailPopup(false));
     });
+
+    domainEmailPopupConfirm?.addEventListener('click', () => closeDomainEmailPopup(true));
+
+    domainEmailPopupConfirmInput?.addEventListener('input', () => {
+        if (!popupExpectedRegistrationNumber || !domainEmailPopupConfirm || !domainEmailPopupConfirmError) return;
+        const typed = domainEmailPopupConfirmInput.value.trim();
+        const matches = typed === popupExpectedRegistrationNumber;
+        domainEmailPopupConfirm.disabled = !matches;
+        if (!typed || matches) {
+            domainEmailPopupConfirmError.classList.add('hidden');
+            domainEmailPopupConfirmError.textContent = '';
+            return;
+        }
+        domainEmailPopupConfirmError.textContent = 'Registration numbers do not match yet.';
+        domainEmailPopupConfirmError.classList.remove('hidden');
+    });
+
+    function showRegistrationNumberOverridePopup(registrationNumber: string): Promise<boolean> {
+        if (popupResolve) {
+            popupResolve(false);
+            popupResolve = null;
+        }
+        popupExpectedRegistrationNumber = registrationNumber;
+        if (domainEmailPopupTitle) domainEmailPopupTitle.textContent = 'Check Registration Number';
+        if (domainEmailPopupMessage) {
+            domainEmailPopupMessage.textContent =
+                'Registration numbers normally start with 2 (for example: 2xxxxxxxx). If you continue, your membership may not link properly and you will not be able to change this value later. Please double-check before continuing.';
+        }
+        if (domainEmailPopupClose) domainEmailPopupClose.textContent = 'Go back';
+        if (domainEmailPopupConfirm) {
+            domainEmailPopupConfirm.textContent = 'Continue anyway';
+            domainEmailPopupConfirm.disabled = true;
+            domainEmailPopupConfirm.classList.remove('hidden');
+        }
+        if (domainEmailPopupConfirmWrap) domainEmailPopupConfirmWrap.classList.remove('hidden');
+        if (domainEmailPopupConfirmInput) {
+            domainEmailPopupConfirmInput.value = '';
+            domainEmailPopupConfirmInput.focus();
+        }
+        if (domainEmailPopupConfirmError) {
+            domainEmailPopupConfirmError.classList.add('hidden');
+            domainEmailPopupConfirmError.textContent = '';
+        }
+        domainEmailPopup?.classList.remove('hidden');
+        return new Promise(resolve => {
+            popupResolve = resolve;
+        });
+    }
 
     // Check if page loaded with a reset token in the URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -165,7 +273,7 @@ export async function initLoginApp() {
 
         try {
             await authState.login(email, password);
-            window.location.href = '/dashboard';
+            window.location.href = '/dashboard.html';
         } catch (error: any) {
             if (error.pendingVerification && error.userId) {
                 showVerifyPanel(error.userId);
@@ -247,7 +355,7 @@ export async function initLoginApp() {
             }
 
             // No verification needed (test env / root admin) — already logged in
-            window.location.href = '/dashboard';
+            window.location.href = '/dashboard.html';
         } catch (error: any) {
             const msg = error.message || 'Registration failed.';
             registerError.textContent = msg;
@@ -277,7 +385,7 @@ export async function initLoginApp() {
 
         try {
             await authState.verifyEmail(pendingUserId, code);
-            window.location.href = '/dashboard';
+            window.location.href = '/dashboard.html';
         } catch (error: any) {
             verifyError.textContent = error.message || 'Verification failed. Please try again.';
             verifyError.classList.remove('hidden');
@@ -376,7 +484,7 @@ export async function initLoginApp() {
             resetSuccess.classList.remove('hidden');
             resetBtn.classList.add('hidden');
             setTimeout(() => {
-                window.location.href = '/login';
+                window.location.href = '/login.html';
             }, 2000);
         } catch (error: any) {
             resetError.textContent = error.message || 'Failed to reset password. The link may have expired.';
