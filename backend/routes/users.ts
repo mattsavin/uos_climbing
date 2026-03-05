@@ -6,6 +6,8 @@ import crypto from 'crypto';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import sharp from 'sharp';
+import { UPLOAD_BASE_DIR } from '../config';
 
 const router = express.Router();
 
@@ -17,19 +19,12 @@ function getMembershipTypeIds(callback: (err: Error | null, ids: string[]) => vo
 }
 
 // Configure multer for profile photo uploads
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const uploadDir = path.join(process.cwd(), 'uploads/profile-photos');
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-        }
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, 'profile-' + uniqueSuffix + path.extname(file.originalname));
-    }
-});
+const uploadDir = path.join(UPLOAD_BASE_DIR, 'profile-photos');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.memoryStorage();
 
 const upload = multer({
     storage: storage,
@@ -65,7 +60,7 @@ router.get('/me/profile', authenticateToken, (req: any, res) => {
 
 /** POST /api/users/me/photo - Upload profile photo */
 router.post('/me/photo', authenticateToken, (req: any, res) => {
-    upload.single('photo')(req, res, (uploadErr: any) => {
+    upload.single('photo')(req, res, async (uploadErr: any) => {
         if (uploadErr instanceof multer.MulterError && uploadErr.code === 'LIMIT_FILE_SIZE') {
             return res.status(400).json({ error: 'Photo too large. Max size is 5MB.' });
         }
@@ -77,12 +72,26 @@ router.post('/me/photo', authenticateToken, (req: any, res) => {
             return res.status(400).json({ error: 'No file uploaded' });
         }
 
-        const photoPath = `/uploads/profile-photos/${req.file.filename}`;
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const filename = 'profile-' + uniqueSuffix + '.webp';
+        const photoPath = `/uploads/profile-photos/${filename}`;
+        const fullPath = path.join(UPLOAD_BASE_DIR, 'profile-photos', filename);
+
+        // Transcode with sharp to strip metadata and prevent polyglot/infected images
+        try {
+            await sharp(req.file.buffer)
+                .resize(500, 500, { fit: sharp.fit.cover })
+                .webp({ quality: 80 })
+                .toFile(fullPath);
+        } catch (error) {
+            console.error('Sharp processing error:', error);
+            return res.status(500).json({ error: 'Failed to process image' });
+        }
 
         // Get old photo to delete it
         db.get('SELECT profilePhoto FROM users WHERE id = ?', [req.user.id], (err, user: any) => {
             if (!err && user && user.profilePhoto) {
-                const oldPath = path.join(process.cwd(), user.profilePhoto);
+                const oldPath = path.join(UPLOAD_BASE_DIR, user.profilePhoto.replace(/^\/uploads\//, ''));
                 if (fs.existsSync(oldPath)) {
                     try {
                         fs.unlinkSync(oldPath);
@@ -249,7 +258,7 @@ router.put('/me/password', authenticateToken, (req: any, res) => {
         const validPassword = await bcrypt.compare(currentPassword, user.passwordHash);
         if (!validPassword) return res.status(401).json({ error: 'Current password is incorrect' });
 
-        const newHash = await bcrypt.hash(newPassword, 10);
+        const newHash = await bcrypt.hash(newPassword, 12);
         db.run('UPDATE users SET passwordHash = ? WHERE id = ?', [newHash, req.user.id], function (err) {
             if (err) return res.status(500).json({ error: 'Database error' });
             res.json({ success: true });

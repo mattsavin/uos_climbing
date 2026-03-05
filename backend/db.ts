@@ -265,10 +265,42 @@ function initializeDatabase() {
             FOREIGN KEY (gearId) REFERENCES gear(id)
         )`);
 
+        // Gallery Table
+        db.run(`CREATE TABLE IF NOT EXISTS gallery (
+            id TEXT PRIMARY KEY,
+            filename TEXT NOT NULL,
+            filepath TEXT NOT NULL,
+            caption TEXT,
+            uploadedBy TEXT,
+            uploadedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+            featured INTEGER DEFAULT 0,
+            featuredOrder INTEGER,
+            heroDesktopX REAL DEFAULT 50,
+            heroDesktopY REAL DEFAULT 50,
+            heroDesktopZoom REAL DEFAULT 1,
+            heroMobileX REAL DEFAULT 50,
+            heroMobileY REAL DEFAULT 50,
+            heroMobileZoom REAL DEFAULT 1,
+            galleryLandscapeX REAL DEFAULT 50,
+            galleryLandscapeY REAL DEFAULT 50,
+            galleryLandscapeZoom REAL DEFAULT 1
+        )`);
+        db.run('ALTER TABLE gallery ADD COLUMN featured INTEGER DEFAULT 0', (err) => { });
+        db.run('ALTER TABLE gallery ADD COLUMN featuredOrder INTEGER', (err) => { });
+        db.run('ALTER TABLE gallery ADD COLUMN heroDesktopX REAL DEFAULT 50', (err) => { });
+        db.run('ALTER TABLE gallery ADD COLUMN heroDesktopY REAL DEFAULT 50', (err) => { });
+        db.run('ALTER TABLE gallery ADD COLUMN heroDesktopZoom REAL DEFAULT 1', (err) => { });
+        db.run('ALTER TABLE gallery ADD COLUMN heroMobileX REAL DEFAULT 50', (err) => { });
+        db.run('ALTER TABLE gallery ADD COLUMN heroMobileY REAL DEFAULT 50', (err) => { });
+        db.run('ALTER TABLE gallery ADD COLUMN heroMobileZoom REAL DEFAULT 1', (err) => { });
+        db.run('ALTER TABLE gallery ADD COLUMN galleryLandscapeX REAL DEFAULT 50', (err) => { });
+        db.run('ALTER TABLE gallery ADD COLUMN galleryLandscapeY REAL DEFAULT 50', (err) => { });
+        db.run('ALTER TABLE gallery ADD COLUMN galleryLandscapeZoom REAL DEFAULT 1', (err) => { });
+
         // Create root admin if not exists
         db.get('SELECT id, membershipYear FROM users WHERE email = ?', [ROOT_ADMIN_EMAIL], async (err, row: any) => {
             if (!row) {
-                const rootHash = await bcrypt.hash('SuperSecret123!', 10);
+                const rootHash = await bcrypt.hash('SuperSecret123!', 12);
                 const currentYear = new Date().getFullYear();
                 const currentMonth = new Date().getMonth();
                 const membershipYear = currentMonth < 8 ? `${currentYear - 1}/${currentYear}` : `${currentYear}/${currentYear + 1}`;
@@ -290,7 +322,7 @@ function initializeDatabase() {
                 db.run('UPDATE users SET emailVerified = 1, membershipStatus = ? WHERE email = ?', ['active', ROOT_ADMIN_EMAIL]);
                 // In non-production, keep local root credentials stable for troubleshooting/dev access
                 if (process.env.NODE_ENV !== 'production') {
-                    const rootHash = await bcrypt.hash('SuperSecret123!', 10);
+                    const rootHash = await bcrypt.hash('SuperSecret123!', 12);
                     db.run(
                         'UPDATE users SET passwordHash = ?, role = ?, firstName = ?, lastName = ?, name = ? WHERE email = ?',
                         [rootHash, 'committee', 'Root', 'Admin', 'Root Admin', ROOT_ADMIN_EMAIL]

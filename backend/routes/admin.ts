@@ -2,91 +2,18 @@ import express from 'express';
 import { db } from '../db';
 import { authenticateToken, requireCommittee } from '../middleware/auth';
 import { sendEmail } from '../services/email';
+import {
+    ROOT_ADMIN_EMAIL,
+    getMembershipLabel,
+    getDefaultMembershipType,
+    runDb,
+    getDb,
+    isRootAdmin,
+    parseSuRoster,
+    newMembershipRowId
+} from './admin.helpers';
 
 const router = express.Router();
-const ROOT_ADMIN_EMAIL = (process.env.ROOT_ADMIN_EMAIL || 'committee@sheffieldclimbing.org').toLowerCase();
-
-function isRootAdmin(user: any): boolean {
-    return !!user
-        && user.role === 'committee'
-        && typeof user.email === 'string'
-        && user.email.toLowerCase() === ROOT_ADMIN_EMAIL;
-}
-
-function getMembershipLabel(membershipType: string, callback: (label: string) => void) {
-    db.get('SELECT label FROM membership_types WHERE id = ?', [membershipType], (err, row: any) => {
-        if (err || !row?.label) return callback(membershipType);
-        callback(row.label);
-    });
-}
-
-function getDefaultMembershipType(callback: (err: Error | null, membershipTypeId: string | null) => void) {
-    db.get(
-        `SELECT id FROM membership_types
-         ORDER BY CASE WHEN id = 'basic' THEN 0 ELSE 1 END, label ASC
-         LIMIT 1`,
-        [],
-        (err, row: any) => {
-            if (err) return callback(err as any, null);
-            callback(null, row?.id || null);
-        }
-    );
-}
-
-function getCurrentAcademicYear(): string {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = now.getMonth();
-    return m < 8 ? `${y - 1}/${y}` : `${y}/${y + 1}`;
-}
-
-function academicYearFromSubscriptionText(text: string): string | null {
-    const normalized = (text || '').trim();
-    if (!normalized) return null;
-
-    // Matches: 2025-2026, 2025/2026, 2025-26, 2025/26
-    const m1 = normalized.match(/(\d{4})\s*[-/]\s*(\d{2,4})/);
-    if (m1) {
-        const startYear = Number(m1[1]);
-        let endYear = Number(m1[2]);
-        if (!Number.isFinite(startYear) || !Number.isFinite(endYear)) return null;
-        if (m1[2].length === 2) {
-            endYear = Math.floor(startYear / 100) * 100 + endYear;
-        }
-        if (endYear < startYear) endYear += 100;
-        return `${startYear}/${endYear}`;
-    }
-
-    // Matches: 25-26 / 25/26
-    const m2 = normalized.match(/(^|[^\d])(\d{2})\s*[-/]\s*(\d{2})([^\d]|$)/);
-    if (m2) {
-        const startYear = 2000 + Number(m2[2]);
-        let endYear = 2000 + Number(m2[3]);
-        if (!Number.isFinite(startYear) || !Number.isFinite(endYear)) return null;
-        if (endYear < startYear) endYear += 100;
-        return `${startYear}/${endYear}`;
-    }
-
-    return null;
-}
-
-function runDb(sql: string, params: any[] = []): Promise<{ changes: number }> {
-    return new Promise((resolve, reject) => {
-        db.run(sql, params, function (err) {
-            if (err) return reject(err);
-            resolve({ changes: this.changes || 0 });
-        });
-    });
-}
-
-function getDb(sql: string, params: any[] = []): Promise<any> {
-    return new Promise((resolve, reject) => {
-        db.get(sql, params, (err, row) => {
-            if (err) return reject(err);
-            resolve(row);
-        });
-    });
-}
 
 router.get('/config/elections', authenticateToken, requireCommittee, (req, res) => {
     db.get('SELECT value FROM config WHERE key = ?', ['electionsOpen'], (err, row: any) => {
@@ -170,10 +97,13 @@ router.post('/memberships/import-su-roster', authenticateToken, requireCommittee
         const raw = (req.body?.raw || '').toString();
         if (!raw.trim()) return res.status(400).json({ error: 'No roster text provided' });
 
-        const lines = raw
-            .split(/\r?\n/)
-            .map((l: string) => l.trim())
-            .filter(Boolean);
+        const {
+            lines,
+            parsed,
+            skipped,
+            yearParsedFromSubscription,
+            yearFallbackUsed
+        } = parseSuRoster(raw);
 
         if (!lines.length) return res.status(400).json({ error: 'No valid lines found' });
 
@@ -181,36 +111,6 @@ router.post('/memberships/import-su-roster', authenticateToken, requireCommittee
             getDefaultMembershipType((_err, typeId) => resolve(typeId));
         });
         if (!defaultType) return res.status(500).json({ error: 'No membership types configured' });
-
-        const parsed: { registrationNumber: string; fullName: string; membershipYear: string }[] = [];
-        const skipped: { line: string; reason: string }[] = [];
-        let yearParsedFromSubscription = 0;
-        let yearFallbackUsed = 0;
-
-        for (const line of lines) {
-            const tabCols = line.split('\t').map((c) => c.trim()).filter(Boolean);
-            const cols = tabCols.length >= 5 ? tabCols : line.split(/\s{2,}/).map((c) => c.trim()).filter(Boolean);
-            if (cols.length < 5) {
-                skipped.push({ line, reason: 'Expected 5 columns' });
-                continue;
-            }
-
-            const registrationNumber = (cols[0] || '').trim();
-            const fullName = (cols[1] || '').trim();
-            const subscriptionPurchased = (cols[3] || '').trim();
-            const membershipYearFromSub = academicYearFromSubscriptionText(subscriptionPurchased);
-            const membershipYear = membershipYearFromSub || getCurrentAcademicYear();
-
-            if (!/^\d{6,12}$/.test(registrationNumber)) {
-                skipped.push({ line, reason: 'Invalid registration number' });
-                continue;
-            }
-
-            if (membershipYearFromSub) yearParsedFromSubscription++;
-            else yearFallbackUsed++;
-
-            parsed.push({ registrationNumber, fullName, membershipYear });
-        }
 
         if (!parsed.length) {
             return res.status(400).json({ error: 'No valid roster rows found', skipped });
@@ -246,7 +146,7 @@ router.post('/memberships/import-su-roster', authenticateToken, requireCommittee
                 } else {
                     await runDb(
                         'INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)',
-                        ['umem_' + require('crypto').randomUUID(), existingUser.id, defaultType, 'active', row.membershipYear]
+                        [newMembershipRowId(), existingUser.id, defaultType, 'active', row.membershipYear]
                     );
                 }
 
