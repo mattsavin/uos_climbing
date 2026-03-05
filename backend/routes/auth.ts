@@ -7,7 +7,6 @@ import { db } from '../db';
 import { SECRET_KEY } from '../config';
 import { authenticateToken } from '../middleware/auth';
 import { sendEmail } from '../services/email';
-import { getAcademicYear, isSheffieldEmail } from './auth.helpers';
 
 const IS_TEST = process.env.NODE_ENV === 'test';
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
@@ -63,10 +62,6 @@ router.post('/register', authLimiter, async (req, res) => {
         return res.status(400).json({ error: 'Passwords do not match' });
     }
 
-    if (password.length < 12) {
-        return res.status(400).json({ error: 'Password must be at least 12 characters long' });
-    }
-
     getMembershipTypeIds(async (typeErr, membershipTypeIds) => {
         if (typeErr) return res.status(500).json({ error: 'Database error' });
 
@@ -95,12 +90,12 @@ router.post('/register', authLimiter, async (req, res) => {
                 );
             });
 
-            const passwordHash = await bcrypt.hash(password, 12);
+            const passwordHash = await bcrypt.hash(password, 10);
             const id = 'user_' + Date.now() + Math.random().toString(36).substr(2, 5);
 
             let role = 'member';
             let membershipStatus = 'pending';
-            if (!IS_TEST && !isSheffieldEmail(normalizedEmail)) {
+            if (!IS_TEST && !normalizedEmail.endsWith('@sheffield.ac.uk')) {
                 return res.status(400).json({ error: 'Please register with your @sheffield.ac.uk email address.' });
             }
             const isRootAdminTestBypass = IS_TEST && normalizedEmail === ROOT_ADMIN_EMAIL;
@@ -109,7 +104,9 @@ router.post('/register', authLimiter, async (req, res) => {
                 membershipStatus = 'active';
             }
 
-            let membershipYear = getAcademicYear();
+            const currentYear = new Date().getFullYear();
+            const currentMonth = new Date().getMonth();
+            let membershipYear = currentMonth < 8 ? `${currentYear - 1}/${currentYear}` : `${currentYear}/${currentYear + 1}`;
             if (preApproved?.membershipYear) {
                 membershipStatus = 'active';
                 membershipYear = preApproved.membershipYear;
@@ -360,8 +357,8 @@ router.post('/reset-password', authLimiter, (req, res) => {
     if (!token || !newPassword) {
         return res.status(400).json({ error: 'Token and new password are required' });
     }
-    if (newPassword.length < 12) {
-        return res.status(400).json({ error: 'Password must be at least 12 characters' });
+    if (newPassword.length < 6) {
+        return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
 
     db.get('SELECT * FROM password_resets WHERE token = ?', [token], async (err, row: any) => {
@@ -374,7 +371,7 @@ router.post('/reset-password', authLimiter, (req, res) => {
         }
 
         try {
-            const newHash = await bcrypt.hash(newPassword, 12);
+            const newHash = await bcrypt.hash(newPassword, 10);
             db.run('UPDATE users SET passwordHash = ? WHERE id = ?', [newHash, row.userId], (updateErr) => {
                 if (updateErr) return res.status(500).json({ error: 'Database error' });
                 db.run('DELETE FROM password_resets WHERE token = ?', [token]);
@@ -400,18 +397,18 @@ router.get('/me', authenticateToken, (req: any, res) => {
         'SELECT id, firstName, lastName, name, email, registrationNumber, role, committeeRole, membershipStatus, membershipYear, emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements, calendarToken, instagram, faveCrag, bio, profilePhoto FROM users WHERE id = ?',
         [req.user.id],
         (err, user: any) => {
-            if (err || !user) return res.status(404).json({ error: 'User not found' });
-            user.name = user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
+        if (err || !user) return res.status(404).json({ error: 'User not found' });
+        user.name = user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
 
-            db.all('SELECT role FROM committee_roles WHERE userId = ?', [req.user.id], (errRoles, rows: any[]) => {
-                if (!errRoles && rows) {
-                    user.committeeRoles = rows.map(r => r.role);
-                } else {
-                    user.committeeRoles = [];
-                }
-                res.json({ user });
-            });
+        db.all('SELECT role FROM committee_roles WHERE userId = ?', [req.user.id], (errRoles, rows: any[]) => {
+            if (!errRoles && rows) {
+                user.committeeRoles = rows.map(r => r.role);
+            } else {
+                user.committeeRoles = [];
+            }
+            res.json({ user });
         });
+    });
 });
 
 export default router;

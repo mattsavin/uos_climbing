@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const user = authState.getUser();
         const rootTestEmailBtn = document.getElementById('root-send-test-email-btn') as HTMLButtonElement | null;
         if (!user) {
-            window.location.href = '/login';
+            window.location.href = '/login.html';
             return;
         }
 
@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Boot non-committee users back to dashboard
         if (!isCommittee && user.email !== 'committee@sheffieldclimbing.org') {
-            window.location.href = '/dashboard';
+            window.location.href = '/dashboard.html';
             return;
         }
 

@@ -65,7 +65,7 @@ jobs:
             docker build -t uos_climbing .
             docker stop uos_climbing || true
             docker rm uos_climbing || true
-            docker run -d --restart unless-stopped --name uos_climbing \
+            docker run -d --name uos_climbing \
               -p 3000:3000 \
               -v ~/data:/data \
               -e JWT_SECRET="$JWT_SECRET" \
@@ -106,7 +106,7 @@ jobs:
             docker build -t uos_climbing_beta .
             docker stop uos_climbing_beta || true
             docker rm uos_climbing_beta || true
-            docker run -d --restart unless-stopped --name uos_climbing_beta \
+            docker run -d --name uos_climbing_beta \
               -p 3001:3000 \
               -v ~/data_beta:/data \
               -e NODE_ENV=production \
