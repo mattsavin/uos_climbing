@@ -118,8 +118,8 @@ export function initCropEditor(options: InitCropEditorOptions) {
             draftCropY = normalizeCrop(savedState.cropY, 50);
             draftZoom = normalizeZoom(savedState.zoom, 1);
             draftBoxScale = clamp(savedState.boxScale, 1 / 3, 1);
-            draftBoxCenterX = 50;
-            draftBoxCenterY = 50;
+            draftBoxCenterX = normalizeCrop(savedState.boxCenterX, 50);
+            draftBoxCenterY = normalizeCrop(savedState.boxCenterY, 50);
         } else {
             draftCropX = normalizeCrop(image[config.xKey], 50);
             draftCropY = normalizeCrop(image[config.yKey], 50);

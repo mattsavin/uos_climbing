@@ -1,7 +1,7 @@
 export async function apiFetch(endpoint: string, options: RequestInit = {}) {
     const isFormData = options.body instanceof FormData;
     const headers: Record<string, string> = {
-        ...(!isFormData && { 'Content-Type': 'application/json' }),
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         ...((options.headers as Record<string, string>) || {})
     };
 
@@ -14,7 +14,10 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}) {
             data = JSON.parse(text);
         } catch {
             if (!res.ok) {
-                throw new Error(`API Request Failed (${res.status})`);
+                const err: any = new Error(`API Request Failed (${res.status})`);
+                err.status = res.status;
+                err.data = text;
+                throw err;
             }
             return text;
         }
