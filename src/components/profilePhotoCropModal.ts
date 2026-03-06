@@ -11,7 +11,7 @@ export const profilePhotoCropModalHtml = `
                 </button>
             </div>
             <div class="aspect-square relative bg-black overflow-hidden select-none cursor-grab" id="profile-crop-stage">
-                <img id="profile-crop-image" src="" alt="Profile crop preview" class="absolute" draggable="false">
+                <img id="profile-crop-image" src="" alt="Profile crop preview" class="absolute" draggable="false" style="max-width: none; max-height: none">
                 <div class="absolute inset-4 rounded-full pointer-events-none" style="box-shadow: 0 0 0 9999px rgba(0,0,0,0.6); border: 2px solid rgba(255,255,255,0.7)"></div>
             </div>
             <div class="p-4 space-y-3">
