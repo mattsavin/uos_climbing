@@ -1,6 +1,11 @@
 import type { MembershipType, Session, SessionType, User } from '../../auth';
 import { apiFetch } from './http';
 
+/**
+ * Client-side API wrapper for the `/api/admin` and related privileged endpoints.
+ * Handles the construction of JSON payloads and HTTP methods via the shared `apiFetch` utility.
+ * Used exclusively by the admin dashboard for managing users, sessions, roles, and configurations.
+ */
 export const adminApi = {
     async getAllUsers(): Promise<User[]> {
         const users = await apiFetch('/api/admin/users');

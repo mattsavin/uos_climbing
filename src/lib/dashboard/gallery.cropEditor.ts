@@ -10,13 +10,29 @@ import {
 } from './gallery.helpers';
 import type { CropContextKey, CropEditorState } from './gallery.helpers';
 
+/**
+ * Configuration options required to bootstrap the crop editor.
+ */
 type InitCropEditorOptions = {
+    /** Global map to persist individual crop states per image and context. */
     cropEditorStateByImageContext: Map<string, CropEditorState>;
+    /** Callback to retrieve the currently active image object from the viewer. */
     getCurrentImage: () => any | null;
+    /** Callback to retrieve the current image's array index. */
     getCurrentImageIndex: () => number;
+    /** Callback to update the summary text overlaid on the viewer. */
     setSummaryText: (context: CropContextKey, x: number, y: number, zoom: number) => void;
 };
 
+/**
+ * Initializes the Gallery Crop Editor overlay.
+ * Binds extensive Pointer Events for dragging, pinching, and mouse-wheel zooming.
+ * Orchestrates geometry math using `getEditorGeometry` and maintains local drafts of
+ * image offsets and scale before they are formally "Saved" to the global state.
+ *
+ * @param {InitCropEditorOptions} options - External state accessors and callbacks.
+ * @returns {Object} A controller containing methods to `openCropEditor`, `closeCropEditor`, and check `isOpen`.
+ */
 export function initCropEditor(options: InitCropEditorOptions) {
     const { cropEditorStateByImageContext, getCurrentImage, getCurrentImageIndex, setSummaryText } = options;
 

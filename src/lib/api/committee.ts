@@ -1,5 +1,10 @@
 import { apiFetch } from './http';
 
+/**
+ * Client-side API wrapper for committee-specific actions and self-management endpoints.
+ * Includes helpers for updating public committee bios, uploading profile photos via FormData,
+ * and securely downloading CSV roster exports directly into the browser.
+ */
 export const committeeApi = {
     async getCommitteeMembers() {
         return apiFetch('/api/committee');

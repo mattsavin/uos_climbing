@@ -9,6 +9,11 @@ const router = express.Router();
 
 
 
+/**
+ * Helper to asynchronous query the database to verify if a given membership string ID is valid.
+ * @param {string} membershipType - The membership ID to validate against `membership_types`.
+ * @param {Function} callback - Error-first callback yielding boolean true if exists.
+ */
 function membershipTypeExists(membershipType: string, callback: (err: Error | null, exists: boolean) => void) {
     db.get('SELECT id FROM membership_types WHERE id = ?', [membershipType], (err, row: any) => {
         if (err) return callback(err as any, false);
@@ -18,6 +23,14 @@ function membershipTypeExists(membershipType: string, callback: (err: Error | nu
 
 
 
+/**
+ * Constructs an RFC 5545 compliant iCalendar string for the user's sessions.
+ * Converts database rows into discrete VEVENT blocks.
+ *
+ * @param {string} userId - ID of the user generating the token (used for unique payload tracking).
+ * @param {any[]} sessions - Array of joined session objects from the database.
+ * @returns {string} The raw string representing the `.ics` file content.
+ */
 function buildIcalContent(userId: string, sessions: any[]) {
     let icalContent = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//USCC//Calendar//EN\r\n";
     sessions.forEach((s: any) => {
@@ -41,6 +54,11 @@ function buildIcalContent(userId: string, sessions: any[]) {
     return icalContent;
 }
 
+/**
+ * GET /api/sessions/
+ * Retrieves all sessions. If the requestor holds committee privileges, unlisted/committee-only
+ * sessions are included. Unauthenticated requests receive only public/basic visibility sessions.
+ */
 router.get('/', (req, res) => {
     // Optional auth: public users can list sessions, but committee-only sessions
     // are only visible to committee users.
@@ -124,6 +142,11 @@ router.get('/ical/:calendarToken/all', (req, res) => {
     });
 });
 
+/**
+ * POST /api/sessions/
+ * Committee Only. Creates a new club session to be displayed on the calendar.
+ * Automatically checks and maps default 'basic' membership constraints if unspecified.
+ */
 router.post('/', authenticateToken, requireCommittee, (req, res) => {
     const { title, type, date, capacity, location, requiredMembership, visibility, registrationVisibility } = req.body;
     const id = 'sess_' + Date.now();
@@ -190,6 +213,14 @@ router.get('/me/bookings', authenticateToken, (req: any, res) => {
     });
 });
 
+/**
+ * POST /api/sessions/:id/book
+ * Authenticated Endpoint. Allows a user to enroll in a climbing session if:
+ * 1. The session is not full (capacity check).
+ * 2. The session date is in the future.
+ * 3. The user holds the required active `membershipType` (or is a committee admin bypassing).
+ * Uses SQLite `BEGIN TRANSACTION` to prevent race conditions on capacity counters.
+ */
 router.post('/:id/book', authenticateToken, (req: any, res) => {
     const userId = req.user.id;
     const sessionId = req.params.id;
@@ -252,6 +283,11 @@ router.post('/:id/book', authenticateToken, (req: any, res) => {
     });
 });
 
+/**
+ * POST /api/sessions/:id/cancel
+ * Authenticated Endpoint. Removes a user's booking from a session, decrementing the
+ * capacity counter safely via a database transaction.
+ */
 router.post('/:id/cancel', authenticateToken, (req: any, res) => {
     const userId = req.user.id;
     const sessionId = req.params.id;

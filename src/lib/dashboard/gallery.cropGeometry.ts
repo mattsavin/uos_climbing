@@ -1,6 +1,19 @@
 import { CROP_CONTEXT_CONFIG, clamp, getCropBounds } from './gallery.helpers';
 import type { CropContextKey } from './gallery.helpers';
 
+/**
+ * Calculates the dimensions and absolute positioning of the cropping box relative to
+ * the scaled image viewport. Ensures the crop box maintains the strict aspect ratio
+ * required by the active `CropContextKey`, and prevents it from overflowing the viewport bounds.
+ *
+ * @param {number} width - The rendered width of the image viewport.
+ * @param {number} height - The rendered height of the image viewport.
+ * @param {number} aspect - The required aspect ratio constraint (width / height).
+ * @param {number} boxScale - A scaling factor (0.33 to 1) applied to the crop box relative to the viewport.
+ * @param {number} centerX - Percentage X coordinate (0-100) indicating the desired horizontal center of the box.
+ * @param {number} centerY - Percentage Y coordinate (0-100) indicating the desired vertical center of the box.
+ * @returns {Object} Computed dimensions (boxWidth, boxHeight, left, top) and adjusted center coordinates.
+ */
 export function getBoxMetrics(width: number, height: number, aspect: number, boxScale: number, centerX: number, centerY: number) {
     if (width / height >= aspect) {
         const boxHeight = height * boxScale;
@@ -34,6 +47,16 @@ export function getBoxMetrics(width: number, height: number, aspect: number, box
     };
 }
 
+/**
+ * Determines the largest rectangular viewport that fits within the HTML stage
+ * while preserving the natural aspect ratio of the underlying image.
+ * Simulates a CSS `object-fit: contain` behavior mathematically.
+ *
+ * @param {DOMRect} stageRect - The bounding client rect of the HTML container (`#crop-editor-stage`).
+ * @param {number} naturalWidth - The intrinsic width of the raw image.
+ * @param {number} naturalHeight - The intrinsic height of the raw image.
+ * @returns {Object} The calculated left, top, width, and height of the contained image viewport.
+ */
 export function getImageViewport(stageRect: DOMRect, naturalWidth: number, naturalHeight: number) {
     if (!naturalWidth || !naturalHeight) {
         return { left: 0, top: 0, width: stageRect.width, height: stageRect.height };
@@ -63,6 +86,15 @@ export function getImageViewport(stageRect: DOMRect, naturalWidth: number, natur
     };
 }
 
+/**
+ * Master geometric orchestration function for the crop editor.
+ * Aggregates hardware measurements (DOMRect), image intrinsic dimensions, and stateful
+ * user transformations (zoom, box scaling) into a single cohesive layout object
+ * used to render the visual DOM overlays.
+ *
+ * @param {Object} input - State dictionary including DOM targets and draft measurements.
+ * @returns {Object|null} A payload containing `stageRect`, `viewport`, `bounds`, and `metrics`, or null if not ready.
+ */
 export function getEditorGeometry(input: {
     activeCropContext: CropContextKey | null;
     cropStage: HTMLElement | null;

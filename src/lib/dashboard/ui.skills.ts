@@ -1,3 +1,10 @@
+/**
+ * Initializes a minimalist skills progression tracker.
+ * Serializes state to `localStorage` under a user-specific key to persist progress.
+ * Renders a checklist of milestones and updates an SVG progress bar dynamically.
+ *
+ * @param {string} userId - Unique identifier of the user to namespace localStorage keys.
+ */
 export function initSkillsTracker(userId: string) {
     const list = document.getElementById('skills-tracker-list');
     if (!list) return;

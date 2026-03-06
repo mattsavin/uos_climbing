@@ -11,6 +11,14 @@ export interface SessionModalOptions {
     onDeleteSuccess?: () => void;
 }
 
+/**
+ * Opens a modal displaying detailed information about a climbing session.
+ * Handles dynamic DOM injection of the modal if it doesn't exist, populates it with data,
+ * and binds context-aware actions (Book, Cancel) along with Committee Override features.
+ * 
+ * @param {SessionModalOptions} options - Configuration object containing the session data,
+ * current user state, and callbacks for mutations.
+ */
 export function openSessionModal(options: SessionModalOptions) {
     const { session, isBooked, user, onBook, onCancel, onEditSuccess, onDeleteSuccess } = options;
 
@@ -392,6 +400,15 @@ export function openSessionModal(options: SessionModalOptions) {
     modal!.classList.remove('hidden');
 }
 
+/**
+ * Fetches and renders the list of attendees for a specific session within the committee pane.
+ * Includes inline actions for committee members to forcefully remove attendees.
+ * 
+ * @param {string} sessionId - ID of the session to fetch attendees for.
+ * @param {HTMLElement} container - DOM element to render the attendee list into.
+ * @param {HTMLElement} countEl - DOM element displaying the total count.
+ * @param {Function} [onUpdate] - Optional callback triggered when an attendee is removed.
+ */
 async function renderAttendees(sessionId: string, container: HTMLElement, countEl: HTMLElement, onUpdate?: () => void) {
     try {
         const attendees = await adminApi.getSessionAttendees(sessionId);

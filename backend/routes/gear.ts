@@ -6,6 +6,11 @@ import { sendEmail } from '../services/email';
 
 const router = express.Router();
 
+/**
+ * GET /api/gear/
+ * Retrieves the full inventory of club climbing gear.
+ * Requires standard authentication.
+ */
 router.get('/', authenticateToken, (req, res) => {
     db.all('SELECT * FROM gear ORDER BY name ASC', [], (err, rows) => {
         if (err) return res.status(500).json({ error: 'Database error' });
@@ -13,6 +18,12 @@ router.get('/', authenticateToken, (req, res) => {
     });
 });
 
+/**
+ * POST /api/gear/
+ * Adds a new piece of gear to the inventory system.
+ * Initializes both the `totalQuantity` and `availableQuantity` matching the initial count.
+ * Requires Kit Sec privileges.
+ */
 router.post('/', authenticateToken, requireKitSec, (req, res) => {
     const { name, description, totalQuantity } = req.body;
     const id = 'gear_' + Date.now();
@@ -67,6 +78,12 @@ router.get('/me/requests', authenticateToken, (req: any, res) => { // Changed fr
     });
 });
 
+/**
+ * POST /api/gear/:id/request
+ * Authenticated Endpoint. Submits a borrowing request for a specific piece of gear.
+ * Validates that the requested gear actually has an `availableQuantity > 0` before inserting
+ * the pending request into the database.
+ */
 router.post('/:id/request', authenticateToken, (req: any, res) => {
     const userId = req.user.id;
     const gearId = req.params.id;
@@ -87,6 +104,12 @@ router.post('/:id/request', authenticateToken, (req: any, res) => {
     });
 });
 
+/**
+ * POST /api/gear/requests/:request_id/approve
+ * Kit Sec Endpoint. Approves a pending gear borrow request.
+ * Decrements the `availableQuantity` of the associated gear item and dispatches
+ * an approval notification email to the user.
+ */
 router.post('/requests/:request_id/approve', authenticateToken, requireKitSec, (req, res) => {
     const requestId = req.params.request_id;
     db.get('SELECT r.gearId, r.status, u.name, u.email FROM gear_requests r LEFT JOIN users u ON r.userId = u.id WHERE r.id = ?', [requestId], (err, request: any) => {
@@ -146,6 +169,11 @@ router.post('/requests/:request_id/reject', authenticateToken, requireKitSec, (r
     });
 });
 
+/**
+ * POST /api/gear/requests/:request_id/return
+ * Kit Sec Endpoint. Marks a previously approved gear request as returned.
+ * Restores the gear's `availableQuantity` by incrementing it.
+ */
 router.post('/requests/:request_id/return', authenticateToken, requireKitSec, (req, res) => {
     const requestId = req.params.request_id;
     const returnDate = new Date().toISOString();

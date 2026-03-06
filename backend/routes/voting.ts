@@ -18,6 +18,11 @@ router.get('/candidates', authenticateToken, (req, res) => {
     });
 });
 
+/**
+ * POST /api/voting/apply
+ * Authenticated Endpoint. Allows a user to submit their manifesto and run for a committee role.
+ * Requires the global configuration key `electionsOpen` to be explicitly set to 'true'.
+ */
 router.post('/apply', authenticateToken, (req: any, res) => {
     const { manifesto, role, presentationLink } = req.body;
     if (!manifesto || !role) return res.status(400).json({ error: 'Manifesto and role are required' });
@@ -67,6 +72,12 @@ router.get('/status', authenticateToken, (req: any, res) => {
     });
 });
 
+/**
+ * POST /api/voting/vote
+ * Authenticated Endpoint. Submits a user's vote for a specific candidate.
+ * Relies on SQLite UNIQUE constraints (`userId`) to prevent double voting.
+ * Requires elections to be actively open.
+ */
 router.post('/vote', authenticateToken, (req: any, res) => {
     const { candidateId } = req.body;
     if (!candidateId) return res.status(400).json({ error: 'Candidate ID is required' });
@@ -88,6 +99,12 @@ router.post('/vote', authenticateToken, (req: any, res) => {
     });
 });
 
+/**
+ * POST /api/voting/reset
+ * Committee Only Endpoint. Executes a hard reset of the entire voting ecosystem via an atomic
+ * database rollback transaction. Purges all votes, candidates, referendums, and referendum votes,
+ * while forcefully closing the elections configuration flag.
+ */
 router.post('/reset', authenticateToken, requireCommittee, (req, res) => {
     db.serialize(() => {
         db.run('BEGIN TRANSACTION');
@@ -106,6 +123,11 @@ router.post('/reset', authenticateToken, requireCommittee, (req, res) => {
     });
 });
 
+/**
+ * GET /api/voting/referendums
+ * Authenticated Endpoint. Fetches all active referendums alongside aggregate counts for
+ * 'yes', 'no', and 'abstain' votes using correlated subqueries. Includes the requester's own vote.
+ */
 router.get('/referendums', authenticateToken, (req: any, res) => {
     db.all(`
         SELECT r.id, r.title, r.description, r.createdAt,

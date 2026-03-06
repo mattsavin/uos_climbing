@@ -1,3 +1,9 @@
+/**
+ * Raw HTML template for the Account Manager modal.
+ * Includes structural UI for Profile Settings (photo upload, demographics) 
+ * and Security Settings (password changes, account deletion).
+ * Designed to be injected into the DOM by `src/lib/dashboard/profile.ts`.
+ */
 export const accountManagerModalHtml = `
     <div id="account-manager-modal" class="fixed inset-0 z-[150] hidden flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="account-manager-backdrop"></div>
