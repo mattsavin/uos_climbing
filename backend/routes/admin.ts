@@ -1,17 +1,17 @@
+import { standardDbResponse } from '../utils/response';
 import express from 'express';
 import { db } from '../db';
 import { authenticateToken, requireCommittee } from '../middleware/auth';
 import { sendEmail } from '../services/email';
 import {
     ROOT_ADMIN_EMAIL,
-    getMembershipLabel,
-    getDefaultMembershipType,
     runDb,
     getDb,
     isRootAdmin,
     parseSuRoster,
     newMembershipRowId
 } from './admin.helpers';
+import { getMembershipLabel, getDefaultMembershipType } from '../services/membership';
 
 const router = express.Router();
 
@@ -260,10 +260,7 @@ router.post('/users/:id/reject', authenticateToken, requireCommittee, (req, res)
 });
 
 router.post('/users/:id/promote', authenticateToken, requireCommittee, (req, res) => {
-    db.run('UPDATE users SET role = ? WHERE id = ?', ['committee', req.params.id], function (err) {
-        if (err) return res.status(500).json({ error: 'Database error' });
-        res.json({ success: true });
-    });
+    db.run('UPDATE users SET role = ? WHERE id = ?', ['committee', req.params.id], standardDbResponse(res));
 });
 
 router.post('/users/:id/demote', authenticateToken, requireCommittee, (req: any, res) => {

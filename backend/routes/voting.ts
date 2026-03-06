@@ -1,3 +1,4 @@
+import { standardDbResponse } from '../utils/response';
 import express from 'express';
 import { db } from '../db';
 import { authenticateToken, requireCommittee } from '../middleware/auth';
@@ -43,10 +44,7 @@ router.post('/withdraw', authenticateToken, (req: any, res) => {
             return res.status(403).json({ error: 'Elections are not currently open' });
         }
 
-        db.run('DELETE FROM candidates WHERE userId = ?', [req.user.id], function (err) {
-            if (err) return res.status(500).json({ error: 'Database error' });
-            res.json({ success: true });
-        });
+        db.run('DELETE FROM candidates WHERE userId = ?', [req.user.id], standardDbResponse(res));
     });
 });
 
