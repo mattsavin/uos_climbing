@@ -2,6 +2,7 @@ import { renderGalleryThumbGrid } from './gallery.list';
 import type { CropEditorState } from './gallery.helpers';
 import { initGalleryUploadHandlers } from './gallery.upload';
 import { createGalleryViewerController } from './gallery.viewer';
+import { apiFetch } from '../api/http';
 
 let currentGalleryImages: any[] = [];
 let currentViewerIndex = -1;
@@ -19,9 +20,7 @@ const galleryViewer = createGalleryViewerController({
 
 export async function fetchGalleryImages() {
     try {
-        const response = await fetch('/api/gallery');
-        if (!response.ok) throw new Error('Failed to fetch gallery');
-        return await response.json();
+        return await apiFetch('/api/gallery');
     } catch (e) {
         console.error(e);
         return [];

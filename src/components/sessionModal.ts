@@ -121,7 +121,7 @@ export function openSessionModal(options: SessionModalOptions) {
                                 </select>
                             </div>
                             <div class="flex flex-col gap-2 mt-4 pt-4 border-t border-slate-800">
-                                <button type="submit" class="btn-primary w-full !px-4 !py-3 !text-xs uppercase tracking-wider !bg-amber-500 hover:!bg-amber-400 !text-brand-darker !shadow-amber-500/20 font-black">Save Adjustments</button>
+                                <button type="submit" class="btn-primary w-full !px-4 !py-3 !text-xs uppercase tracking-wider !bg-amber-500 hover:!bg-amber-400 !text-brand-darker !shadow-amber-500/20">Save Adjustments</button>
                                 <button type="button" id="usm-delete-btn" class="w-full text-[10px] font-bold px-2 py-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded uppercase tracking-wider transition-colors hidden text-center">Delete Event</button>
                             </div>
                         </form>

@@ -7,6 +7,7 @@ import { adminApi } from './lib/api/admin';
 import { committeeApi } from './lib/api/committee';
 import { gearApi } from './lib/api/gear';
 import { votingApi } from './lib/api/voting';
+import { apiFetch } from './lib/api/http';
 
 export interface User {
     id: string;
@@ -66,21 +67,7 @@ export function getCurrentAcademicYear() {
     return `${year}/${year + 1}`;
 }
 
-async function parseJsonSafely<T = any>(res: Response, fallback: T): Promise<T> {
-    try {
-        return await res.json();
-    } catch {
-        return fallback;
-    }
-}
 
-async function parseJsonOrThrow<T = any>(res: Response, fallbackMessage: string): Promise<T> {
-    const data = await parseJsonSafely<any>(res, {});
-    if (!res.ok) {
-        throw new Error(data?.error || fallbackMessage);
-    }
-    return data as T;
-}
 
 export interface SessionType {
     id: string;
@@ -106,95 +93,65 @@ export const authState = {
 
     async init() {
         try {
-            const res = await fetch('/api/auth/me', {
-                credentials: 'include'
-            });
-            if (res.ok) {
-                const data = await res.json();
-                this.user = data.user;
-            } else {
-                this.logout();
-            }
+            const data = await apiFetch('/api/auth/me');
+            this.user = data.user;
         } catch (e) {
             this.logout();
         }
     },
 
     async login(email: string, password?: string) {
-        const res = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ email, password })
-        });
-
-        const data = await parseJsonSafely<any>(res, null);
-        if (!data) throw new Error('Server returned an unexpected response. Please try again.');
-
-        if (!res.ok) {
-            // Surface pendingVerification info so the UI can show the OTP panel
-            const err: any = new Error(data.error || 'Login failed');
-            err.pendingVerification = data.pendingVerification;
-            err.userId = data.userId;
+        try {
+            const data = await apiFetch('/api/auth/login', {
+                method: 'POST',
+                body: JSON.stringify({ email, password })
+            });
+            this.user = data.user;
+            return this.user;
+        } catch (err: any) {
+            if (err.data && err.data.pendingVerification !== undefined) {
+                err.pendingVerification = err.data.pendingVerification;
+                err.userId = err.data.userId;
+            }
             throw err;
         }
-
-        this.user = data.user;
-        return this.user;
     },
 
     async verifyEmail(userId: string, code: string) {
-        const res = await fetch('/api/auth/verify-email', {
+        const data = await apiFetch('/api/auth/verify-email', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
             body: JSON.stringify({ userId, code })
         });
-
-        const data = await parseJsonSafely<any>(res, null);
-        if (!data) throw new Error('Server returned an unexpected response. Please try again.');
-        if (!res.ok) throw new Error(data.error || 'Verification failed');
-
         this.user = data.user;
         return this.user;
     },
 
     async requestVerification(userId: string) {
-        const res = await fetch('/api/auth/request-verification', {
+        return apiFetch('/api/auth/request-verification', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId })
         });
-        return parseJsonOrThrow(res, 'Failed to resend code');
     },
 
     async register(firstName: string, lastName: string, email: string, passwordHash: string, passwordConfirm: string, registrationNumber: string, membershipTypes: string[]) {
-        const res = await fetch('/api/auth/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ firstName, lastName, email, password: passwordHash, passwordConfirm, registrationNumber, membershipTypes })
-        });
-
-        const data = await parseJsonSafely<any>(res, null);
-        if (!data) throw new Error('Server returned an unexpected response. Please try again.');
-        if (!res.ok) {
-            throw new Error(data.error || "Registration failed");
+        try {
+            const data = await apiFetch('/api/auth/register', {
+                method: 'POST',
+                body: JSON.stringify({ firstName, lastName, email, password: passwordHash, passwordConfirm, registrationNumber, membershipTypes })
+            });
+            this.user = data.user;
+            return data;
+        } catch (err: any) {
+            if (err.data && err.data.pendingVerification !== undefined) {
+                err.pendingVerification = err.data.pendingVerification;
+                err.userId = err.data.userId;
+            }
+            throw err;
         }
-
-        this.user = data.user;
-        return data; // Return full response including pendingVerification flag
     },
 
     async getProfile() {
-        const res = await fetch('/api/users/me/profile', {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include'
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to fetch profile");
-        return data; // Returns { firstName, lastName, emergencyContactName, ... }
+        return apiFetch('/api/users/me/profile');
     },
 
     async updateProfile(fname: string, sname: string, emergencyContactName: string, emergencyContactMobile: string, pronouns: string, dietaryRequirements: string) {
@@ -202,17 +159,10 @@ export const authState = {
 
         const name = `${fname} ${sname}`.trim();
 
-        const res = await fetch(`/api/users/${this.user.id}`, {
+        await apiFetch(`/api/users/${this.user.id}`, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include',
             body: JSON.stringify({ firstName: fname, lastName: sname, emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements })
         });
-
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to update profile");
 
         this.user.firstName = fname;
         this.user.lastName = sname;
@@ -227,17 +177,10 @@ export const authState = {
     async confirmMembershipRenewal(membershipYear: string, membershipTypes: string[]) {
         if (!this.user) throw new Error("Not logged in");
 
-        const res = await fetch('/api/users/me/membership-renewal', {
+        const data = await apiFetch('/api/users/me/membership-renewal', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include',
             body: JSON.stringify({ membershipYear, membershipTypes })
         });
-
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to renew membership");
 
         this.user.membershipYear = data.membershipYear;
         this.user.membershipStatus = data.membershipStatus;
@@ -247,68 +190,42 @@ export const authState = {
     async changePassword(currentPassword: string, newPassword: string) {
         if (!this.user) throw new Error("Not logged in");
 
-        const res = await fetch('/api/users/me/password', {
+        return apiFetch('/api/users/me/password', {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
             body: JSON.stringify({ currentPassword, newPassword })
         });
-
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to update password");
-        return data;
     },
 
     async forgotPassword(email: string) {
-        const res = await fetch('/api/auth/forgot-password', {
+        return apiFetch('/api/auth/forgot-password', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email })
         });
-        const data = await parseJsonSafely<any>(res, {});
-        if (!res.ok) throw new Error(data?.error || 'Request failed');
-        return data;
     },
 
     async resetPassword(token: string, newPassword: string) {
-        const res = await fetch('/api/auth/reset-password', {
+        return apiFetch('/api/auth/reset-password', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token, newPassword })
         });
-        const data = await parseJsonSafely<any>(res, {});
-        if (!res.ok) throw new Error(data?.error || 'Reset failed');
-        return data;
     },
 
     async getMyMemberships(): Promise<MembershipRow[]> {
-        const res = await fetch('/api/users/me/memberships', { credentials: 'include' });
-        const data = await parseJsonSafely<any>(res, []);
-        if (!res.ok) throw new Error(data?.error || 'Failed to fetch memberships');
-        return data;
+        return apiFetch('/api/users/me/memberships');
     },
 
     async requestMembershipType(membershipType: string, membershipYear?: string) {
-        const res = await fetch('/api/users/me/memberships', {
+        return apiFetch('/api/users/me/memberships', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
             body: JSON.stringify({ membershipType, membershipYear })
         });
-        const data = await parseJsonSafely<any>(res, {});
-        if (!res.ok) throw new Error(data?.error || 'Request failed');
-        return data;
     },
 
     async requestMembership() {
         if (!this.user) throw new Error('Not logged in');
-        const res = await fetch('/api/users/me/request-membership', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include'
+        const data = await apiFetch('/api/users/me/request-membership', {
+            method: 'POST'
         });
-        const data = await parseJsonSafely<any>(res, {});
-        if (!res.ok) throw new Error(data?.error || 'Request failed');
         this.user.membershipStatus = data.membershipStatus;
         this.user.membershipYear = data.membershipYear;
         return data;
@@ -317,23 +234,24 @@ export const authState = {
     async deleteAccount(password: string) {
         if (!this.user) throw new Error("Not logged in");
 
-        // First verify password
-        const verifyRes = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ email: this.user.email, password })
+        try {
+            await apiFetch('/api/auth/login', {
+                method: 'POST',
+                body: JSON.stringify({ email: this.user.email, password })
+            });
+        } catch (error: any) {
+            const status = error?.status ?? error?.response?.status;
+            if (status === 401 || status === 403) {
+                throw new Error("Incorrect password.");
+            }
+            // For other errors (network/server/etc.), rethrow so they can be handled upstream
+            throw error;
+        }
+
+        const data = await apiFetch(`/api/users/${this.user.id}`, {
+            method: 'DELETE'
         });
 
-        if (!verifyRes.ok) throw new Error("Incorrect password.");
-
-        const res = await fetch(`/api/users/${this.user.id}`, {
-            method: 'DELETE',
-            credentials: 'include'
-        });
-
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to delete account");
         this.logout();
         return data;
     },
@@ -341,7 +259,7 @@ export const authState = {
     async logout() {
         this.user = null;
         try {
-            await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+            await apiFetch('/api/auth/logout', { method: 'POST' });
         } catch {
             // Ignore network errors — user is still logged out client-side
         }

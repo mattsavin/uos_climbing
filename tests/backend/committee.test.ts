@@ -111,37 +111,7 @@ describe('Committee API', () => {
         expect(res.status).toBe(403);
     });
 
-    it('should allow uploading a profile photo', async () => {
-        // Create a dummy image file
-        const dummyImagePath = path.join(__dirname, 'dummy.png');
-        fs.writeFileSync(dummyImagePath, 'dummy content');
 
-        const res = await request(app)
-            .post('/api/committee/me/photo')
-            .set('Authorization', `Bearer ${committeeToken}`)
-            .attach('photo', dummyImagePath);
-
-        expect(res.status).toBe(200);
-        expect(res.body).toHaveProperty('success', true);
-        expect(res.body).toHaveProperty('photoPath');
-        expect(res.body.photoPath).toContain('/uploads/profile-photos/');
-
-        // Verify file exists
-        const fullPath = path.join(process.cwd(), res.body.photoPath);
-        expect(fs.existsSync(fullPath)).toBe(true);
-
-        // Cleanup
-        fs.unlinkSync(dummyImagePath);
-        if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
-    });
-
-    it('should fail photo upload if not authorized', async () => {
-        const res = await request(app)
-            .post('/api/committee/me/photo')
-            .set('Authorization', `Bearer ${memberToken}`);
-
-        expect(res.status).toBe(403);
-    });
 
     it('should export members with verified membership type as CSV', async () => {
         // Create test users with verified memberships

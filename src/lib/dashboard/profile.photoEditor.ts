@@ -1,5 +1,6 @@
 import { showToast } from '../../utils';
 import { authState } from '../../auth';
+import { apiFetch } from '../../lib/api/http';
 
 export function initProfilePhotoCropEditor() {
     const modal = document.getElementById('profile-crop-modal');
@@ -24,13 +25,10 @@ export function initProfilePhotoCropEditor() {
     const accountUploadFn = async (blob: Blob): Promise<string> => {
         const formData = new FormData();
         formData.append('photo', blob, 'profile.jpg');
-        const res = await fetch('/api/users/me/photo', {
+        const result = await apiFetch('/api/users/me/photo', {
             method: 'POST',
-            credentials: 'include',
             body: formData
         });
-        const result = await res.json();
-        if (!res.ok) throw new Error(result.error || 'Upload failed');
         if (authState.user) authState.user.profilePhoto = result.photoPath;
         return result.photoPath;
     };

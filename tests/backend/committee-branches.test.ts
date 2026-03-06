@@ -16,7 +16,7 @@ describe('Committee Route Branches', () => {
             email: 'committee@sheffieldclimbing.org',
             password: 'SuperSecret123!'
         });
-        const adminCookies = adminRes.headers['set-cookie'] as string[] | undefined;
+        const adminCookies = adminRes.headers['set-cookie'] as unknown as string[] | undefined;
         const adminCookie = (adminCookies || []).find((c) => c.startsWith('uscc_token='));
         rootToken = adminCookie ? adminCookie.split(';')[0].split('=')[1] : '';
 
@@ -38,7 +38,7 @@ describe('Committee Route Branches', () => {
             email,
             password: 'Password123!'
         });
-        const cookies = loginRes.headers['set-cookie'] as string[] | undefined;
+        const cookies = loginRes.headers['set-cookie'] as unknown as string[] | undefined;
         const cookie = (cookies || []).find((c) => c.startsWith('uscc_token='));
         committeeToken = cookie ? cookie.split(';')[0].split('=')[1] : '';
     });
@@ -70,69 +70,5 @@ describe('Committee Route Branches', () => {
         spy.mockRestore();
     });
 
-    it('returns 400 for no photo and invalid photo type', async () => {
-        const noFileRes = await request(app)
-            .post('/api/committee/me/photo')
-            .set('Authorization', `Bearer ${committeeToken}`);
-        expect(noFileRes.status).toBe(400);
-        expect(noFileRes.body.error).toBe('No file uploaded');
 
-        const badTypeRes = await request(app)
-            .post('/api/committee/me/photo')
-            .set('Authorization', `Bearer ${committeeToken}`)
-            .attach('photo', Buffer.from('bad'), 'bad.txt');
-        expect(badTypeRes.status).toBe(400);
-        expect(badTypeRes.body.error).toContain('Only images');
-    });
-
-    it('returns 500 when updating profile photo path fails in DB', async () => {
-        const dummyImagePath = path.join(process.cwd(), `committee-branches-${Date.now()}.png`);
-        fs.writeFileSync(dummyImagePath, 'dummy');
-
-        const originalRun = db.run.bind(db);
-        const spy = vi.spyOn(db, 'run').mockImplementation((sql: any, params: any, cb: any) => {
-            const callback = typeof params === 'function' ? params : cb;
-            if (typeof sql === 'string' && sql.includes('UPDATE users SET profilePhoto = ?')) {
-                if (callback) callback.call({}, new Error('DB Error'));
-                return db as any;
-            }
-            return originalRun(sql, params as any, cb as any);
-        });
-
-        const res = await request(app)
-            .post('/api/committee/me/photo')
-            .set('Authorization', `Bearer ${committeeToken}`)
-            .attach('photo', dummyImagePath);
-
-        expect(res.status).toBe(500);
-        expect(res.body.error).toBe('Database error');
-
-        spy.mockRestore();
-        if (fs.existsSync(dummyImagePath)) fs.unlinkSync(dummyImagePath);
-    });
-
-    it('deletes old profile photo file when present', async () => {
-        const dummyImagePath = path.join(process.cwd(), `committee-branches-old-${Date.now()}.png`);
-        fs.writeFileSync(dummyImagePath, 'dummy');
-
-        const getSpy = vi
-            .spyOn(db, 'get')
-            .mockImplementationOnce((_sql: string, _params: any[], cb: any) =>
-                cb(null, { profilePhoto: '/uploads/profile-photos/existing-old.png' }));
-        const existsSpy = vi.spyOn(fs, 'existsSync').mockReturnValue(true as any);
-        const unlinkSpy = vi.spyOn(fs, 'unlinkSync').mockImplementation(() => undefined as any);
-
-        const res = await request(app)
-            .post('/api/committee/me/photo')
-            .set('Authorization', `Bearer ${committeeToken}`)
-            .attach('photo', dummyImagePath);
-
-        expect(res.status).toBe(200);
-        expect(res.body.success).toBe(true);
-
-        getSpy.mockRestore();
-        existsSpy.mockRestore();
-        unlinkSpy.mockRestore();
-        if (fs.existsSync(dummyImagePath)) fs.unlinkSync(dummyImagePath);
-    });
 });

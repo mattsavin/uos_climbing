@@ -16,15 +16,10 @@ export const committeeApi = {
         const formData = new FormData();
         formData.append('photo', file);
 
-        const res = await fetch('/api/committee/me/photo', {
+        return apiFetch('/api/users/me/photo', {
             method: 'POST',
-            credentials: 'include',
             body: formData
         });
-
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Photo upload failed');
-        return data;
     },
 
     async exportMembersCSV(membershipType: string): Promise<void> {

@@ -1,4 +1,5 @@
 import path from 'path';
+import os from 'os';
 
 if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
     throw new Error('FATAL ERROR: JWT_SECRET must be defined in production environment.');
@@ -17,4 +18,6 @@ export const EMAIL_FROM = process.env.EMAIL_FROM || '';
 // Uploads Directory Configuration
 export const UPLOAD_BASE_DIR = process.env.NODE_ENV === 'production'
     ? '/data/uploads'
-    : path.join(process.cwd(), 'uploads');
+    : process.env.NODE_ENV === 'test'
+        ? path.join(os.tmpdir(), 'uos_test_uploads')
+        : path.join(process.cwd(), 'uploads');

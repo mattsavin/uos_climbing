@@ -1,6 +1,7 @@
 import { authState, committeeApi, adminApi } from '../../auth';
 import { showToast } from '../../utils';
 
+
 type PhotoCropEditor = {
     open: (file: File, uploadFn: (blob: Blob) => Promise<string>, onSuccess?: (photoPath: string) => void) => void;
 };

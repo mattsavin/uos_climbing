@@ -1,3 +1,4 @@
+import { standardDbResponse } from '../utils/response';
 import express from 'express';
 import { db } from '../db';
 import { authenticateToken, requireCommittee } from '../middleware/auth';
@@ -51,10 +52,7 @@ router.put('/:id', authenticateToken, requireCommittee, (req, res) => {
 
 // DELETE session type (committee only)
 router.delete('/:id', authenticateToken, requireCommittee, (req, res) => {
-    db.run('DELETE FROM session_types WHERE id = ?', [req.params.id], function (err) {
-        if (err) return res.status(500).json({ error: 'Database error' });
-        res.json({ success: true });
-    });
+    db.run('DELETE FROM session_types WHERE id = ?', [req.params.id], standardDbResponse(res));
 });
 
 export default router;

@@ -1,3 +1,4 @@
+import { standardDbResponse } from '../utils/response';
 import express from 'express';
 import bcrypt from 'bcrypt';
 import { db } from '../db';
@@ -8,15 +9,10 @@ import path from 'path';
 import fs from 'fs';
 import sharp from 'sharp';
 import { UPLOAD_BASE_DIR } from '../config';
-
+import { memoryUpload as upload } from '../utils/upload';
+import { getMembershipTypeIds } from '../services/membership';
 const router = express.Router();
 
-function getMembershipTypeIds(callback: (err: Error | null, ids: string[]) => void) {
-    db.all('SELECT id FROM membership_types', [], (err, rows: any[]) => {
-        if (err) return callback(err as any, []);
-        callback(null, (rows || []).map((r: any) => r.id));
-    });
-}
 
 // Configure multer for profile photo uploads
 const uploadDir = path.join(UPLOAD_BASE_DIR, 'profile-photos');
@@ -24,22 +20,6 @@ if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-const storage = multer.memoryStorage();
-
-const upload = multer({
-    storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-    fileFilter: (req, file, cb) => {
-        const filetypes = /jpeg|jpg|png|webp/;
-        const mimetype = filetypes.test(file.mimetype);
-        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-
-        if (mimetype && extname) {
-            return cb(null, true);
-        }
-        cb(new Error('Only images (jpeg, jpg, png, webp) are allowed!'));
-    }
-});
 
 /** Get current user's membership rows */
 router.get('/me/memberships', authenticateToken, (req: any, res) => {
@@ -239,10 +219,7 @@ router.put('/:id', authenticateToken, (req: any, res) => {
     db.run(
         'UPDATE users SET firstName = ?, lastName = ?, name = ?, emergencyContactName = ?, emergencyContactMobile = ?, pronouns = ?, dietaryRequirements = ? WHERE id = ?',
         [firstName, lastName, `${firstName} ${lastName}`.trim(), emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements, req.params.id],
-        function (err) {
-            if (err) return res.status(500).json({ error: 'Database error' });
-            res.json({ success: true });
-        }
+        standardDbResponse(res)
     );
 });
 
@@ -259,10 +236,7 @@ router.put('/me/password', authenticateToken, (req: any, res) => {
         if (!validPassword) return res.status(401).json({ error: 'Current password is incorrect' });
 
         const newHash = await bcrypt.hash(newPassword, 12);
-        db.run('UPDATE users SET passwordHash = ? WHERE id = ?', [newHash, req.user.id], function (err) {
-            if (err) return res.status(500).json({ error: 'Database error' });
-            res.json({ success: true });
-        });
+        db.run('UPDATE users SET passwordHash = ? WHERE id = ?', [newHash, req.user.id], standardDbResponse(res));
     });
 });
 
@@ -293,10 +267,7 @@ function performUserDelete(userId: string, res: any) {
         db.run('DELETE FROM votes WHERE userId = ?', [userId], () => {
             db.run('DELETE FROM candidates WHERE userId = ?', [userId], () => {
                 db.run('DELETE FROM user_memberships WHERE userId = ?', [userId], () => {
-                    db.run('DELETE FROM users WHERE id = ?', [userId], function (err) {
-                        if (err) return res.status(500).json({ error: 'Database error' });
-                        res.json({ success: true });
-                    });
+                    db.run('DELETE FROM users WHERE id = ?', [userId], standardDbResponse(res));
                 });
             });
         });
