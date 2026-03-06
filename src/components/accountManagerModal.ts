@@ -1,8 +1,8 @@
 export const accountManagerModalHtml = `
-    <div id="account-manager-modal" class="fixed inset-0 z-150 items-center justify-center p-4">
+    <div id="account-manager-modal" class="fixed inset-0 z-[150] hidden flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="account-manager-backdrop"></div>
         <div
-            class="relative glass-card p-0! w-full max-w-lg shadow-2xl border border-white/10 animate-[fade-in-up_0.2s_ease-out] flex flex-col overflow-hidden">
+            class="relative glass-card !p-0 w-full max-w-lg shadow-2xl border border-white/10 animate-[fade-in-up_0.2s_ease-out] flex flex-col overflow-hidden">
             <!-- Header -->
             <div class="flex justify-between items-center p-6 border-b border-white/10 bg-slate-800/50">
                 <h3 class="text-xl font-bold text-white flex items-center gap-2">
@@ -51,7 +51,7 @@ export const accountManagerModalHtml = `
                     </div>
                     <div>
                         <h4 class="text-white font-bold text-sm mb-1">Profile Photo</h4>
-                        <p class="text-slate-500 text-[10px] leading-relaxed max-w-45">Add a photo to your membership card for visual verification at gyms.</p>
+                        <p class="text-slate-500 text-[10px] leading-relaxed max-w-[180px]">Add a photo to your membership card for visual verification at gyms.</p>
                         <button id="upload-photo-status" class="hidden text-purple-400 text-[10px] font-bold mt-1 uppercase tracking-widest animate-pulse">Uploading...</button>
                     </div>
                 </div>

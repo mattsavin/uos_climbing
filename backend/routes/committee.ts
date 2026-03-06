@@ -1,12 +1,7 @@
 import { standardDbResponse } from '../utils/response';
 import express from 'express';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
 import { db } from '../db';
 import { authenticateToken, requireCommittee } from '../middleware/auth';
-import crypto from 'crypto';
-import { UPLOAD_BASE_DIR } from '../config';
 
 const router = express.Router();
 
