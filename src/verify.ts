@@ -51,9 +51,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         verifyCard?.classList.remove('hidden');
-    } catch (err: any) {
-        const message = err?.data?.error || (err?.status === 404 ? 'Member not found.' : 'Network error. Please try again.');
-        showError(message);
+    } catch (err) {
+        showError('Network error. Please try again.');
     }
 
     function showError(msg: string) {

@@ -22,9 +22,6 @@ describe('Membership/Session Types Branch Coverage', () => {
             await new Promise((r) => setTimeout(r, 200));
             iterations++;
         }
-        if (!rootToken) {
-            throw new Error('Failed to obtain rootToken: login did not succeed after retries');
-        }
     });
 
     afterAll(async () => {

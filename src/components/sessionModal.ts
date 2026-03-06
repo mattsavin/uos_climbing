@@ -17,7 +17,7 @@ export function openSessionModal(options: SessionModalOptions) {
     let modal = document.getElementById('unified-session-modal');
     if (!modal) {
         document.body.insertAdjacentHTML('beforeend', `
-            <div id="unified-session-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4">
+            <div id="unified-session-modal" class="fixed inset-0 z-100 items-center justify-center p-4">
                 <div id="unified-session-backdrop" class="absolute inset-0 bg-black/60 backdrop-blur-sm cursor-pointer transition-opacity"></div>
                 <div class="relative w-full max-w-md bg-brand-dark border border-white/10 rounded-2xl shadow-2xl p-6 transform transition-all flex flex-col max-h-[90vh] overflow-y-auto">
                     
@@ -28,7 +28,7 @@ export function openSessionModal(options: SessionModalOptions) {
                     <div class="text-center mb-6">
                         <span id="usm-icon" class="inline-flex items-center justify-center w-12 h-12 rounded-full mb-3">
                         </span>
-                        <h3 id="usm-title" class="text-2xl font-black text-white uppercase tracking-widest break-words leading-tight"></h3>
+                        <h3 id="usm-title" class="text-2xl font-black text-white uppercase tracking-widest wrap-break-word leading-tight"></h3>
                         <p id="usm-type" class="text-xs font-bold mt-2 text-slate-400 uppercase tracking-widest"></p>
                     </div>
 
@@ -41,15 +41,15 @@ export function openSessionModal(options: SessionModalOptions) {
                             <span class="text-slate-500 font-bold uppercase tracking-wider text-xs">Availability</span>
                             <span id="usm-capacity" class="font-mono text-white bg-slate-900 px-2 py-1 rounded inline-block"></span>
                         </div>
-                        <div id="usm-location-row" class="hidden flex justify-between items-center pt-1">
+                        <div id="usm-location-row" class="justify-between items-center pt-1">
                             <span class="text-slate-500 font-bold uppercase tracking-wider text-xs">Location</span>
                             <span id="usm-location" class="font-mono text-white text-right"></span>
                         </div>
-                        <div id="usm-visibility-row" class="hidden flex justify-between items-center pt-1">
+                        <div id="usm-visibility-row" class="justify-between items-center pt-1">
                             <span class="text-slate-500 font-bold uppercase tracking-wider text-xs">Visibility</span>
                             <span id="usm-visibility" class="font-mono text-amber-300 bg-amber-500/10 border border-amber-500/30 px-2 py-1 rounded inline-block text-[11px] uppercase tracking-wider">Committee Only</span>
                         </div>
-                        <div id="usm-registration-visibility-row" class="hidden flex justify-between items-center pt-1">
+                        <div id="usm-registration-visibility-row" class="justify-between items-center pt-1">
                             <span class="text-slate-500 font-bold uppercase tracking-wider text-xs">Registration</span>
                             <span id="usm-registration-visibility" class="font-mono text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 px-2 py-1 rounded inline-block text-[11px] uppercase tracking-wider">Committee Only</span>
                         </div>
@@ -121,7 +121,7 @@ export function openSessionModal(options: SessionModalOptions) {
                                 </select>
                             </div>
                             <div class="flex flex-col gap-2 mt-4 pt-4 border-t border-slate-800">
-                                <button type="submit" class="btn-primary w-full !px-4 !py-3 !text-xs uppercase tracking-wider !bg-amber-500 hover:!bg-amber-400 !text-brand-darker !shadow-amber-500/20">Save Adjustments</button>
+                                <button type="submit" class="btn-primary w-full px-4! py-3! text-xs! uppercase tracking-wider bg-amber-500! hover:bg-amber-400! text-brand-darker! shadow-amber-500/20!">Submit</button>
                                 <button type="button" id="usm-delete-btn" class="w-full text-[10px] font-bold px-2 py-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded uppercase tracking-wider transition-colors hidden text-center">Delete Event</button>
                             </div>
                         </form>

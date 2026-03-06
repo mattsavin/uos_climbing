@@ -77,8 +77,8 @@ export function showConfirmModal(message: string): Promise<boolean> {
                 </div>
             </div>
             <div class="flex gap-3 justify-end">
-                <button id="global-confirm-cancel" class="btn-outline !py-2 !px-4 !text-sm flex-1">Cancel</button>
-                <button id="global-confirm-ok" class="btn-primary !py-2 !px-4 !text-sm flex-1">Proceed</button>
+                <button id="global-confirm-cancel" class="btn-outline py-2! px-4! text-sm! flex-1">Cancel</button>
+                <button id="global-confirm-ok" class="btn-primary py-2! px-4! text-sm! flex-1">Proceed</button>
             </div>
         `;
 
@@ -129,8 +129,8 @@ export function showPromptModal(message: string, placeholder = ''): Promise<stri
                 <input type="text" id="global-prompt-input" class="w-full bg-slate-900/80 border border-slate-700/50 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold transition-all shadow-inner" placeholder="${escapeHTML(placeholder)}">
             </div>
             <div class="flex gap-3 justify-end">
-                <button id="global-prompt-cancel" class="btn-outline !py-2 !px-4 !text-sm flex-1">Cancel</button>
-                <button id="global-prompt-ok" class="btn-primary !py-2 !px-4 !text-sm flex-1">Submit</button>
+                <button id="global-prompt-cancel" class="btn-outline py-2! px-4! text-sm! flex-1">Cancel</button>
+                <button id="global-prompt-ok" class="btn-primary py-2! px-4! text-sm! flex-1">Submit</button>
             </div>
         `;
 
