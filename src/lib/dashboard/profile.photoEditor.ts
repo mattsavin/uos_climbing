@@ -68,7 +68,10 @@ export function initProfilePhotoCropEditor() {
         applyTransform();
     };
 
-    cropImage.addEventListener('load', () => requestAnimationFrame(initImagePosition));
+    cropImage.addEventListener('load', () => requestAnimationFrame(() => {
+        initImagePosition();
+        saveBtn.disabled = false;
+    }));
 
     zoomInput.addEventListener('input', () => {
         userZoom = parseFloat(zoomInput.value);
@@ -173,6 +176,9 @@ export function initProfilePhotoCropEditor() {
     });
 
     const exportCrop = (): Promise<Blob> => new Promise((resolve, reject) => {
+        if (!cropImage.complete || cropImage.naturalWidth === 0 || stageSize === 0) {
+            return reject(new Error('Image not ready'));
+        }
         const outputSize = 500;
         const canvas = document.createElement('canvas');
         canvas.width = outputSize;
@@ -236,6 +242,7 @@ export function initProfilePhotoCropEditor() {
             };
 
             if (cropImage.src.startsWith('blob:')) URL.revokeObjectURL(cropImage.src);
+            saveBtn.disabled = true;
             cropImage.src = URL.createObjectURL(file);
             modal.classList.remove('hidden');
         });
@@ -245,6 +252,7 @@ export function initProfilePhotoCropEditor() {
         currentUploadFn = uploadFn;
         onSuccess = successCallback ?? null;
         if (cropImage.src.startsWith('blob:')) URL.revokeObjectURL(cropImage.src);
+        saveBtn.disabled = true;
         cropImage.src = URL.createObjectURL(file);
         modal.classList.remove('hidden');
     };
