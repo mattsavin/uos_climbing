@@ -57,20 +57,20 @@ export function initProfilePhotoCropEditor() {
         cropImage.style.height = `${cropImage.naturalHeight * scale}px`;
     };
 
-    const initImagePosition = () => {
+    const initImagePosition = (): boolean => {
         stageSize = stage.getBoundingClientRect().width;
-        if (!stageSize || !cropImage.naturalWidth) return;
+        if (!stageSize || !cropImage.naturalWidth) return false;
         baseScale = Math.max(stageSize / cropImage.naturalWidth, stageSize / cropImage.naturalHeight);
         userZoom = 1;
         tx = 0;
         ty = 0;
         zoomInput.value = '1';
         applyTransform();
+        return true;
     };
 
     cropImage.addEventListener('load', () => requestAnimationFrame(() => {
-        initImagePosition();
-        saveBtn.disabled = false;
+        if (initImagePosition()) saveBtn.disabled = false;
     }));
 
     zoomInput.addEventListener('input', () => {
