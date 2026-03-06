@@ -131,7 +131,7 @@ router.post('/', authenticateToken, requireCommittee, (req: any, res) => {
         } catch (error: any) {
             console.error('Sharp processing error:', error);
             if (files && Array.isArray(files)) {
-                Promise.allSettled(
+                void Promise.allSettled(
                     files
                         .filter((file): file is Express.Multer.File => !!(file && file.path))
                         .map(file => fs.promises.unlink(file.path).catch(cleanupErr => {
