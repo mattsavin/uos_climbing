@@ -7,14 +7,24 @@ describe('Membership/Session Types Branch Coverage', () => {
     let rootToken = '';
 
     beforeAll(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        const adminRes = await request(app).post('/api/auth/login').send({
-            email: 'committee@sheffieldclimbing.org',
-            password: 'SuperSecret123!'
-        });
-        const cookies = adminRes.headers['set-cookie'] as string[] | undefined;
-        const tokenCookie = (cookies || []).find((c) => c.startsWith('uscc_token='));
-        rootToken = tokenCookie ? tokenCookie.split(';')[0].split('=')[1] : '';
+        let iterations = 0;
+        while (iterations < 20) {
+            const adminRes = await request(app).post('/api/auth/login').send({
+                email: 'committee@sheffieldclimbing.org',
+                password: 'SuperSecret123!'
+            });
+            const cookies = adminRes.headers['set-cookie'] as unknown as string[] | undefined;
+            const tokenCookie = (cookies || []).find((c) => c.startsWith('uscc_token='));
+            if (tokenCookie) {
+                rootToken = tokenCookie.split(';')[0].split('=')[1];
+                break;
+            }
+            await new Promise((r) => setTimeout(r, 200));
+            iterations++;
+        }
+        if (!rootToken) {
+            throw new Error('Failed to obtain rootToken: login did not succeed after retries');
+        }
     });
 
     afterAll(async () => {
@@ -115,9 +125,14 @@ describe('Membership/Session Types Branch Coverage', () => {
     });
 
     it('membership-types: enforces at least one type remains when count query reports one', async () => {
-        const spy = vi
-            .spyOn(db, 'get')
-            .mockImplementationOnce((sql: any, params: any, cb: any) => cb(null, { count: 1 }));
+        const originalGet = db.get.bind(db);
+        const spy = vi.spyOn(db, 'get').mockImplementation((sql: any, params: any, cb: any) => {
+            if (typeof sql === 'string' && sql.includes('SELECT COUNT(*)')) {
+                if (cb) cb(null, { count: 1 });
+                return db as any;
+            }
+            return originalGet(sql, params, cb);
+        });
         const res = await request(app)
             .delete('/api/membership-types/some_type')
             .set('Authorization', `Bearer ${rootToken}`);
@@ -141,9 +156,14 @@ describe('Membership/Session Types Branch Coverage', () => {
         expect(createRes.body.error).toBe('Database error');
         createSpy.mockRestore();
 
-        const countSpy = vi
-            .spyOn(db, 'get')
-            .mockImplementationOnce((_sql: string, _params: any[], cb: any) => cb(new Error('DB Error'), null));
+        const originalGet = db.get.bind(db);
+        const countSpy = vi.spyOn(db, 'get').mockImplementation((sql: any, params: any, cb: any) => {
+            if (typeof sql === 'string' && sql.includes('SELECT COUNT(*)')) {
+                if (cb) cb(new Error('DB Error'), null);
+                return db as any;
+            }
+            return originalGet(sql, params, cb);
+        });
         const deleteRes = await request(app)
             .delete('/api/membership-types/some_type')
             .set('Authorization', `Bearer ${rootToken}`);
@@ -153,9 +173,14 @@ describe('Membership/Session Types Branch Coverage', () => {
     });
 
     it('membership-types: returns 404 when delete affects no rows and count allows deletion', async () => {
-        const countSpy = vi
-            .spyOn(db, 'get')
-            .mockImplementationOnce((_sql: string, _params: any[], cb: any) => cb(null, { count: 2 }));
+        const originalGet = db.get.bind(db);
+        const countSpy = vi.spyOn(db, 'get').mockImplementation((sql: any, params: any, cb: any) => {
+            if (typeof sql === 'string' && sql.includes('SELECT COUNT(*)')) {
+                if (cb) cb(null, { count: 2 });
+                return db as any;
+            }
+            return originalGet(sql, params, cb);
+        });
         const runSpy = vi
             .spyOn(db, 'run')
             .mockImplementationOnce((_sql: string, _params: any[], cb: any) => {

@@ -98,7 +98,7 @@ describe('Gallery API', () => {
                 .attach('photos', mockImageBuffer, 'test.txt');
 
             expect(res.status).toBe(400);
-            expect(res.body.error).toBe('Only images are allowed!');
+            expect(res.body.error).toBe('Only images (jpeg, jpg, png, webp, heic, heif) are allowed!');
         });
 
         it('should successfully upload a single image with a caption', async () => {

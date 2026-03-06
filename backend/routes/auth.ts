@@ -8,7 +8,7 @@ import { SECRET_KEY } from '../config';
 import { authenticateToken } from '../middleware/auth';
 import { sendEmail } from '../services/email';
 import { getAcademicYear, isSheffieldEmail } from './auth.helpers';
-
+import { getMembershipTypeIds } from '../services/membership';
 const IS_TEST = process.env.NODE_ENV === 'test';
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const AUTH_RATE_LIMIT_ENABLED = process.env.AUTH_RATE_LIMIT_ENABLED === 'true';
@@ -43,12 +43,6 @@ function generateOTP(): string {
     return crypto.randomInt(100000, 999999).toString();
 }
 
-function getMembershipTypeIds(callback: (err: Error | null, ids: string[]) => void) {
-    db.all('SELECT id FROM membership_types', [], (err, rows: any[]) => {
-        if (err) return callback(err as any, []);
-        callback(null, (rows || []).map((r: any) => r.id));
-    });
-}
 
 router.post('/register', authLimiter, async (req, res) => {
     const { firstName, lastName, email, registrationNumber, password, passwordConfirm, membershipTypes } = req.body;

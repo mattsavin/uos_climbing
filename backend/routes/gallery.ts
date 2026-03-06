@@ -4,10 +4,10 @@ import { authenticateToken, requireCommittee } from '../middleware/auth';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import os from 'os';
 import crypto from 'crypto';
 import sharp from 'sharp';
 import { UPLOAD_BASE_DIR } from '../config';
+import { diskUpload as upload } from '../utils/upload';
 
 const router = express.Router();
 
@@ -16,30 +16,6 @@ if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Disk storage for multer so we don't hold the entire batch of files in memory
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, os.tmpdir());
-    },
-    filename: (req, file, cb) => {
-        cb(null, 'tmp-gallery-' + Date.now() + '-' + crypto.randomBytes(4).toString('hex') + path.extname(file.originalname));
-    }
-});
-
-const upload = multer({
-    storage: storage,
-    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit for high-res photos
-    fileFilter: (req, file, cb) => {
-        const filetypes = /jpeg|jpg|png|webp|heic|heif/;
-        const mimetype = filetypes.test(file.mimetype);
-        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-
-        if (mimetype && extname) {
-            return cb(null, true);
-        }
-        cb(new Error('Only images are allowed!'));
-    }
-});
 
 // GET /api/gallery - Fetch all gallery images (or only featured with ?featured=1)
 router.get('/', (req, res) => {
@@ -295,7 +271,10 @@ router.put('/:id', authenticateToken, requireCommittee, (req: any, res) => {
     const executeUpdate = () => {
         params.push(id);
         db.run(`UPDATE gallery SET ${updates.join(', ')} WHERE id = ?`, params, function (err) {
-            if (err) return res.status(500).json({ error: 'Database error' });
+            if (err) {
+                console.error('Gallery PUT db.run error:', err);
+                return res.status(500).json({ error: 'Database error' });
+            }
             res.json({ success: true });
         });
     };
@@ -303,7 +282,10 @@ router.put('/:id', authenticateToken, requireCommittee, (req: any, res) => {
     const shouldAutoAssignFeaturedOrder = featured === true && featuredOrder === undefined;
     if (shouldAutoAssignFeaturedOrder) {
         db.get('SELECT COALESCE(MAX(featuredOrder), 0) + 1 AS nextOrder FROM gallery WHERE featured = 1 AND id != ?', [id], (orderErr, row: any) => {
-            if (orderErr) return res.status(500).json({ error: 'Database error' });
+            if (orderErr) {
+                console.error('Gallery PUT featuredOrder query error:', orderErr);
+                return res.status(500).json({ error: 'Database error' });
+            }
             updates.push('featuredOrder = ?');
             params.push(row?.nextOrder || 1);
             executeUpdate();

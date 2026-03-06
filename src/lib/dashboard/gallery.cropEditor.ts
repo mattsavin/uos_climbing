@@ -1,7 +1,6 @@
 import { bindCropEditorActionButtons } from './gallery.cropEditorActions';
 import { getEditorGeometry } from './gallery.cropGeometry';
 import {
-    BOX_DRAG_SENSITIVITY,
     CROP_CONTEXT_CONFIG,
     IMAGE_DRAG_SENSITIVITY,
     clamp,
@@ -160,13 +159,10 @@ export function initCropEditor(options: InitCropEditorOptions) {
 
         const activePointers = new Map<number, { x: number, y: number }>();
         let isDraggingImage = false;
-        let isDraggingBox = false;
         let dragStartX = 0;
         let dragStartY = 0;
         let dragStartCropX = 50;
         let dragStartCropY = 50;
-        let dragStartBoxCenterX = 50;
-        let dragStartBoxCenterY = 50;
         let isPinching = false;
         let pinchStartDistance = 0;
         let pinchStartZoom = 1;
@@ -184,12 +180,6 @@ export function initCropEditor(options: InitCropEditorOptions) {
             }
         };
 
-        const stopBoxDrag = () => {
-            if (!isDraggingBox) return;
-            isDraggingBox = false;
-            cropStage.style.cursor = 'grab';
-        };
-
         const tryStartPinch = () => {
             if (activePointers.size < 2) return;
             const points = Array.from(activePointers.values());
@@ -197,7 +187,6 @@ export function initCropEditor(options: InitCropEditorOptions) {
             pinchStartZoom = draftZoom;
             isPinching = true;
             stopImageDrag();
-            stopBoxDrag();
             cropStage.style.cursor = 'default';
         };
 
@@ -210,18 +199,6 @@ export function initCropEditor(options: InitCropEditorOptions) {
 
             if (activePointers.size >= 2) {
                 tryStartPinch();
-                event.preventDefault();
-                return;
-            }
-
-            const onBox = !!(cropBox && (event.target as HTMLElement).closest('#crop-editor-box'));
-            if (onBox) {
-                isDraggingBox = true;
-                dragStartX = event.clientX;
-                dragStartY = event.clientY;
-                dragStartBoxCenterX = draftBoxCenterX;
-                dragStartBoxCenterY = draftBoxCenterY;
-                cropStage.style.cursor = 'grabbing';
                 event.preventDefault();
                 return;
             }
@@ -248,34 +225,6 @@ export function initCropEditor(options: InitCropEditorOptions) {
                 const nextZoom = normalizeZoom(pinchStartZoom * (currentDistance / pinchStartDistance), pinchStartZoom);
                 draftZoom = nextZoom;
                 draftBoxScale = clamp(1 / draftZoom, 1 / 3, 1);
-                applyCropEditorVisuals();
-                return;
-            }
-
-            if (isDraggingBox) {
-                const geometry = getEditorGeometry({
-                    activeCropContext,
-                    cropStage,
-                    cropImage,
-                    draftZoom,
-                    draftBoxScale,
-                    draftBoxCenterX,
-                    draftBoxCenterY
-                });
-                if (!geometry) return;
-                const { viewport, metrics } = geometry;
-                if (!viewport.width || !viewport.height) return;
-
-                const deltaXPercent = ((event.clientX - dragStartX) / viewport.width) * 100 * BOX_DRAG_SENSITIVITY;
-                const deltaYPercent = ((event.clientY - dragStartY) / viewport.height) * 100 * BOX_DRAG_SENSITIVITY;
-
-                const minCenterX = (metrics.boxWidth / 2 / viewport.width) * 100;
-                const maxCenterX = 100 - minCenterX;
-                const minCenterY = (metrics.boxHeight / 2 / viewport.height) * 100;
-                const maxCenterY = 100 - minCenterY;
-
-                draftBoxCenterX = clamp(dragStartBoxCenterX + deltaXPercent, minCenterX, maxCenterX);
-                draftBoxCenterY = clamp(dragStartBoxCenterY + deltaYPercent, minCenterY, maxCenterY);
                 applyCropEditorVisuals();
                 return;
             }
@@ -335,7 +284,6 @@ export function initCropEditor(options: InitCropEditorOptions) {
                 return;
             }
 
-            stopBoxDrag();
             stopImageDrag(event.pointerId);
         };
 

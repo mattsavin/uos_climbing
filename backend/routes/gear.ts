@@ -1,3 +1,4 @@
+import { standardDbResponse } from '../utils/response';
 import express from 'express';
 import { db } from '../db';
 import { authenticateToken, requireKitSec } from '../middleware/auth';
@@ -32,18 +33,12 @@ router.put('/:id', authenticateToken, requireKitSec, (req, res) => {
     db.run(
         'UPDATE gear SET name = ?, description = ?, totalQuantity = ?, availableQuantity = ? WHERE id = ?',
         [name, description, totalQuantity, availableQuantity, req.params.id],
-        function (err) {
-            if (err) return res.status(500).json({ error: 'Database error' });
-            res.json({ success: true });
-        }
+        standardDbResponse(res)
     );
 });
 
 router.delete('/:id', authenticateToken, requireKitSec, (req, res) => {
-    db.run('DELETE FROM gear WHERE id = ?', [req.params.id], function (err) {
-        if (err) return res.status(500).json({ error: 'Database error' });
-        res.json({ success: true });
-    });
+    db.run('DELETE FROM gear WHERE id = ?', [req.params.id], standardDbResponse(res));
 });
 
 router.get('/requests', authenticateToken, requireKitSec, (req, res) => {

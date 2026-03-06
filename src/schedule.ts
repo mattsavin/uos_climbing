@@ -3,6 +3,7 @@ import { authState, getCurrentAcademicYear } from './auth';
 import { renderCalendarEvents } from './calendar';
 import { openSessionModal } from './components/sessionModal';
 import { initApp } from './main';
+import { apiFetch } from './lib/api/http';
 
 export async function initJoinApp() {
     // 1. Initialize Layout (Navbar & Footer)
@@ -32,13 +33,9 @@ export async function initJoinApp() {
         try {
             // we use getSessions from adminApi - note backend must allow GET /api/sessions without auth!
             // Wait, is GET /api/sessions protected? Let's check server.ts.
-            const res = await fetch('/api/sessions');
-            if (!res.ok) throw new Error("Failed to load sessions");
-            const sessions = await res.json();
+            const sessions = await apiFetch('/api/sessions');
 
-            const sessionTypesRes = await fetch('/api/session-types');
-            if (!sessionTypesRes.ok) throw new Error('Failed to load session types');
-            const sessionTypes = await sessionTypesRes.json();
+            const sessionTypes = await apiFetch('/api/session-types');
             const availableSessionTypes = sessionTypes.map((type: { label: string }) => type.label);
 
             // Render read-only calendar (empty bookings array, isAdmin=false, no click handler)

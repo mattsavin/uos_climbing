@@ -1,6 +1,5 @@
 import { authState } from '../../auth';
 import { showToast, showPromptModal } from '../../utils';
-import imageCompression from 'browser-image-compression';
 
 export function initProfileHandlers() {
     const profileForm = document.getElementById('profile-form');
@@ -110,75 +109,12 @@ export function initProfileHandlers() {
 }
 
 export function initAccountModalHandlers() {
-    const photoInput = document.getElementById('member-photo-input') as HTMLInputElement;
+    // Photo upload and crop is handled by initProfilePhotoCropEditor in profile.photoEditor.ts.
+    // Wire up the trigger button to open the hidden file input.
     const triggerBtn = document.getElementById('trigger-photo-upload');
-    const photoPreview = document.getElementById('profile-photo-preview') as HTMLImageElement;
-    const photoPlaceholder = document.getElementById('profile-photo-placeholder');
-    const uploadStatus = document.getElementById('upload-photo-status');
-
+    const photoInput = document.getElementById('member-photo-input') as HTMLInputElement | null;
     if (triggerBtn && photoInput) {
         triggerBtn.addEventListener('click', () => photoInput.click());
-
-        photoInput.addEventListener('change', async () => {
-            const file = photoInput.files?.[0];
-            if (!file) return;
-
-            if (uploadStatus) {
-                uploadStatus.textContent = 'Compressing...';
-                uploadStatus.classList.remove('hidden');
-            }
-
-            let fileToUpload = file;
-            try {
-                const options = {
-                    maxSizeMB: 1,
-                    maxWidthOrHeight: 500,
-                    useWebWorker: true,
-                };
-                fileToUpload = await imageCompression(file, options);
-            } catch (err) {
-                console.error('Image compression error:', err);
-                // Fallback to original file if compression fails
-            }
-
-            // Local preview
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                if (photoPreview && e.target?.result) {
-                    photoPreview.src = e.target.result as string;
-                    photoPreview.classList.remove('hidden');
-                    photoPlaceholder?.classList.add('hidden');
-                }
-            };
-            reader.readAsDataURL(fileToUpload);
-
-            // Upload
-            try {
-                if (uploadStatus) uploadStatus.textContent = 'Uploading...';
-
-                const formData = new FormData();
-                formData.append('photo', fileToUpload, fileToUpload.name);
-
-                const res = await fetch('/api/users/me/photo', {
-                    method: 'POST',
-                    credentials: 'include',
-                    body: formData
-                });
-
-                const result = await res.json();
-                if (!res.ok) throw new Error(result.error || 'Upload failed');
-
-                showToast('Photo updated!', 'success');
-                // Update local auth state if needed, though ui.ts will refresh on next dashboardUpdate
-                if (authState.user) authState.user.profilePhoto = result.photoPath;
-                window.dispatchEvent(new CustomEvent('dashboardUpdate'));
-
-            } catch (err: any) {
-                showToast(err.message || 'Failed to upload photo', 'error');
-            } finally {
-                if (uploadStatus) uploadStatus.classList.add('hidden');
-            }
-        });
     }
 
     const accountModal = document.getElementById('account-manager-modal');

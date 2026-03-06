@@ -1,23 +1,13 @@
+import { standardDbResponse } from '../utils/response';
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import { db } from '../db';
 import { authenticateToken, requireCommittee } from '../middleware/auth';
 import { SECRET_KEY } from '../config';
-
+import { getDefaultMembershipType, getMembershipLabel } from '../services/membership';
 const router = express.Router();
 
-function getDefaultMembershipType(callback: (err: Error | null, membershipTypeId: string | null) => void) {
-    db.get(
-        `SELECT id FROM membership_types
-         ORDER BY CASE WHEN id = 'basic' THEN 0 ELSE 1 END, label ASC
-         LIMIT 1`,
-        [],
-        (err, row: any) => {
-            if (err) return callback(err as any, null);
-            callback(null, row?.id || null);
-        }
-    );
-}
+
 
 function membershipTypeExists(membershipType: string, callback: (err: Error | null, exists: boolean) => void) {
     db.get('SELECT id FROM membership_types WHERE id = ?', [membershipType], (err, row: any) => {
@@ -26,12 +16,7 @@ function membershipTypeExists(membershipType: string, callback: (err: Error | nu
     });
 }
 
-function getMembershipTypeLabel(membershipType: string, callback: (label: string) => void) {
-    db.get('SELECT label FROM membership_types WHERE id = ?', [membershipType], (err, row: any) => {
-        if (err || !row?.label) return callback(membershipType);
-        callback(row.label);
-    });
-}
+
 
 function buildIcalContent(userId: string, sessions: any[]) {
     let icalContent = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//USCC//Calendar//EN\r\n";
@@ -192,10 +177,7 @@ router.put('/:id', authenticateToken, requireCommittee, (req, res) => {
             db.run(
                 'UPDATE sessions SET title = ?, type = ?, date = ?, capacity = ?, bookedSlots = ?, location = ?, requiredMembership = ?, visibility = ?, registrationVisibility = ? WHERE id = ?',
                 [title, type, date, capacity, bookedSlots, location || null, reqMemb, eventVisibility, eventRegistrationVisibility, req.params.id],
-                function (err) {
-                    if (err) return res.status(500).json({ error: 'Database error' });
-                    res.json({ success: true });
-                }
+                standardDbResponse(res)
             );
         });
     });
@@ -239,7 +221,7 @@ router.post('/:id/book', authenticateToken, (req: any, res) => {
                 if (err2) return res.status(500).json({ error: 'Database error checking membership' });
                 // Enforce requirement unless they are root admin testing it
                 if (!registrationIsCommitteeOnly && !userMemb && req.user.email !== 'committee@sheffieldclimbing.org') {
-                    return getMembershipTypeLabel(reqMemb, (typeLabel) => {
+                    return getMembershipLabel(reqMemb, (typeLabel) => {
                         return res.status(403).json({ error: `This session requires an active ${typeLabel} membership.` });
                     });
                 }

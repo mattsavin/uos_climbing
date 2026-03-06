@@ -1,43 +1,10 @@
+import { standardDbResponse } from '../utils/response';
 import express from 'express';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
 import { db } from '../db';
 import { authenticateToken, requireCommittee } from '../middleware/auth';
-import crypto from 'crypto';
-import { UPLOAD_BASE_DIR } from '../config';
 
 const router = express.Router();
 
-// Configure multer for profile photo uploads
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const uploadDir = path.join(UPLOAD_BASE_DIR, 'profile-photos');
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-        }
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, 'profile-' + uniqueSuffix + path.extname(file.originalname));
-    }
-});
-
-const upload = multer({
-    storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-    fileFilter: (req, file, cb) => {
-        const filetypes = /jpeg|jpg|png|webp/;
-        const mimetype = filetypes.test(file.mimetype);
-        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-
-        if (mimetype && extname) {
-            return cb(null, true);
-        }
-        cb(new Error('Only images (jpeg, jpg, png, webp) are allowed!'));
-    }
-});
 
 /** GET /api/committee - Get all committee members */
 router.get('/', (req, res) => {
@@ -66,49 +33,10 @@ router.put('/me', authenticateToken, (req: any, res) => {
     db.run(
         'UPDATE users SET instagram = ?, faveCrag = ?, bio = ? WHERE id = ?',
         [instagram, faveCrag, bio, req.user.id],
-        function (err) {
-            if (err) return res.status(500).json({ error: 'Database error' });
-            res.json({ success: true });
-        }
+        standardDbResponse(res)
     );
 });
 
-/** POST /api/committee/me/photo - Upload profile photo */
-router.post('/me/photo', authenticateToken, (req: any, res) => {
-    upload.single('photo')(req, res, (uploadErr: any) => {
-        if (uploadErr instanceof multer.MulterError && uploadErr.code === 'LIMIT_FILE_SIZE') {
-            return res.status(400).json({ error: 'Photo too large. Max size is 5MB.' });
-        }
-        if (uploadErr) {
-            return res.status(400).json({ error: uploadErr.message || 'Invalid image upload.' });
-        }
-
-        if (req.user.role !== 'committee') {
-            return res.status(403).json({ error: 'Only committee members can upload profile photos' });
-        }
-
-        if (!req.file) {
-            return res.status(400).json({ error: 'No file uploaded' });
-        }
-
-        const photoPath = `/uploads/profile-photos/${req.file.filename}`;
-
-        // Get old photo to delete it
-        db.get('SELECT profilePhoto FROM users WHERE id = ?', [req.user.id], (err, user: any) => {
-            if (!err && user && user.profilePhoto) {
-                const oldPath = path.join(UPLOAD_BASE_DIR, user.profilePhoto.replace(/^\/uploads\//, ''));
-                if (fs.existsSync(oldPath)) {
-                    fs.unlinkSync(oldPath);
-                }
-            }
-
-            db.run('UPDATE users SET profilePhoto = ? WHERE id = ?', [photoPath, req.user.id], (err) => {
-                if (err) return res.status(500).json({ error: 'Database error' });
-                res.json({ success: true, photoPath });
-            });
-        });
-    });
-});
 
 /** GET /api/committee/export/members - Export members with verified membership type as CSV */
 router.get('/export/members', authenticateToken, requireCommittee, (req: any, res) => {
