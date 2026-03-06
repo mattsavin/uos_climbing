@@ -130,41 +130,16 @@ router.post('/', authenticateToken, requireCommittee, (req: any, res) => {
             res.json({ success: true, uploaded: uploadedImages });
         } catch (error: any) {
             console.error('Sharp processing error:', error);
-
-        if (err) {
-            console.error('Database error fetching gallery item for deletion:', err);
-            return res.status(500).json({ error: 'Database error' });
-        }
-        if (!row) {
-            return res.status(404).json({ error: 'Image not found' });
-        }
             if (files && Array.isArray(files)) {
-                for (const file of files) {
-                    if (file && file.path) {
-                        try {
-                            if (fs.existsSync(file.path)) {
-                                fs.unlinkSync(file.path);
+                void Promise.allSettled(
+                    files
+                        .filter((file): file is Express.Multer.File => !!(file && file.path))
+                        .map(file => fs.promises.unlink(file.path).catch(cleanupErr => {
+                            if ((cleanupErr as NodeJS.ErrnoException).code !== 'ENOENT') {
+                                console.error('Failed to clean up temp upload file:', cleanupErr);
                             }
-                        } catch (cleanupErr) {
-                            console.error('Failed to clean up temp upload file:', cleanupErr);
-                        }
-                    }
-                }
-            }
-
-            // Cleanup any temporary files left in req.files to avoid filling os.tmpdir()
-            if (files && Array.isArray(files)) {
-                for (const file of files) {
-                    if (file && file.path) {
-                        try {
-                            if (fs.existsSync(file.path)) {
-                                fs.unlinkSync(file.path);
-                            }
-                        } catch (cleanupErr) {
-                            console.error('Failed to clean up temp upload file:', cleanupErr);
-                        }
-                    }
-                }
+                        }))
+                );
             }
             res.status(500).json({ error: 'Failed to process images' });
         }
@@ -274,10 +249,7 @@ router.put('/:id', authenticateToken, requireCommittee, (req: any, res) => {
     if (heroMobileX !== undefined) {
         const value = toCropValue(heroMobileX);
         if (value === null) return res.status(400).json({ error: 'Invalid heroMobileX (must be 0-100)' });
-            if (err) return res.status(500).json({ error: 'Database error' });
-            if (this.changes === 0) {
-                return res.status(404).json({ error: 'Gallery item not found' });
-            }
+        updates.push('heroMobileX = ?');
         params.push(value);
     }
     if (heroMobileY !== undefined) {

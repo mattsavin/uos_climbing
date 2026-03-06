@@ -160,6 +160,39 @@ describe('Gallery API', () => {
             expect(res.body.error).toBe('Failed to process images');
         });
 
+        it('should clean up temp files asynchronously and not block the 500 response', async () => {
+            const sharpImport = (await import('sharp')).default as any;
+            sharpImport.mockReturnValueOnce({
+                resize: vi.fn().mockReturnThis(),
+                webp: vi.fn().mockReturnThis(),
+                toFile: vi.fn().mockRejectedValue(new Error('Sharp fail')),
+            });
+
+            // Simulate a never-resolving unlink to prove the response is not blocked by cleanup
+            let resolveUnlink: (() => void) | undefined;
+            const unlinkSpy = vi.spyOn(fs.promises, 'unlink').mockImplementation(
+                () => new Promise<void>(resolve => { resolveUnlink = resolve; })
+            );
+            const unlinkSyncSpy = vi.spyOn(fs, 'unlinkSync');
+
+            const res = await request(app)
+                .post('/api/gallery')
+                .set('Authorization', `Bearer ${committeeToken}`)
+                .attach('photos', mockImageBuffer, 'test-async-cleanup.jpg');
+
+            // 500 should arrive even though the unlink promise has never resolved
+            expect(res.status).toBe(500);
+            expect(res.body.error).toBe('Failed to process images');
+            // async unlink must have been attempted
+            expect(unlinkSpy).toHaveBeenCalled();
+            // old sync unlink must NOT have been used for the error-path cleanup
+            expect(unlinkSyncSpy).not.toHaveBeenCalled();
+
+            resolveUnlink?.();
+            unlinkSpy.mockRestore();
+            unlinkSyncSpy.mockRestore();
+        });
+
         it('should handle db insert error', async () => {
             const spy = vi.spyOn(db, 'run').mockImplementationOnce((query, params, cb) => cb.call({}, new Error('DB Error')));
 
