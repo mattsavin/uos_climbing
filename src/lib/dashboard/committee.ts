@@ -1,7 +1,11 @@
 import { authState, committeeApi, adminApi } from '../../auth';
 import { showToast } from '../../utils';
 
-export function initCommitteeProfileHandlers() {
+type PhotoCropEditor = {
+    open: (file: File, uploadFn: (blob: Blob) => Promise<string>, onSuccess?: (photoPath: string) => void) => void;
+};
+
+export function initCommitteeProfileHandlers(photoCropEditor?: PhotoCropEditor | null) {
     const committeeProfileCard = document.getElementById('committee-profile-card');
     const profilePhotoInput = document.getElementById('profile-photo-input') as HTMLInputElement;
     const uploadPhotoBtn = document.getElementById('upload-photo-btn');
@@ -60,34 +64,36 @@ export function initCommitteeProfileHandlers() {
     if (uploadPhotoBtn && profilePhotoInput) {
         uploadPhotoBtn.addEventListener('click', () => profilePhotoInput.click());
 
-        profilePhotoInput.addEventListener('change', async () => {
+        profilePhotoInput.addEventListener('change', () => {
             const file = profilePhotoInput.files?.[0];
             if (!file) return;
+            profilePhotoInput.value = '';
 
-            // Preview locally first
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                if (profilePreview && e.target?.result) {
-                    profilePreview.src = e.target.result as string;
-                    profilePreview.classList.remove('hidden');
-                    if (profilePlaceholder) profilePlaceholder.classList.add('hidden');
-                }
-            };
-            reader.readAsDataURL(file);
-
-            // Upload to server
-            try {
-                uploadPhotoBtn.textContent = 'Uploading...';
-                const result = await committeeApi.uploadPhoto(file);
-                showToast('Profile photo updated!', 'success');
-
-                // Update local user state
-                const user = authState.getUser();
-                if (user) user.profilePhoto = result.photoPath;
-            } catch (err: any) {
-                showToast(err.message || 'Failed to upload photo', 'error');
-            } finally {
-                uploadPhotoBtn.textContent = 'Change Photo';
+            if (photoCropEditor) {
+                photoCropEditor.open(
+                    file,
+                    async (blob) => {
+                        const formData = new FormData();
+                        formData.append('photo', blob, 'profile.jpg');
+                        const res = await fetch('/api/committee/me/photo', {
+                            method: 'POST',
+                            credentials: 'include',
+                            body: formData
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Photo upload failed');
+                        const user = authState.getUser();
+                        if (user) user.profilePhoto = data.photoPath;
+                        return data.photoPath;
+                    },
+                    (photoPath) => {
+                        if (profilePreview) {
+                            profilePreview.src = photoPath;
+                            profilePreview.classList.remove('hidden');
+                        }
+                        if (profilePlaceholder) profilePlaceholder.classList.add('hidden');
+                    }
+                );
             }
         });
     }

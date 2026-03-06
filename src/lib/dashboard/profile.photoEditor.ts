@@ -19,6 +19,21 @@ export function initProfilePhotoCropEditor() {
     let stageSize = 0;
     let baseScale = 1;
     let onSuccess: ((photoPath: string) => void) | null = null;
+    let currentUploadFn: ((blob: Blob) => Promise<string>) | null = null;
+
+    const accountUploadFn = async (blob: Blob): Promise<string> => {
+        const formData = new FormData();
+        formData.append('photo', blob, 'profile.jpg');
+        const res = await fetch('/api/users/me/photo', {
+            method: 'POST',
+            credentials: 'include',
+            body: formData
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Upload failed');
+        if (authState.user) authState.user.profilePhoto = result.photoPath;
+        return result.photoPath;
+    };
 
     // The circle has 16px inset on each side (Tailwind inset-4)
     const getCircleRadius = () => (stageSize - 32) / 2;
@@ -181,22 +196,10 @@ export function initProfilePhotoCropEditor() {
 
         try {
             const blob = await exportCrop();
-            const formData = new FormData();
-            formData.append('photo', blob, 'profile.jpg');
-
-            const res = await fetch('/api/users/me/photo', {
-                method: 'POST',
-                credentials: 'include',
-                body: formData
-            });
-
-            const result = await res.json();
-            if (!res.ok) throw new Error(result.error || 'Upload failed');
-
-            if (authState.user) authState.user.profilePhoto = result.photoPath;
+            const photoPath = await (currentUploadFn ?? accountUploadFn)(blob);
             showToast('Profile photo updated!', 'success');
             close();
-            onSuccess?.(result.photoPath);
+            onSuccess?.(photoPath);
             window.dispatchEvent(new CustomEvent('dashboardUpdate'));
         } catch (err: any) {
             showToast(err.message || 'Failed to upload photo', 'error');
@@ -206,7 +209,7 @@ export function initProfilePhotoCropEditor() {
         }
     });
 
-    // Hook into the account modal's file input
+    // Hook into the account modal's file input (default upload target)
     const photoInput = document.getElementById('member-photo-input') as HTMLInputElement | null;
     if (photoInput) {
         photoInput.addEventListener('change', () => {
@@ -214,6 +217,7 @@ export function initProfilePhotoCropEditor() {
             if (!file) return;
             photoInput.value = '';
 
+            currentUploadFn = accountUploadFn;
             onSuccess = (photoPath: string) => {
                 const preview = document.getElementById('profile-photo-preview') as HTMLImageElement | null;
                 const placeholder = document.getElementById('profile-photo-placeholder');
@@ -229,5 +233,12 @@ export function initProfilePhotoCropEditor() {
         });
     }
 
-    return { close };
+    const open = (file: File, uploadFn: (blob: Blob) => Promise<string>, successCallback?: (photoPath: string) => void) => {
+        currentUploadFn = uploadFn;
+        onSuccess = successCallback ?? null;
+        cropImage.src = URL.createObjectURL(file);
+        modal.classList.remove('hidden');
+    };
+
+    return { open, close };
 }

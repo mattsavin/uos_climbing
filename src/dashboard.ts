@@ -29,11 +29,11 @@ document.addEventListener('DOMContentLoaded', () => {
     initAdminConfirm();
     initProfileHandlers();
     initAccountModalHandlers();
-    initProfilePhotoCropEditor();
+    const photoCropEditor = initProfilePhotoCropEditor();
 
     // Initial Boot
     authState.init().then(() => {
         updateUI();
-        initCommitteeProfileHandlers();
+        initCommitteeProfileHandlers(photoCropEditor);
     });
 });
