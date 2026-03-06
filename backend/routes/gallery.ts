@@ -34,7 +34,7 @@ const upload = multer({
         const mimetype = filetypes.test(file.mimetype);
         const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
 
-        if (mimetype || extname) {
+        if (mimetype && extname) {
             return cb(null, true);
         }
         cb(new Error('Only images are allowed!'));
@@ -56,6 +56,16 @@ router.get('/', (req, res) => {
 // POST /api/gallery - Upload a new gallery image (Committee Only)
 router.post('/', authenticateToken, requireCommittee, (req: any, res) => {
 
+    // Enforce a maximum total batch size for the request to avoid excessive disk/CPU usage.
+    // This is in addition to the per-file 50MB limit enforced by Multer above.
+    const contentLengthHeader = req.headers['content-length'];
+    const MAX_BATCH_BYTES = 50 * 1024 * 1024 * 5; // 250MB total for all files in this request
+    if (typeof contentLengthHeader === 'string') {
+        const totalBytes = parseInt(contentLengthHeader, 10);
+        if (!Number.isNaN(totalBytes) && totalBytes > MAX_BATCH_BYTES) {
+            return res.status(413).json({ error: 'Total upload size exceeds the 250MB limit for gallery uploads.' });
+        }
+    }
     upload.array('photos', 50)(req, res, async (uploadErr: any) => {
         if (uploadErr instanceof multer.MulterError && uploadErr.code === 'LIMIT_FILE_SIZE') {
             return res.status(400).json({ error: 'One or more photos are too large. Max size is 50MB per file.' });
@@ -120,6 +130,17 @@ router.post('/', authenticateToken, requireCommittee, (req: any, res) => {
             res.json({ success: true, uploaded: uploadedImages });
         } catch (error: any) {
             console.error('Sharp processing error:', error);
+            if (files && Array.isArray(files)) {
+                Promise.allSettled(
+                    files
+                        .filter((file): file is Express.Multer.File => !!(file && file.path))
+                        .map(file => fs.promises.unlink(file.path).catch(cleanupErr => {
+                            if ((cleanupErr as NodeJS.ErrnoException).code !== 'ENOENT') {
+                                console.error('Failed to clean up temp upload file:', cleanupErr);
+                            }
+                        }))
+                );
+            }
             res.status(500).json({ error: 'Failed to process images' });
         }
     });

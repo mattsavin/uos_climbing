@@ -41,16 +41,37 @@ async function initGallery() {
         return;
     }
 
-    grid.innerHTML = images.map((img: any) => `
-        <div class="glass-card ${GALLERY_LANDSCAPE_ASPECT_CLASS} flex items-center justify-center border border-white/10 group overflow-hidden relative cursor-pointer gallery-item" data-src="${img.filepath}" data-caption="${img.caption || ''}">
-            <img src="${img.filepath}" alt="${img.caption || 'Gallery Image'}" class="w-full h-full object-cover transition-transform duration-700" style="object-position: ${normalizeCrop(img.galleryLandscapeX, 50)}% ${normalizeCrop(img.galleryLandscapeY, 50)}%; transform-origin: ${normalizeCrop(img.galleryLandscapeX, 50)}% ${normalizeCrop(img.galleryLandscapeY, 50)}%; transform: scale(${normalizeZoom(img.galleryLandscapeZoom, 1)});">
-            ${img.caption ? `
-            <div class="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/80 to-transparent p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                <p class="text-white text-sm font-bold text-center">${img.caption}</p>
-            </div>
-            ` : ''}
-        </div>
-    `).join('');
+    grid.innerHTML = '';
+    images.forEach((img: any) => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = `glass-card ${GALLERY_LANDSCAPE_ASPECT_CLASS} flex items-center justify-center border border-white/10 group overflow-hidden relative cursor-pointer gallery-item`;
+        itemDiv.setAttribute('data-src', img.filepath);
+        itemDiv.setAttribute('data-caption', img.caption || '');
+
+        const imgEl = document.createElement('img');
+        imgEl.src = img.filepath;
+        imgEl.alt = img.caption || 'Gallery Image';
+        imgEl.className = 'w-full h-full object-cover transition-transform duration-700';
+        imgEl.style.objectPosition = `${normalizeCrop(img.galleryLandscapeX, 50)}% ${normalizeCrop(img.galleryLandscapeY, 50)}%`;
+        imgEl.style.transformOrigin = `${normalizeCrop(img.galleryLandscapeX, 50)}% ${normalizeCrop(img.galleryLandscapeY, 50)}%`;
+        imgEl.style.transform = `scale(${normalizeZoom(img.galleryLandscapeZoom, 1)})`;
+
+        itemDiv.appendChild(imgEl);
+
+        if (img.caption) {
+            const captionDiv = document.createElement('div');
+            captionDiv.className = 'absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/80 to-transparent p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300';
+
+            const captionP = document.createElement('p');
+            captionP.className = 'text-white text-sm font-bold text-center';
+            captionP.textContent = img.caption;
+
+            captionDiv.appendChild(captionP);
+            itemDiv.appendChild(captionDiv);
+        }
+
+        grid.appendChild(itemDiv);
+    });
 
     // Modal Logic
     const modal = document.getElementById('image-modal');

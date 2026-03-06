@@ -48,9 +48,15 @@ export async function initHeroCarousel() {
     // Build slides
     container.innerHTML = images.map((img, i) => {
         const crop = getHeroCropStyles(img);
+        const altText = (img.caption || FALLBACK_ALT)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
         return `
         <div class="hero-slide absolute inset-0 transition-opacity duration-1000 ${i === 0 ? 'opacity-100' : 'opacity-0'}" aria-hidden="${i !== 0}">
-            <img src="${img.filepath}" alt="${img.caption || FALLBACK_ALT}" class="w-full h-full object-cover" style="object-position: ${crop.objectPosition}; transform-origin: ${crop.transformOrigin}; transform: scale(${crop.zoom});">
+            <img src="${img.filepath}" alt="${altText}" class="w-full h-full object-cover" style="object-position: ${crop.objectPosition}; transform-origin: ${crop.transformOrigin}; transform: scale(${crop.zoom});">
         </div>
     `;
     }).join('');
