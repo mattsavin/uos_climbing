@@ -4,8 +4,9 @@ import { updateUI, initGeneralHandlers } from './lib/dashboard/ui';
 import { initSessionHandlers } from './lib/dashboard/sessions';
 import { initAdminConfirm } from './lib/dashboard/admin';
 import { initProfileHandlers, initAccountModalHandlers } from './lib/dashboard/profile';
+import { initProfilePhotoCropEditor } from './lib/dashboard/profile.photoEditor';
 import { initCommitteeProfileHandlers } from './lib/dashboard/committee';
-import { membershipRenewalModalHtml, accountManagerModalHtml, adminConfirmModalHtml, membershipCardModalHtml } from './components';
+import { membershipRenewalModalHtml, accountManagerModalHtml, adminConfirmModalHtml, membershipCardModalHtml, profilePhotoCropModalHtml } from './components';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Inject components
@@ -13,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (app) {
         app.insertAdjacentHTML('beforeend', membershipRenewalModalHtml);
         app.insertAdjacentHTML('beforeend', accountManagerModalHtml);
+        app.insertAdjacentHTML('beforeend', profilePhotoCropModalHtml);
         app.insertAdjacentHTML('beforeend', adminConfirmModalHtml);
         app.insertAdjacentHTML('beforeend', membershipCardModalHtml);
     }
@@ -27,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initAdminConfirm();
     initProfileHandlers();
     initAccountModalHandlers();
+    initProfilePhotoCropEditor();
 
     // Initial Boot
     authState.init().then(() => {
