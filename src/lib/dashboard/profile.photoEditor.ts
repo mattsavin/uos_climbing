@@ -159,6 +159,13 @@ export function initProfilePhotoCropEditor() {
         modal.classList.add('hidden');
         if (cropImage.src.startsWith('blob:')) URL.revokeObjectURL(cropImage.src);
         cropImage.src = '';
+        for (const pointerId of activePointers.keys()) {
+            if (stage.hasPointerCapture(pointerId)) stage.releasePointerCapture(pointerId);
+        }
+        activePointers.clear();
+        isDragging = false;
+        isPinching = false;
+        stage.style.cursor = 'grab';
     };
 
     [cancelBtn, cancelXBtn, backdrop].forEach(el => {
@@ -228,6 +235,7 @@ export function initProfilePhotoCropEditor() {
                 if (placeholder) placeholder.classList.add('hidden');
             };
 
+            if (cropImage.src.startsWith('blob:')) URL.revokeObjectURL(cropImage.src);
             cropImage.src = URL.createObjectURL(file);
             modal.classList.remove('hidden');
         });
@@ -236,6 +244,7 @@ export function initProfilePhotoCropEditor() {
     const open = (file: File, uploadFn: (blob: Blob) => Promise<string>, successCallback?: (photoPath: string) => void) => {
         currentUploadFn = uploadFn;
         onSuccess = successCallback ?? null;
+        if (cropImage.src.startsWith('blob:')) URL.revokeObjectURL(cropImage.src);
         cropImage.src = URL.createObjectURL(file);
         modal.classList.remove('hidden');
     };

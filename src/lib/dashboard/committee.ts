@@ -67,9 +67,9 @@ export function initCommitteeProfileHandlers(photoCropEditor?: PhotoCropEditor |
         profilePhotoInput.addEventListener('change', () => {
             const file = profilePhotoInput.files?.[0];
             if (!file) return;
-            profilePhotoInput.value = '';
 
             if (photoCropEditor) {
+                profilePhotoInput.value = '';
                 photoCropEditor.open(
                     file,
                     async (blob) => {
@@ -94,6 +94,8 @@ export function initCommitteeProfileHandlers(photoCropEditor?: PhotoCropEditor |
                         if (profilePlaceholder) profilePlaceholder.classList.add('hidden');
                     }
                 );
+            } else {
+                showToast('Photo crop editor unavailable. Please refresh the page and try again.', 'error');
             }
         });
     }

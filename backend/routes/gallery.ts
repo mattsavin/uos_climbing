@@ -295,7 +295,10 @@ router.put('/:id', authenticateToken, requireCommittee, (req: any, res) => {
     const executeUpdate = () => {
         params.push(id);
         db.run(`UPDATE gallery SET ${updates.join(', ')} WHERE id = ?`, params, function (err) {
-            if (err) { console.error('Gallery PUT db.run error:', err); return res.status(500).json({ error: 'Database error' }); }
+            if (err) {
+                console.error('Gallery PUT db.run error:', err);
+                return res.status(500).json({ error: 'Database error' });
+            }
             res.json({ success: true });
         });
     };
@@ -303,7 +306,10 @@ router.put('/:id', authenticateToken, requireCommittee, (req: any, res) => {
     const shouldAutoAssignFeaturedOrder = featured === true && featuredOrder === undefined;
     if (shouldAutoAssignFeaturedOrder) {
         db.get('SELECT COALESCE(MAX(featuredOrder), 0) + 1 AS nextOrder FROM gallery WHERE featured = 1 AND id != ?', [id], (orderErr, row: any) => {
-            if (orderErr) { console.error('Gallery PUT featuredOrder query error:', orderErr); return res.status(500).json({ error: 'Database error' }); }
+            if (orderErr) {
+                console.error('Gallery PUT featuredOrder query error:', orderErr);
+                return res.status(500).json({ error: 'Database error' });
+            }
             updates.push('featuredOrder = ?');
             params.push(row?.nextOrder || 1);
             executeUpdate();
