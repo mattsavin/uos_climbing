@@ -68,18 +68,14 @@ export function initCommitteeProfileHandlers(photoCropEditor?: PhotoCropEditor |
         profilePhotoInput.addEventListener('change', () => {
             const file = profilePhotoInput.files?.[0];
             if (!file) return;
-            profilePhotoInput.value = '';
 
             if (photoCropEditor) {
+                profilePhotoInput.value = '';
                 photoCropEditor.open(
                     file,
                     async (blob) => {
-                        const formData = new FormData();
-                        formData.append('photo', blob, 'profile.jpg');
-                        const data = await apiFetch('/api/users/me/photo', {
-                            method: 'POST',
-                            body: formData
-                        });
+                        const fileFromBlob = new File([blob], 'profile.jpg', { type: blob.type || 'image/jpeg' });
+                        const data = await committeeApi.uploadPhoto(fileFromBlob);
                         const user = authState.getUser();
                         if (user) user.profilePhoto = data.photoPath;
                         return data.photoPath;
@@ -92,6 +88,8 @@ export function initCommitteeProfileHandlers(photoCropEditor?: PhotoCropEditor |
                         if (profilePlaceholder) profilePlaceholder.classList.add('hidden');
                     }
                 );
+            } else {
+                showToast('Photo crop editor unavailable. Please refresh the page and try again.', 'error');
             }
         });
     }

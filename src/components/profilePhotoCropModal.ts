@@ -1,5 +1,5 @@
 export const profilePhotoCropModalHtml = `
-    <div id="profile-crop-modal" class="fixed inset-0 z-200 items-center justify-center p-4">
+    <div id="profile-crop-modal" class="hidden fixed inset-0 z-[220] flex items-center justify-center p-4">
         <div id="profile-crop-backdrop" class="absolute inset-0 bg-black/90 backdrop-blur-sm"></div>
         <div class="relative w-full max-w-sm glass-card p-0! border border-white/10 shadow-2xl overflow-hidden">
             <div class="p-4 border-b border-white/10 bg-slate-800/50 flex items-center justify-between">
