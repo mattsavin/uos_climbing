@@ -239,8 +239,13 @@ export const authState = {
                 method: 'POST',
                 body: JSON.stringify({ email: this.user.email, password })
             });
-        } catch {
-            throw new Error("Incorrect password.");
+        } catch (error: any) {
+            const status = error?.status ?? error?.response?.status;
+            if (status === 401 || status === 403) {
+                throw new Error("Incorrect password.");
+            }
+            // For other errors (network/server/etc.), rethrow so they can be handled upstream
+            throw error;
         }
 
         const data = await apiFetch(`/api/users/${this.user.id}`, {
