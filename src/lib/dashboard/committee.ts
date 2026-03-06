@@ -1,7 +1,11 @@
 import { authState, committeeApi, adminApi } from '../../auth';
 import { showToast } from '../../utils';
 
-export function initCommitteeProfileHandlers() {
+type PhotoCropEditor = {
+    open: (file: File, uploadFn: (blob: Blob) => Promise<string>, onSuccess?: (photoPath: string) => void) => void;
+};
+
+export function initCommitteeProfileHandlers(photoCropEditor?: PhotoCropEditor | null) {
     const committeeProfileCard = document.getElementById('committee-profile-card');
     const profilePhotoInput = document.getElementById('profile-photo-input') as HTMLInputElement;
     const uploadPhotoBtn = document.getElementById('upload-photo-btn');
@@ -60,34 +64,31 @@ export function initCommitteeProfileHandlers() {
     if (uploadPhotoBtn && profilePhotoInput) {
         uploadPhotoBtn.addEventListener('click', () => profilePhotoInput.click());
 
-        profilePhotoInput.addEventListener('change', async () => {
+        profilePhotoInput.addEventListener('change', () => {
             const file = profilePhotoInput.files?.[0];
             if (!file) return;
 
-            // Preview locally first
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                if (profilePreview && e.target?.result) {
-                    profilePreview.src = e.target.result as string;
-                    profilePreview.classList.remove('hidden');
-                    if (profilePlaceholder) profilePlaceholder.classList.add('hidden');
-                }
-            };
-            reader.readAsDataURL(file);
-
-            // Upload to server
-            try {
-                uploadPhotoBtn.textContent = 'Uploading...';
-                const result = await committeeApi.uploadPhoto(file);
-                showToast('Profile photo updated!', 'success');
-
-                // Update local user state
-                const user = authState.getUser();
-                if (user) user.profilePhoto = result.photoPath;
-            } catch (err: any) {
-                showToast(err.message || 'Failed to upload photo', 'error');
-            } finally {
-                uploadPhotoBtn.textContent = 'Change Photo';
+            if (photoCropEditor) {
+                profilePhotoInput.value = '';
+                photoCropEditor.open(
+                    file,
+                    async (blob) => {
+                        const fileFromBlob = new File([blob], 'profile.jpg', { type: blob.type || 'image/jpeg' });
+                        const data = await committeeApi.uploadPhoto(fileFromBlob);
+                        const user = authState.getUser();
+                        if (user) user.profilePhoto = data.photoPath;
+                        return data.photoPath;
+                    },
+                    (photoPath) => {
+                        if (profilePreview) {
+                            profilePreview.src = photoPath;
+                            profilePreview.classList.remove('hidden');
+                        }
+                        if (profilePlaceholder) profilePlaceholder.classList.add('hidden');
+                    }
+                );
+            } else {
+                showToast('Photo crop editor unavailable. Please refresh the page and try again.', 'error');
             }
         });
     }
