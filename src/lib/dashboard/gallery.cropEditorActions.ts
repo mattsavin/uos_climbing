@@ -6,6 +6,7 @@ import {
     normalizeZoom
 } from './gallery.helpers';
 import type { CropContextKey, CropEditorState } from './gallery.helpers';
+import { apiFetch } from '../api/http';
 
 type DraftState = {
     activeCropContext: CropContextKey | null;
@@ -113,17 +114,10 @@ export function bindCropEditorActionButtons(options: BindCropEditorActionButtons
             cropSaveBtn.textContent = 'Saving...';
 
             try {
-                const res = await fetch(`/api/gallery/${image.id}`, {
+                await apiFetch(`/api/gallery/${image.id}`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
                     body: JSON.stringify(payload)
                 });
-
-                if (!res.ok) {
-                    const maybeJson = await res.json().catch(() => ({}));
-                    throw new Error(maybeJson.error || 'Failed to save crop settings');
-                }
 
                 image[config.xKey] = finalCropX;
                 image[config.yKey] = finalCropY;

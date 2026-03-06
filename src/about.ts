@@ -2,6 +2,7 @@ import './style.css';
 import { initApp } from './main';
 import { config } from './config';
 import { escapeHTML } from './utils';
+import { apiFetch } from './lib/api/http';
 
 // Initialize core app
 initApp();
@@ -30,10 +31,7 @@ async function renderCommittee() {
     };
 
     try {
-        const response = await fetch('/api/committee');
-        if (!response.ok) throw new Error('Failed to fetch committee');
-
-        const members = await response.json();
+        const members = await apiFetch('/api/committee');
         const roles = config.committeeRoles;
 
         const normalize = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, '');

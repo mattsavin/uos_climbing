@@ -1,5 +1,6 @@
 import { showToast } from '../../utils';
 import { validateGalleryUploadBatch } from './gallery.helpers';
+import { apiFetch } from '../api/http';
 
 export function initGalleryUploadHandlers(renderGalleryList: () => Promise<void>) {
     const openBtn = document.getElementById('open-gallery-upload-btn');
@@ -105,23 +106,10 @@ export function initGalleryUploadHandlers(renderGalleryList: () => Promise<void>
                     formData.append('caption', caption);
                 }
 
-                const res = await fetch('/api/gallery', {
+                await apiFetch('/api/gallery', {
                     method: 'POST',
-                    credentials: 'include',
                     body: formData
                 });
-
-                let result: any = {};
-                const contentType = res.headers.get('content-type');
-                if (contentType && contentType.includes('application/json')) {
-                    result = await res.json();
-                } else {
-                    const errorText = await res.text();
-                    console.error('Server returned non-JSON response:', errorText);
-                    throw new Error(`Server Error: ${res.status} ${res.statusText}`);
-                }
-
-                if (!res.ok) throw new Error(result.error || `Upload failed: ${res.status}`);
 
                 showToast(files.length > 1 ? `${files.length} images uploaded!` : 'Gallery image uploaded!', 'success');
                 (form as HTMLFormElement).reset();

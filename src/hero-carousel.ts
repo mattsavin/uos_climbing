@@ -1,6 +1,7 @@
 const FALLBACK_IMAGE = '/src/assets/NUBS_Finals_015.jpg';
 const FALLBACK_ALT = 'Climbing';
 const INTERVAL_MS = 5000;
+import { apiFetch } from './lib/api/http';
 
 function normalizeCrop(value: any, fallback = 50): number {
     const parsed = Number(value);
@@ -30,10 +31,7 @@ export async function initHeroCarousel() {
     let images: any[] = [];
 
     try {
-        const res = await fetch('/api/gallery?featured=1');
-        if (res.ok) {
-            images = await res.json();
-        }
+        images = await apiFetch('/api/gallery?featured=1');
     } catch {
         // fall through to fallback
     }

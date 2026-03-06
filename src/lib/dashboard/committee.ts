@@ -1,5 +1,6 @@
 import { authState, committeeApi, adminApi } from '../../auth';
 import { showToast } from '../../utils';
+import { apiFetch } from '../../lib/api/http';
 
 type PhotoCropEditor = {
     open: (file: File, uploadFn: (blob: Blob) => Promise<string>, onSuccess?: (photoPath: string) => void) => void;
@@ -75,13 +76,10 @@ export function initCommitteeProfileHandlers(photoCropEditor?: PhotoCropEditor |
                     async (blob) => {
                         const formData = new FormData();
                         formData.append('photo', blob, 'profile.jpg');
-                        const res = await fetch('/api/committee/me/photo', {
+                        const data = await apiFetch('/api/users/me/photo', {
                             method: 'POST',
-                            credentials: 'include',
                             body: formData
                         });
-                        const data = await res.json();
-                        if (!res.ok) throw new Error(data.error || 'Photo upload failed');
                         const user = authState.getUser();
                         if (user) user.profilePhoto = data.photoPath;
                         return data.photoPath;

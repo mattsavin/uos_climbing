@@ -8,6 +8,7 @@ import path from 'path';
 import fs from 'fs';
 import sharp from 'sharp';
 import { UPLOAD_BASE_DIR } from '../config';
+import { memoryUpload as upload } from '../utils/upload';
 
 const router = express.Router();
 
@@ -24,22 +25,6 @@ if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-const storage = multer.memoryStorage();
-
-const upload = multer({
-    storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-    fileFilter: (req, file, cb) => {
-        const filetypes = /jpeg|jpg|png|webp/;
-        const mimetype = filetypes.test(file.mimetype);
-        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-
-        if (mimetype && extname) {
-            return cb(null, true);
-        }
-        cb(new Error('Only images (jpeg, jpg, png, webp) are allowed!'));
-    }
-});
 
 /** Get current user's membership rows */
 router.get('/me/memberships', authenticateToken, (req: any, res) => {

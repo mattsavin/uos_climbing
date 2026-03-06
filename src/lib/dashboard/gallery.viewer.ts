@@ -9,6 +9,7 @@ import {
     normalizeZoom
 } from './gallery.helpers';
 import type { CropEditorState, CropContextKey } from './gallery.helpers';
+import { apiFetch } from '../api/http';
 
 type GalleryViewerOptions = {
     getCurrentGalleryImages: () => any[];
@@ -236,13 +237,10 @@ export function createGalleryViewerController(options: GalleryViewerOptions) {
                 const isFeatured = toggleBtn.dataset.featured === '1';
                 if (!id) return;
                 try {
-                    const res = await fetch(`/api/gallery/${id}`, {
+                    await apiFetch(`/api/gallery/${id}`, {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ featured: !isFeatured }),
-                        credentials: 'include'
                     });
-                    if (!res.ok) throw new Error('Update failed');
                     showToast(isFeatured ? 'Removed from homepage carousel' : 'Added to homepage carousel', 'success');
                     closeGalleryViewer();
                     await renderGalleryList();
@@ -272,13 +270,10 @@ export function createGalleryViewerController(options: GalleryViewerOptions) {
             try {
                 for (let i = 0; i < swapped.length; i++) {
                     const img = swapped[i];
-                    const res = await fetch(`/api/gallery/${img.id}`, {
+                    await apiFetch(`/api/gallery/${img.id}`, {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include',
                         body: JSON.stringify({ featured: true, featuredOrder: i + 1 })
                     });
-                    if (!res.ok) throw new Error('Failed to update highlight reel order');
                 }
 
                 showToast('Highlight reel order updated', 'success');
@@ -329,11 +324,9 @@ export function createGalleryViewerController(options: GalleryViewerOptions) {
                     'Delete Image',
                     'Are you sure you want to permanently delete this image from the public gallery?',
                     async () => {
-                        const res = await fetch(`/api/gallery/${id}`, {
-                            method: 'DELETE',
-                            credentials: 'include'
+                        await apiFetch(`/api/gallery/${id}`, {
+                            method: 'DELETE'
                         });
-                        if (!res.ok) throw new Error('Deletion failed');
                         showToast('Image deleted successfully', 'success');
                         closeGalleryViewer();
                         await renderGalleryList();
@@ -368,13 +361,10 @@ export function createGalleryViewerController(options: GalleryViewerOptions) {
                 if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving...'; }
 
                 try {
-                    const res = await fetch(`/api/gallery/${id}`, {
+                    await apiFetch(`/api/gallery/${id}`, {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ caption: newCaption }),
-                        credentials: 'include'
+                        body: JSON.stringify({ caption: newCaption })
                     });
-                    if (!res.ok) throw new Error('Update failed');
                     showToast('Caption updated', 'success');
                     closeEditModal();
                     await renderGalleryList();

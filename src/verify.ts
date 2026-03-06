@@ -1,3 +1,5 @@
+import { apiFetch } from './lib/api/http';
+
 document.addEventListener('DOMContentLoaded', async () => {
     const verifyCard = document.getElementById('verify-card');
     const errorCard = document.getElementById('error-card');
@@ -21,13 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     try {
-        const res = await fetch(`/api/verify/${memberToken}`);
-        const data = await res.json();
-
-        if (!res.ok) {
-            showError(data.error || 'Member not found.');
-            return;
-        }
+        const data = await apiFetch(`/api/verify/${memberToken}`);
 
         // Populate Data
         if (nameEl) nameEl.textContent = data.name;

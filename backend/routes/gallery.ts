@@ -8,6 +8,7 @@ import os from 'os';
 import crypto from 'crypto';
 import sharp from 'sharp';
 import { UPLOAD_BASE_DIR } from '../config';
+import { diskUpload as upload } from '../utils/upload';
 
 const router = express.Router();
 
@@ -16,30 +17,6 @@ if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Disk storage for multer so we don't hold the entire batch of files in memory
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, os.tmpdir());
-    },
-    filename: (req, file, cb) => {
-        cb(null, 'tmp-gallery-' + Date.now() + '-' + crypto.randomBytes(4).toString('hex') + path.extname(file.originalname));
-    }
-});
-
-const upload = multer({
-    storage: storage,
-    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit for high-res photos
-    fileFilter: (req, file, cb) => {
-        const filetypes = /jpeg|jpg|png|webp|heic|heif/;
-        const mimetype = filetypes.test(file.mimetype);
-        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-
-        if (mimetype && extname) {
-            return cb(null, true);
-        }
-        cb(new Error('Only images are allowed!'));
-    }
-});
 
 // GET /api/gallery - Fetch all gallery images (or only featured with ?featured=1)
 router.get('/', (req, res) => {

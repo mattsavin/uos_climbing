@@ -1,5 +1,6 @@
 import './style.css';
 import { GALLERY_LANDSCAPE_ASPECT_CLASS } from './lib/gallery.config';
+import { apiFetch } from './lib/api/http';
 
 function normalizeCrop(value: any, fallback = 50): number {
     const parsed = Number(value);
@@ -15,9 +16,7 @@ function normalizeZoom(value: any, fallback = 1): number {
 
 async function fetchGalleryImages() {
     try {
-        const res = await fetch('/api/gallery');
-        if (!res.ok) throw new Error('Failed to fetch gallery');
-        return await res.json();
+        return await apiFetch('/api/gallery');
     } catch (e) {
         console.error(e);
         return [];
