@@ -4,7 +4,6 @@ import { authenticateToken, requireCommittee } from '../middleware/auth';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import os from 'os';
 import crypto from 'crypto';
 import sharp from 'sharp';
 import { UPLOAD_BASE_DIR } from '../config';
