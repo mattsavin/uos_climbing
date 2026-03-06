@@ -57,18 +57,21 @@ export function initProfilePhotoCropEditor() {
         cropImage.style.height = `${cropImage.naturalHeight * scale}px`;
     };
 
-    const initImagePosition = () => {
+    const initImagePosition = (): boolean => {
         stageSize = stage.getBoundingClientRect().width;
-        if (!stageSize || !cropImage.naturalWidth) return;
+        if (!stageSize || !cropImage.naturalWidth) return false;
         baseScale = Math.max(stageSize / cropImage.naturalWidth, stageSize / cropImage.naturalHeight);
         userZoom = 1;
         tx = 0;
         ty = 0;
         zoomInput.value = '1';
         applyTransform();
+        return true;
     };
 
-    cropImage.addEventListener('load', () => requestAnimationFrame(initImagePosition));
+    cropImage.addEventListener('load', () => requestAnimationFrame(() => {
+        if (initImagePosition()) saveBtn.disabled = false;
+    }));
 
     zoomInput.addEventListener('input', () => {
         userZoom = parseFloat(zoomInput.value);
@@ -173,6 +176,9 @@ export function initProfilePhotoCropEditor() {
     });
 
     const exportCrop = (): Promise<Blob> => new Promise((resolve, reject) => {
+        if (!cropImage.complete || cropImage.naturalWidth === 0 || stageSize === 0) {
+            return reject(new Error('Image not ready'));
+        }
         const outputSize = 500;
         const canvas = document.createElement('canvas');
         canvas.width = outputSize;
@@ -236,6 +242,7 @@ export function initProfilePhotoCropEditor() {
             };
 
             if (cropImage.src.startsWith('blob:')) URL.revokeObjectURL(cropImage.src);
+            saveBtn.disabled = true;
             cropImage.src = URL.createObjectURL(file);
             modal.classList.remove('hidden');
         });
@@ -245,6 +252,7 @@ export function initProfilePhotoCropEditor() {
         currentUploadFn = uploadFn;
         onSuccess = successCallback ?? null;
         if (cropImage.src.startsWith('blob:')) URL.revokeObjectURL(cropImage.src);
+        saveBtn.disabled = true;
         cropImage.src = URL.createObjectURL(file);
         modal.classList.remove('hidden');
     };

@@ -73,15 +73,8 @@ export function initCommitteeProfileHandlers(photoCropEditor?: PhotoCropEditor |
                 photoCropEditor.open(
                     file,
                     async (blob) => {
-                        const formData = new FormData();
-                        formData.append('photo', blob, 'profile.jpg');
-                        const res = await fetch('/api/committee/me/photo', {
-                            method: 'POST',
-                            credentials: 'include',
-                            body: formData
-                        });
-                        const data = await res.json();
-                        if (!res.ok) throw new Error(data.error || 'Photo upload failed');
+                        const fileFromBlob = new File([blob], 'profile.jpg', { type: blob.type || 'image/jpeg' });
+                        const data = await committeeApi.uploadPhoto(fileFromBlob);
                         const user = authState.getUser();
                         if (user) user.profilePhoto = data.photoPath;
                         return data.photoPath;
