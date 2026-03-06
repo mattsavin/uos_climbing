@@ -57,9 +57,12 @@ export function initGalleryUploadHandlers(renderGalleryList: () => Promise<void>
                 return;
             }
 
+            // Clear any lingering previews from previous aborted uploads
             stagingArea.innerHTML = '';
             stagingArea.classList.remove('hidden');
 
+            // Iterate over all selected files to dynamically construct a staging list.
+            // This exposes a dedicated text input per file for individual captions.
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
                 const itemDiv = document.createElement('div');
@@ -104,11 +107,14 @@ export function initGalleryUploadHandlers(renderGalleryList: () => Promise<void>
             }
 
             try {
+                // Construct a multipart/form-data payload capable of transmitting binary Blobs
                 const formData = new FormData();
                 const captionInputs = form.querySelectorAll('.gallery-staging-caption') as NodeListOf<HTMLInputElement>;
 
                 for (let i = 0; i < files.length; i++) {
+                    // Node.js Multer expects the field name 'photos' to be an array
                     formData.append('photos', files[i]);
+                    // Associate captions by index sequence matching the uploaded Blobs
                     const caption = captionInputs[i] ? captionInputs[i].value : '';
                     formData.append('caption', caption);
                 }

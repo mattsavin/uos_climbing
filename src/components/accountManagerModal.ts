@@ -39,6 +39,7 @@ export const accountManagerModalHtml = `
             </div>
 
             <!-- Profile Form Tab -->
+            <!-- Rendered by default, houses bio fields and the profile picture uploader -->
             <div id="account-profile-pane" class="p-6">
                 <!-- Photo Upload Section -->
                 <div class="flex items-center gap-6 mb-8 p-4 bg-slate-900/50 rounded-xl border border-white/5">
@@ -114,6 +115,7 @@ export const accountManagerModalHtml = `
             </div>
 
             <!-- Password Form Tab -->
+            <!-- Hidden by default, toggled via the #tab-password-settings button -->
             <div id="account-password-pane" class="p-6 hidden">
                 <form id="password-form" class="space-y-4">
                     <div>
@@ -147,6 +149,8 @@ export const accountManagerModalHtml = `
                     </div>
                 </form>
 
+                <!-- Danger Zone -->
+                <!-- Red-bordered area for destructive actions, requiring an explicit confirmation prompt -->
                 <div class="mt-8 pt-6 border-t border-red-500/20">
                     <h4 class="text-sm font-bold text-red-500 uppercase tracking-widest mb-2 flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -7,6 +7,8 @@ import crypto from 'crypto';
 const router = express.Router();
 
 router.get('/candidates', authenticateToken, (req, res) => {
+    // Join candidates with users to get names, and run a correlated subquery 
+    // to tally the total votes each candidate has received.
     db.all(`
         SELECT u.id, u.name, c.manifesto, c.role, c.presentationLink,
         (SELECT COUNT(*) FROM votes v WHERE v.candidateId = u.id) as voteCount
@@ -32,6 +34,8 @@ router.post('/apply', authenticateToken, (req: any, res) => {
             return res.status(403).json({ error: 'Elections are not currently open' });
         }
 
+        // Attempt to insert the candidate. If the userId already exists in the candidates table,
+        // the UNIQUE constraint will fail, allowing us to safely catch duplicate applications.
         db.run('INSERT INTO candidates (userId, manifesto, role, presentationLink) VALUES (?, ?, ?, ?)', [req.user.id, manifesto, role, presentationLink || null], function (err) {
             if (err) {
                 if (err.message.includes('UNIQUE constraint failed')) {
@@ -87,6 +91,8 @@ router.post('/vote', authenticateToken, (req: any, res) => {
             return res.status(403).json({ error: 'Elections are not currently open' });
         }
 
+        // Insert the vote. The schema enforces a UNIQUE constraint on userId,
+        // preventing a single user from casting multiple votes for committee roles.
         db.run('INSERT INTO votes (userId, candidateId) VALUES (?, ?)', [req.user.id, candidateId], function (err) {
             if (err) {
                 if (err.message.includes('UNIQUE constraint failed')) {
@@ -129,6 +135,9 @@ router.post('/reset', authenticateToken, requireCommittee, (req, res) => {
  * 'yes', 'no', and 'abstain' votes using correlated subqueries. Includes the requester's own vote.
  */
 router.get('/referendums', authenticateToken, (req: any, res) => {
+    // Utilize inline correlated subqueries to dynamically aggregate the 'yes', 'no', 
+    // and 'abstain' splits for every active referendum, while simultaneously tagging 
+    // the payload with the current user's specific vote on that referendum (if any).
     db.all(`
         SELECT r.id, r.title, r.description, r.createdAt,
         (SELECT COUNT(*) FROM referendum_votes rv WHERE rv.referendumId = r.id AND rv.choice = 'yes') as yesCount,

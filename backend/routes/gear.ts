@@ -92,8 +92,11 @@ router.post('/:id/request', authenticateToken, (req: any, res) => {
 
     db.get('SELECT availableQuantity FROM gear WHERE id = ?', [gearId], (err, gear: any) => {
         if (err || !gear) return res.status(404).json({ error: 'Gear not found' });
+        // Prevent requesting gear that is completely checked out
         if (gear.availableQuantity <= 0) return res.status(400).json({ error: 'Gear out of stock' });
 
+        // Insert the request leaving the status as 'pending'. 
+        // We do *not* decrement the inventory until a Kit Sec actually approves this.
         db.run('INSERT INTO gear_requests (id, userId, gearId, status, requestDate) VALUES (?, ?, ?, ?, ?)',
             [requestId, userId, gearId, 'pending', requestDate],
             function (err) {
@@ -117,17 +120,22 @@ router.post('/requests/:request_id/approve', authenticateToken, requireKitSec, (
         if (!request) return res.status(404).json({ error: 'Request not found' });
         if (request.status !== 'pending') return res.status(400).json({ error: 'Request is not pending' });
 
+        // Use an atomic transaction to ensure the inventory isn't dropped if the request state update fails
         db.serialize(() => {
             db.run('BEGIN TRANSACTION');
+            // 1. Mark request as approved
             db.run("UPDATE gear_requests SET status = 'approved' WHERE id = ? AND status = 'pending'", [requestId], function (err) {
                 if (err) { db.run('ROLLBACK'); return res.status(500).json({ error: 'DB Error' }); }
+                // Ensures race conditions don't allow a request to be double-approved
                 if (this.changes === 0) { db.run('ROLLBACK'); return res.status(400).json({ error: 'Request is no longer pending' }); }
 
+                // 2. Reduce the global availability by 1
                 db.run('UPDATE gear SET availableQuantity = availableQuantity - 1 WHERE id = ?', [request.gearId], function (err) {
                     if (err) { db.run('ROLLBACK'); return res.status(500).json({ error: 'DB Error' }); }
 
                     db.run('COMMIT');
 
+                    // If user has an email, dispatch the collection notification asynchronously (fire-and-forget)
                     if (request.email) {
                         sendEmail(
                             request.email,

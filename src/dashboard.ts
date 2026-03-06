@@ -18,6 +18,8 @@ import { membershipRenewalModalHtml, accountManagerModalHtml, adminConfirmModalH
 
 document.addEventListener('DOMContentLoaded', () => {
     // Inject components
+    // The dashboard relies on HTML String injection to keep the primary DOM payload light.
+    // Modals are hidden by default and activated via their respective UI controllers.
     const app = document.getElementById('app');
     if (app) {
         app.insertAdjacentHTML('beforeend', membershipRenewalModalHtml);
@@ -27,11 +29,13 @@ document.addEventListener('DOMContentLoaded', () => {
         app.insertAdjacentHTML('beforeend', membershipCardModalHtml);
     }
     // Listen for custom update events from modules
+    // This pub-sub pattern allows deeply nested components to trigger top-level UI refreshes
     window.addEventListener('dashboardUpdate', () => {
         updateUI();
     });
 
     // Initialize Handlers
+    // Binds event listeners to static DOM elements that already exist in the HTML skeleton
     initGeneralHandlers();
     initSessionHandlers();
     initAdminConfirm();
@@ -40,8 +44,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const photoCropEditor = initProfilePhotoCropEditor();
 
     // Initial Boot
+    // Resolving auth state guarantees the user payload is hydrated before any secure UI renders
     authState.init().then(() => {
         updateUI();
+        // Committee handlers often require DOM nodes that are only injected *after* auth resolves
         initCommitteeProfileHandlers(photoCropEditor);
     });
 });

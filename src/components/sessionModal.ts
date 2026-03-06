@@ -140,12 +140,15 @@ export function openSessionModal(options: SessionModalOptions) {
         `);
         modal = document.getElementById('unified-session-modal');
 
+        // Bind static close handlers to the backdrop and the generic close "X"
         document.getElementById('unified-session-backdrop')?.addEventListener('click', close);
         document.getElementById('usm-close-btn')?.addEventListener('click', close);
 
         // Let's hook up the edit form submit
+        // This is only exposed if the logged-in user possesses committee privileges
         document.getElementById('usm-edit-form')?.addEventListener('submit', async (e) => {
             e.preventDefault();
+            // Read all live inputs from the admin-override form
             const id = (document.getElementById('usm-edit-id') as HTMLInputElement).value;
             const title = (document.getElementById('usm-edit-title') as HTMLInputElement).value;
             const date = (document.getElementById('usm-edit-date') as HTMLInputElement).value;
@@ -196,208 +199,219 @@ export function openSessionModal(options: SessionModalOptions) {
 
     }
 
-    // Attach callbacks globally so the form event listeners can use them
-    (window as any)._usmCurrentOnEditSuccess = onEditSuccess;
-    (window as any)._usmCurrentOnDeleteSuccess = onDeleteSuccess;
+}
 
-    const titleEl = document.getElementById('usm-title')!;
-    const typeEl = document.getElementById('usm-type')!;
-    const datetimeEl = document.getElementById('usm-datetime')!;
-    const capacityEl = document.getElementById('usm-capacity')!;
-    const visibilityRowEl = document.getElementById('usm-visibility-row')!;
-    const registrationVisibilityRowEl = document.getElementById('usm-registration-visibility-row')!;
-    const iconEl = document.getElementById('usm-icon')!;
-    const actionsEl = document.getElementById('usm-actions')!;
-    const errorEl = document.getElementById('usm-error')!;
-    const editPaneEl = document.getElementById('usm-edit-pane')!;
-    const deleteBtnEl = document.getElementById('usm-delete-btn')!;
+// Attach callbacks globally so the form event listeners can use them
+// This allows the singleton DOM instance to dynamically swap handlers based on the current context
+(window as any)._usmCurrentOnEditSuccess = onEditSuccess;
+(window as any)._usmCurrentOnDeleteSuccess = onDeleteSuccess;
 
-    errorEl.classList.add('hidden');
-    errorEl.textContent = '';
+// Retrieve references to dynamic DOM nodes that need to be hydrated with session data
+const titleEl = document.getElementById('usm-title')!;
+const typeEl = document.getElementById('usm-type')!;
+const datetimeEl = document.getElementById('usm-datetime')!;
+const capacityEl = document.getElementById('usm-capacity')!;
+const visibilityRowEl = document.getElementById('usm-visibility-row')!;
+const registrationVisibilityRowEl = document.getElementById('usm-registration-visibility-row')!;
+const iconEl = document.getElementById('usm-icon')!;
+const actionsEl = document.getElementById('usm-actions')!;
+const errorEl = document.getElementById('usm-error')!;
+const editPaneEl = document.getElementById('usm-edit-pane')!;
+const deleteBtnEl = document.getElementById('usm-delete-btn')!;
 
-    // Clear old actions
-    const attendeePaneEl = document.getElementById('usm-attendee-pane')!;
-    const attendeeListEl = document.getElementById('usm-attendee-list')!;
-    const attendeeCountEl = document.getElementById('usm-attendee-count')!;
+errorEl.classList.add('hidden');
+errorEl.textContent = '';
 
-    actionsEl.innerHTML = '';
-    editPaneEl.classList.add('hidden');
-    attendeePaneEl.classList.add('hidden');
-    deleteBtnEl.classList.add('hidden');
+// Clear old actions
+const attendeePaneEl = document.getElementById('usm-attendee-pane')!;
+const attendeeListEl = document.getElementById('usm-attendee-list')!;
+const attendeeCountEl = document.getElementById('usm-attendee-count')!;
 
-    titleEl.textContent = session.title;
-    datetimeEl.innerHTML = new Date(session.date).toLocaleString('en-GB', {
-        weekday: 'short',
-        day: 'numeric',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-    capacityEl.textContent = `${session.bookedSlots} / ${session.capacity} Slots`;
-    const locationRowEl = document.getElementById('usm-location-row')!;
-    const locationEl = document.getElementById('usm-location')!;
-    if ((session as any).location) {
-        locationRowEl.classList.remove('hidden');
-        locationEl.textContent = escapeHTML((session as any).location);
-    } else {
-        locationRowEl.classList.add('hidden');
-    }
-    if ((session as any).visibility === 'committee_only') {
-        visibilityRowEl.classList.remove('hidden');
-    } else {
-        visibilityRowEl.classList.add('hidden');
-    }
-    if ((session as any).registrationVisibility === 'committee_only') {
-        registrationVisibilityRowEl.classList.remove('hidden');
-    } else {
-        registrationVisibilityRowEl.classList.add('hidden');
-    }
+actionsEl.innerHTML = '';
+editPaneEl.classList.add('hidden');
+attendeePaneEl.classList.add('hidden');
+deleteBtnEl.classList.add('hidden');
 
-    // Styling the icon depending on Type
-    if (session.type === 'Competition') {
-        iconEl.className = 'inline-flex items-center justify-center w-12 h-12 rounded-full mb-3 bg-red-500/20 text-red-500';
-        typeEl.className = 'text-[10px] font-bold text-red-500 uppercase tracking-widest';
-        typeEl.textContent = "COMPETITION";
+// Hydrate the visual UI elements
+titleEl.textContent = session.title;
+datetimeEl.innerHTML = new Date(session.date).toLocaleString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit'
+});
+capacityEl.textContent = `${session.bookedSlots} / ${session.capacity} Slots`;
+const locationRowEl = document.getElementById('usm-location-row')!;
+const locationEl = document.getElementById('usm-location')!;
+if ((session as any).location) {
+    locationRowEl.classList.remove('hidden');
+    locationEl.textContent = escapeHTML((session as any).location);
+} else {
+    locationRowEl.classList.add('hidden');
+}
+
+// Toggle visibility warnings
+if ((session as any).visibility === 'committee_only') {
+    visibilityRowEl.classList.remove('hidden');
+} else {
+    visibilityRowEl.classList.add('hidden');
+}
+if ((session as any).registrationVisibility === 'committee_only') {
+    registrationVisibilityRowEl.classList.remove('hidden');
+} else {
+    registrationVisibilityRowEl.classList.add('hidden');
+}
+
+// Styling the icon depending on Type
+// The visual palette is defined here for standard session types. Custom types fallback gracefully.
+iconEl.className = 'inline-flex items-center justify-center w-12 h-12 rounded-full mb-3 bg-red-500/20 text-red-500';
+typeEl.className = 'text-[10px] font-bold text-red-500 uppercase tracking-widest';
+typeEl.textContent = "COMPETITION";
     } else if (session.type === 'Social') {
-        iconEl.className = 'inline-flex items-center justify-center w-12 h-12 rounded-full mb-3 bg-brand-gold-muted/20 text-brand-gold-muted';
-        typeEl.className = 'text-[10px] font-bold text-brand-gold-muted uppercase tracking-widest';
-        typeEl.textContent = "CLUB SOCIAL";
-    } else if (session.type === 'Training Session (Bouldering)') {
-        iconEl.className = 'inline-flex items-center justify-center w-12 h-12 rounded-full mb-3 bg-blue-500/20 text-blue-400';
-        typeEl.className = 'text-[10px] font-bold text-blue-400 uppercase tracking-widest';
-        typeEl.textContent = "TRAINING (BOULDERING)";
-    } else if (session.type === 'Training Session (Roped)') {
-        iconEl.className = 'inline-flex items-center justify-center w-12 h-12 rounded-full mb-3 bg-purple-500/20 text-purple-400';
-        typeEl.className = 'text-[10px] font-bold text-purple-400 uppercase tracking-widest';
-        typeEl.textContent = "TRAINING (ROPED)";
-    } else if (session.type === 'Meeting') {
-        iconEl.className = 'inline-flex items-center justify-center w-12 h-12 rounded-full mb-3 bg-emerald-500/20 text-emerald-400';
-        typeEl.className = 'text-[10px] font-bold text-emerald-400 uppercase tracking-widest';
-        typeEl.textContent = "CLUB MEETING";
-    }
-    iconEl.innerHTML = `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>`;
+    iconEl.className = 'inline-flex items-center justify-center w-12 h-12 rounded-full mb-3 bg-brand-gold-muted/20 text-brand-gold-muted';
+    typeEl.className = 'text-[10px] font-bold text-brand-gold-muted uppercase tracking-widest';
+    typeEl.textContent = "CLUB SOCIAL";
+} else if (session.type === 'Training Session (Bouldering)') {
+    iconEl.className = 'inline-flex items-center justify-center w-12 h-12 rounded-full mb-3 bg-blue-500/20 text-blue-400';
+    typeEl.className = 'text-[10px] font-bold text-blue-400 uppercase tracking-widest';
+    typeEl.textContent = "TRAINING (BOULDERING)";
+} else if (session.type === 'Training Session (Roped)') {
+    iconEl.className = 'inline-flex items-center justify-center w-12 h-12 rounded-full mb-3 bg-purple-500/20 text-purple-400';
+    typeEl.className = 'text-[10px] font-bold text-purple-400 uppercase tracking-widest';
+    typeEl.textContent = "TRAINING (ROPED)";
+} else if (session.type === 'Meeting') {
+    iconEl.className = 'inline-flex items-center justify-center w-12 h-12 rounded-full mb-3 bg-emerald-500/20 text-emerald-400';
+    typeEl.className = 'text-[10px] font-bold text-emerald-400 uppercase tracking-widest';
+    typeEl.textContent = "CLUB MEETING";
+}
+iconEl.innerHTML = `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>`;
 
-    function showError(msg: string) {
-        errorEl.textContent = msg;
-        errorEl.classList.remove('hidden');
-    }
+function showError(msg: string) {
+    errorEl.textContent = msg;
+    errorEl.classList.remove('hidden');
+}
 
-    if (!user) {
-        // Not logged in
-        const btn = document.createElement('a');
-        btn.href = '/login';
-        btn.className = 'w-full px-4 py-3 bg-brand-gold text-brand-darker hover:bg-white rounded-lg transition-colors text-sm font-bold uppercase shadow-lg shadow-brand-gold/20 text-center flex items-center justify-center gap-2 block';
-        btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg> Sign In to Book`;
+if (!user) {
+    // Not logged in
+    const btn = document.createElement('a');
+    btn.href = '/login';
+    btn.className = 'w-full px-4 py-3 bg-brand-gold text-brand-darker hover:bg-white rounded-lg transition-colors text-sm font-bold uppercase shadow-lg shadow-brand-gold/20 text-center flex items-center justify-center gap-2 block';
+    btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg> Sign In to Book`;
+    actionsEl.appendChild(btn);
+} else {
+    // Logged in
+    if (isBooked) {
+        const btn = document.createElement('button');
+        btn.className = 'w-full px-4 py-3 bg-red-400 hover:bg-red-500 text-brand-darker rounded-lg transition-colors text-sm font-black uppercase tracking-wider shadow-[0_0_15px_rgba(248,113,113,0.3)] block';
+        btn.innerHTML = `<span class="flex items-center justify-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg> Cancel Booking</span>`;
+        btn.onclick = async () => {
+            if (onCancel) {
+                btn.disabled = true;
+                btn.textContent = 'Canceling...';
+                try {
+                    await onCancel(session.id);
+                    close();
+                } catch (err: any) {
+                    showError(err.message || 'Action failed.');
+                    btn.disabled = false;
+                    btn.innerHTML = `<span class="flex items-center justify-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg> Cancel Booking</span>`;
+                }
+            }
+        };
+        actionsEl.appendChild(btn);
+    } else if (session.bookedSlots >= session.capacity) {
+        const btn = document.createElement('button');
+        btn.className = 'w-full px-4 py-3 bg-slate-800 text-slate-500 rounded-lg cursor-not-allowed text-sm font-bold uppercase tracking-wider block';
+        btn.innerHTML = 'Fully Booked';
+        btn.disabled = true;
         actionsEl.appendChild(btn);
     } else {
-        // Logged in
-        if (isBooked) {
-            const btn = document.createElement('button');
-            btn.className = 'w-full px-4 py-3 bg-red-400 hover:bg-red-500 text-brand-darker rounded-lg transition-colors text-sm font-black uppercase tracking-wider shadow-[0_0_15px_rgba(248,113,113,0.3)] block';
-            btn.innerHTML = `<span class="flex items-center justify-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg> Cancel Booking</span>`;
-            btn.onclick = async () => {
-                if (onCancel) {
-                    btn.disabled = true;
-                    btn.textContent = 'Canceling...';
-                    try {
-                        await onCancel(session.id);
-                        close();
-                    } catch (err: any) {
-                        showError(err.message || 'Action failed.');
-                        btn.disabled = false;
-                        btn.innerHTML = `<span class="flex items-center justify-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg> Cancel Booking</span>`;
-                    }
+        const btn = document.createElement('button');
+        btn.className = 'w-full px-4 py-3 bg-brand-gold hover:bg-white text-brand-darker rounded-lg transition-colors text-sm font-black uppercase shadow-[0_0_20px_rgba(253,185,19,0.4)] tracking-wider block';
+        btn.textContent = 'Confirm Booking';
+        btn.onclick = async () => {
+            if (onBook) {
+                btn.disabled = true;
+                btn.textContent = 'Booking...';
+                try {
+                    await onBook(session.id);
+                    close();
+                } catch (err: any) {
+                    showError(err.message || 'Action failed.');
+                    btn.disabled = false;
+                    btn.textContent = 'Confirm Booking';
                 }
-            };
-            actionsEl.appendChild(btn);
-        } else if (session.bookedSlots >= session.capacity) {
-            const btn = document.createElement('button');
-            btn.className = 'w-full px-4 py-3 bg-slate-800 text-slate-500 rounded-lg cursor-not-allowed text-sm font-bold uppercase tracking-wider block';
-            btn.innerHTML = 'Fully Booked';
-            btn.disabled = true;
-            actionsEl.appendChild(btn);
-        } else {
-            const btn = document.createElement('button');
-            btn.className = 'w-full px-4 py-3 bg-brand-gold hover:bg-white text-brand-darker rounded-lg transition-colors text-sm font-black uppercase shadow-[0_0_20px_rgba(253,185,19,0.4)] tracking-wider block';
-            btn.textContent = 'Confirm Booking';
-            btn.onclick = async () => {
-                if (onBook) {
-                    btn.disabled = true;
-                    btn.textContent = 'Booking...';
-                    try {
-                        await onBook(session.id);
-                        close();
-                    } catch (err: any) {
-                        showError(err.message || 'Action failed.');
-                        btn.disabled = false;
-                        btn.textContent = 'Confirm Booking';
-                    }
-                }
-            };
-            actionsEl.appendChild(btn);
-        }
+            }
+        };
+        actionsEl.appendChild(btn);
+    }
 
-        // Committee Edit Toggle
-        const isCommittee = user.role === 'committee' || !!user.committeeRole || (Array.isArray(user.committeeRoles) && user.committeeRoles.length > 0);
-        if (isCommittee) {
-            const toggleWrapper = document.createElement('div');
-            toggleWrapper.className = 'text-center mt-3';
+    actionsEl.appendChild(btn);
+}
 
-            const toggleBtn = document.createElement('button');
-            toggleBtn.className = 'text-[10px] text-slate-400 hover:text-white underline decoration-dashed underline-offset-4 transition-colors font-bold tracking-wider uppercase inline-block';
-            toggleBtn.innerHTML = '<span class="flex items-center justify-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg> Expand Admin Options</span>';
-            toggleBtn.onclick = () => {
-                editPaneEl.classList.toggle('hidden');
-                toggleBtn.classList.toggle('text-white');
-            };
-            toggleWrapper.appendChild(toggleBtn);
-            actionsEl.appendChild(toggleWrapper);
+// Committee Edit Toggle
+// Checks JWT profile to safely expose nested admin operations inside the standard viewer component
+const isCommittee = user.role === 'committee' || !!user.committeeRole || (Array.isArray(user.committeeRoles) && user.committeeRoles.length > 0);
+if (isCommittee) {
+    const toggleWrapper = document.createElement('div');
+    toggleWrapper.className = 'text-center mt-3';
 
-            deleteBtnEl.classList.remove('hidden');
+    const toggleBtn = document.createElement('button');
+    toggleBtn.className = 'text-[10px] text-slate-400 hover:text-white underline decoration-dashed underline-offset-4 transition-colors font-bold tracking-wider uppercase inline-block';
+    toggleBtn.innerHTML = '<span class="flex items-center justify-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg> Expand Admin Options</span>';
+    toggleBtn.onclick = () => {
+        editPaneEl.classList.toggle('hidden');
+        toggleBtn.classList.toggle('text-white');
+    };
+    toggleWrapper.appendChild(toggleBtn);
+    actionsEl.appendChild(toggleWrapper);
 
-            // Populate edit fields
-            (document.getElementById('usm-edit-id') as HTMLInputElement).value = session.id;
-            (document.getElementById('usm-edit-title') as HTMLInputElement).value = session.title;
-            (document.getElementById('usm-edit-date') as HTMLInputElement).value = session.date;
-            (document.getElementById('usm-edit-location') as HTMLInputElement).value = (session as any).location || '';
+    deleteBtnEl.classList.remove('hidden');
 
-            const typeSelect = document.getElementById('usm-edit-type') as HTMLSelectElement;
-            adminApi.getSessionTypes().then(types => {
-                typeSelect.innerHTML = types.map(t => `<option value="${t.id}">${t.label}</option>`).join('');
-                typeSelect.value = session.type;
-            });
+    // Populate edit fields
+    (document.getElementById('usm-edit-id') as HTMLInputElement).value = session.id;
+    (document.getElementById('usm-edit-title') as HTMLInputElement).value = session.title;
+    (document.getElementById('usm-edit-date') as HTMLInputElement).value = session.date;
+    (document.getElementById('usm-edit-location') as HTMLInputElement).value = (session as any).location || '';
 
-            (document.getElementById('usm-edit-capacity') as HTMLInputElement).value = session.capacity.toString();
-            (document.getElementById('usm-edit-booked') as HTMLInputElement).value = session.bookedSlots.toString();
-            const registrationRuleSelect = document.getElementById('usm-edit-registration-rule') as HTMLSelectElement;
-            adminApi.getMembershipTypes().then(types => {
-                const activeTypes = types.filter(t => !t.deprecated || t.id === 'basic');
-                const membershipOptions = activeTypes.length
-                    ? activeTypes.map(t => `<option value="${t.id}">${t.label} Members</option>`).join('')
-                    : '<option value="basic">Basic Members</option>';
-                registrationRuleSelect.innerHTML = `
+    const typeSelect = document.getElementById('usm-edit-type') as HTMLSelectElement;
+    adminApi.getSessionTypes().then(types => {
+        typeSelect.innerHTML = types.map(t => `<option value="${t.id}">${t.label}</option>`).join('');
+        typeSelect.value = session.type;
+    });
+
+    (document.getElementById('usm-edit-capacity') as HTMLInputElement).value = session.capacity.toString();
+    (document.getElementById('usm-edit-booked') as HTMLInputElement).value = session.bookedSlots.toString();
+    const registrationRuleSelect = document.getElementById('usm-edit-registration-rule') as HTMLSelectElement;
+    adminApi.getMembershipTypes().then(types => {
+        const activeTypes = types.filter(t => !t.deprecated || t.id === 'basic');
+        const membershipOptions = activeTypes.length
+            ? activeTypes.map(t => `<option value="${t.id}">${t.label} Members</option>`).join('')
+            : '<option value="basic">Basic Members</option>';
+        registrationRuleSelect.innerHTML = `
                     ${membershipOptions}
                     <option value="committee_only">Committee Only</option>
                 `;
-                registrationRuleSelect.value = (session as any).registrationVisibility === 'committee_only'
-                    ? 'committee_only'
-                    : ((session as any).requiredMembership || (activeTypes.find(t => t.id === 'basic')?.id || activeTypes[0]?.id || 'basic'));
-            }).catch(() => {
-                registrationRuleSelect.innerHTML = `
+        registrationRuleSelect.value = (session as any).registrationVisibility === 'committee_only'
+            ? 'committee_only'
+            : ((session as any).requiredMembership || (activeTypes.find(t => t.id === 'basic')?.id || activeTypes[0]?.id || 'basic'));
+    }).catch(() => {
+        registrationRuleSelect.innerHTML = `
                     <option value="basic">Basic Members</option>
                     <option value="committee_only">Committee Only</option>
                 `;
-                registrationRuleSelect.value = (session as any).registrationVisibility === 'committee_only' ? 'committee_only' : ((session as any).requiredMembership || 'basic');
-            });
-            (document.getElementById('usm-edit-visibility') as HTMLSelectElement).value = (session as any).visibility || 'all';
+        registrationRuleSelect.value = (session as any).registrationVisibility === 'committee_only' ? 'committee_only' : ((session as any).requiredMembership || 'basic');
+    });
+    (document.getElementById('usm-edit-visibility') as HTMLSelectElement).value = (session as any).visibility || 'all';
 
-            // Load Attendees
-            attendeePaneEl.classList.remove('hidden');
-            renderAttendees(session.id, attendeeListEl, attendeeCountEl, onEditSuccess);
-        }
+    // Load Attendees
+    attendeePaneEl.classList.remove('hidden');
+    renderAttendees(session.id, attendeeListEl, attendeeCountEl, onEditSuccess);
+}
     }
 
-    modal!.classList.remove('hidden');
+modal!.classList.remove('hidden');
 }
 
 /**

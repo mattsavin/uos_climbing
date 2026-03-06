@@ -73,12 +73,14 @@ router.get('/', (req, res) => {
     let isCommittee = false;
     if (token) {
         try {
+            // Decode the JWT to check for elevated privileges
             const user: any = jwt.verify(token, SECRET_KEY);
+            // Array/truthiness checks handle varying historical formats of committee roles
             isCommittee = user.role === 'committee'
                 || !!user.committeeRole
                 || (Array.isArray(user.committeeRoles) && user.committeeRoles.length > 0);
         } catch {
-            isCommittee = false;
+            isCommittee = false; // Graceful degrade to public view on invalid token
         }
     }
 
@@ -161,6 +163,7 @@ router.post('/', authenticateToken, requireCommittee, (req, res) => {
             if (existsErr) return res.status(500).json({ error: 'Database error' });
             if (!exists) return res.status(400).json({ error: 'Invalid required membership type' });
 
+            // Insert the new session with 0 initial bookings
             db.run(
                 'INSERT INTO sessions (id, type, title, date, capacity, bookedSlots, location, requiredMembership, visibility, registrationVisibility) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 [id, type, title, date, capacity, 0, location || null, reqMemb, eventVisibility, eventRegistrationVisibility],
@@ -236,8 +239,10 @@ router.post('/:id/book', authenticateToken, (req: any, res) => {
                 return res.status(400).json({ error: 'Cannot book a past session.' });
             }
 
+            // Prevent booking if capacity is reached (fast-fail before transaction)
             if (session.bookedSlots >= session.capacity) return res.status(400).json({ error: 'Session is full' });
 
+            // Check if registration explicitly requires committee status
             const isCommittee = req.user.role === 'committee'
                 || !!req.user.committeeRole
                 || (Array.isArray(req.user.committeeRoles) && req.user.committeeRoles.length > 0);
@@ -257,6 +262,7 @@ router.post('/:id/book', authenticateToken, (req: any, res) => {
                     });
                 }
 
+                // Execute the booking as an atomic transaction to guarantee capacity limits
                 db.serialize(() => {
                     db.run('BEGIN TRANSACTION');
                     db.run('INSERT INTO bookings (userId, sessionId) VALUES (?, ?)', [userId, sessionId], function (err) {
@@ -264,11 +270,13 @@ router.post('/:id/book', authenticateToken, (req: any, res) => {
                             db.run('ROLLBACK');
                             return res.status(500).json({ error: 'Database error on booking' });
                         }
+                        // Secondary check: ensures bookedSlots hasn't concurrently exceeded capacity
                         db.run('UPDATE sessions SET bookedSlots = bookedSlots + 1 WHERE id = ? AND bookedSlots < capacity', [sessionId], function (err) {
                             if (err) {
                                 db.run('ROLLBACK');
                                 return res.status(500).json({ error: 'Database error on update' });
                             }
+                            // this.changes === 0 means the row didn't match the `bookedSlots < capacity` condition
                             if (this.changes === 0) {
                                 db.run('ROLLBACK');
                                 return res.status(400).json({ error: 'Session is full' });
@@ -295,8 +303,10 @@ router.post('/:id/cancel', authenticateToken, (req: any, res) => {
     db.get('SELECT * FROM bookings WHERE userId = ? AND sessionId = ?', [userId, sessionId], (err, booking) => {
         if (!booking) return res.status(400).json({ error: 'You have not booked this session' });
 
+        // Execute the cancellation as an atomic transaction to ensure the counter stays synced
         db.serialize(() => {
             db.run('BEGIN TRANSACTION');
+            // 1. Remove the booking record
             db.run('DELETE FROM bookings WHERE userId = ? AND sessionId = ?', [userId, sessionId], function (err) {
                 if (err) {
                     db.run('ROLLBACK');
@@ -306,6 +316,7 @@ router.post('/:id/cancel', authenticateToken, (req: any, res) => {
                     db.run('ROLLBACK');
                     return res.status(400).json({ error: 'You have not booked this session' });
                 }
+                // 2. Decrement the capacity counter, ensuring it doesn't drop below zero
                 db.run('UPDATE sessions SET bookedSlots = bookedSlots - 1 WHERE id = ? AND bookedSlots > 0', [sessionId], function (err) {
                     if (err) {
                         db.run('ROLLBACK');
