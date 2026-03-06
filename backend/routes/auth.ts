@@ -44,6 +44,19 @@ function generateOTP(): string {
 }
 
 
+/**
+ * Register a new user.
+ * Expects a JSON body with firstName, lastName, email, registrationNumber, password, passwordConfirm, and optional membershipTypes.
+ * Validates the inputs, hashes the password, creates user and membership records.
+ * Can short-circuit to pre-approved accounts or bypass email verification in a test environment.
+ * 
+ * @name POST/register
+ * @function
+ * @memberof module:routers/auth
+ * @param {express.Request} req - The incoming request object.
+ * @param {express.Response} res - The outgoing response object.
+ * @returns {Promise<any>} JSON with success/pendingVerification status or error details.
+ */
 router.post('/register', authLimiter, async (req, res) => {
     const { firstName, lastName, email, registrationNumber, password, passwordConfirm, membershipTypes } = req.body;
     const normalizedEmail = (email || '').toString().trim().toLowerCase();
@@ -176,6 +189,19 @@ router.post('/register', authLimiter, async (req, res) => {
     });
 });
 
+/**
+ * Login a user.
+ * Expects a JSON body with email and password.
+ * Checks against the database, validates the hashed password, and returns a secure HTTP-only cookie along with a standard JWT token.
+ * Rejects requests if the email is unverified (unless bypassing in test env).
+ *
+ * @name POST/login
+ * @function
+ * @memberof module:routers/auth
+ * @param {express.Request} req - The incoming request containing email and password.
+ * @param {express.Response} res - The outgoing response to issue cookies and tokens.
+ * @returns {void} JSON object containing user details and access token, or error.
+ */
 router.post('/login', authLimiter, (req, res) => {
     const { email, password } = req.body;
     const normalizedEmail = (email || '').toString().trim().toLowerCase();
@@ -218,7 +244,18 @@ router.post('/login', authLimiter, (req, res) => {
     });
 });
 
-/** Verify a user's email with their OTP code */
+/**
+ * Verify a user's email address with a 6-digit OTP code.
+ * Fetches the OTP verification row from the database, checks for expiration or mismatch.
+ * Marks user as verified, cleans up OTP row, and sends a welcome email.
+ *
+ * @name POST/verify-email
+ * @function
+ * @memberof module:routers/auth
+ * @param {express.Request} req - The incoming request containing userId and the code.
+ * @param {express.Response} res - The outgoing response object.
+ * @returns {void} Updated user object with valid JWT token, or error.
+ */
 router.post('/verify-email', authLimiter, (req, res) => {
     const { userId, code } = req.body;
 
@@ -268,7 +305,18 @@ router.post('/verify-email', authLimiter, (req, res) => {
     });
 });
 
-/** Re-send a verification OTP to the user */
+/**
+ * Re-send a verification OTP to the user.
+ * Generates a new OTP code, replaces any existing row in the email_verifications table,
+ * and asynchronously sends a new email.
+ *
+ * @name POST/request-verification
+ * @function
+ * @memberof module:routers/auth
+ * @param {express.Request} req - The incoming request containing the userId.
+ * @param {express.Response} res - The outgoing response object.
+ * @returns {void} Success response or error.
+ */
 router.post('/request-verification', authLimiter, (req, res) => {
     const { userId } = req.body;
 

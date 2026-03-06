@@ -12,6 +12,11 @@ function membershipTypeLabel(typeId: string): string {
     return membershipTypeLabelMap[typeId] || typeId;
 }
 
+/**
+ * Initialize event listeners for the administrator confirmation modal.
+ * This modal intercepts destructive or critical admin actions (e.g., deletions, approvals)
+ * to prevent accidental clicks.
+ */
 export function initAdminConfirm() {
     const adminConfirmModal = document.getElementById('admin-confirm-modal');
     const adminConfirmBackdrop = document.getElementById('admin-confirm-backdrop');
@@ -51,6 +56,14 @@ export function initAdminConfirm() {
     }
 }
 
+/**
+ * Request an administrator's confirmation before executing a secure action.
+ * Opens the confirmation modal with the provided context.
+ *
+ * @param {string} title - The title of the modal (e.g., 'Confirm Action').
+ * @param {string} message - The detailed prompt to show the user.
+ * @param {() => Promise<void>} callback - The async function to execute if the user confirms.
+ */
 export function requestAdminConfirmation(title: string, message: string, callback: () => Promise<void>) {
     const titleEl = document.getElementById('admin-confirm-title');
     const msgEl = document.getElementById('admin-confirm-message');
@@ -62,6 +75,10 @@ export function requestAdminConfirmation(title: string, message: string, callbac
     if (adminConfirmModal) adminConfirmModal.classList.remove('hidden');
 }
 
+/**
+ * Bind event listeners for the Student Union Roster bulk import tool.
+ * Sends raw pasted spreadsheet data to the API for automatic parsing and roster updates.
+ */
 export function initSuRosterImport() {
     const input = document.getElementById('su-roster-input') as HTMLTextAreaElement | null;
     const importBtn = document.getElementById('import-su-roster-btn') as HTMLButtonElement | null;
@@ -99,6 +116,13 @@ export function initSuRosterImport() {
     });
 }
 
+/**
+ * Fetch and render the active and pending membership lists in the Admin Dashboard tab.
+ * Groups and displays complex user data including array-based memberships and committee roles.
+ * Supports pagination, text search filtering, and state preservation of open dropdowns across re-renders.
+ *
+ * @returns {Promise<void>}
+ */
 export async function renderAdminLists() {
     const pendingList = document.getElementById('pending-list');
     const activeList = document.getElementById('active-list');

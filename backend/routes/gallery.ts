@@ -17,7 +17,17 @@ if (!fs.existsSync(uploadDir)) {
 }
 
 
-// GET /api/gallery - Fetch all gallery images (or only featured with ?featured=1)
+/**
+ * Fetch all gallery images.
+ * Can optionally filter by the featured flag and fetch them ordered by featuredOrder.
+ *
+ * @name GET/
+ * @function
+ * @memberof module:routers/gallery
+ * @param {express.Request} req - The request object. Can contain a query parameter `featured`.
+ * @param {express.Response} res - The response object.
+ * @returns {void} Array of gallery image items.
+ */
 router.get('/', (req, res) => {
     const featuredOnly = req.query.featured === '1';
     const sql = featuredOnly
@@ -29,7 +39,17 @@ router.get('/', (req, res) => {
     });
 });
 
-// POST /api/gallery - Upload a new gallery image (Committee Only)
+/**
+ * Upload a new gallery image (Committee Only).
+ * Accepts batch uploads, enforcing size limits and optimizing images using Sharp before saving.
+ *
+ * @name POST/
+ * @function
+ * @memberof module:routers/gallery
+ * @param {express.Request} req - The incoming multipart/form-data request containing photos and optional captions.
+ * @param {express.Response} res - The response object.
+ * @returns {void} JSON object containing details of the uploaded images.
+ */
 router.post('/', authenticateToken, requireCommittee, (req: any, res) => {
 
     // Enforce a maximum total batch size for the request to avoid excessive disk/CPU usage.
@@ -122,7 +142,17 @@ router.post('/', authenticateToken, requireCommittee, (req: any, res) => {
     });
 });
 
-// DELETE /api/gallery/:id - Delete an image (Committee Only)
+/**
+ * Delete an image (Committee Only).
+ * Removes the image file from the disk and deletes the corresponding database record.
+ *
+ * @name DELETE/:id
+ * @function
+ * @memberof module:routers/gallery
+ * @param {express.Request} req - The incoming request containing the image ID as a URL parameter.
+ * @param {express.Response} res - The response object.
+ * @returns {void} Success status or an error if the item is not found.
+ */
 router.delete('/:id', authenticateToken, requireCommittee, (req: any, res) => {
 
     const { id } = req.params;
@@ -146,7 +176,17 @@ router.delete('/:id', authenticateToken, requireCommittee, (req: any, res) => {
     });
 });
 
-// PUT /api/gallery/:id - Update caption and/or featured status (Committee Only)
+/**
+ * Update caption and/or featured status (Committee Only).
+ * Dynamically constructs a query to mutate only the fields provided in the request body, including image crop offsets.
+ *
+ * @name PUT/:id
+ * @function
+ * @memberof module:routers/gallery
+ * @param {express.Request} req - The incoming request with the image ID and fields to update.
+ * @param {express.Response} res - The response object.
+ * @returns {void} Success response or a validation error.
+ */
 router.put('/:id', authenticateToken, requireCommittee, (req: any, res) => {
 
     const { id } = req.params;

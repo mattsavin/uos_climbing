@@ -1,3 +1,11 @@
+/**
+ * Dashboard Entry Point
+ * Initializes the main dashboard interface by injecting modal components,
+ * registering global update events, and starting specific module handlers (sessions, profile, admin).
+ * Fetches the user's initial auth state payload upon booting.
+ * 
+ * @module Dashboard
+ */
 import './style.css';
 import { authState } from './auth';
 import { updateUI, initGeneralHandlers } from './lib/dashboard/ui';

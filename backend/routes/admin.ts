@@ -51,7 +51,17 @@ router.post('/test-email', authenticateToken, requireCommittee, async (req: any,
     });
 });
 
-/** Get all users with their membership rows joined */
+/**
+ * Get all users with their membership rows joined.
+ * Fetches the entire user base, resolving and attaching their memberships and committee roles.
+ *
+ * @name GET/users
+ * @function
+ * @memberof module:routers/admin
+ * @param {express.Request} req - The incoming request object.
+ * @param {express.Response} res - The outgoing response object.
+ * @returns {void} Array of user objects containing membership and role arrays.
+ */
 router.get('/users', authenticateToken, requireCommittee, (req, res) => {
     db.all(
         'SELECT id, firstName, lastName, email, registrationNumber, role, committeeRole, membershipStatus, membershipYear, emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements FROM users',
@@ -92,6 +102,18 @@ router.get('/users', authenticateToken, requireCommittee, (req, res) => {
     );
 });
 
+/**
+ * Import Student Union (SU) membership roster.
+ * Parses raw copy-pasted UI text from the SU dashboard, extracting registration numbers and years.
+ * Automatically provisions active memberships for matched users and pre-approves unmatched users.
+ *
+ * @name POST/memberships/import-su-roster
+ * @function
+ * @memberof module:routers/admin
+ * @param {express.Request} req - The incoming request containing raw text data in `req.body.raw`.
+ * @param {express.Response} res - The response object detailing import statistics.
+ * @returns {Promise<void>} Async response resolving import metrics.
+ */
 router.post('/memberships/import-su-roster', authenticateToken, requireCommittee, async (req, res) => {
     try {
         const raw = (req.body?.raw || '').toString();
@@ -184,6 +206,17 @@ router.post('/memberships/import-su-roster', authenticateToken, requireCommittee
     }
 });
 
+/**
+ * Approve a user's base membership.
+ * Marks their overarching status as active, configures default membership rows, and sends a notification email.
+ *
+ * @name POST/users/:id/approve
+ * @function
+ * @memberof module:routers/admin
+ * @param {express.Request} req - The incoming request mapped to a specific user ID.
+ * @param {express.Response} res - The response object.
+ * @returns {void} Success state of the database updates.
+ */
 router.post('/users/:id/approve', authenticateToken, requireCommittee, (req, res) => {
     db.run('UPDATE users SET membershipStatus = ? WHERE id = ?', ['active', req.params.id], function (err) {
         if (err) return res.status(500).json({ error: 'Database error' });
@@ -285,6 +318,17 @@ router.post('/users/:id/demote', authenticateToken, requireCommittee, (req: any,
     });
 });
 
+/**
+ * Update a user's assigned committee role(s).
+ * Clears old sub-roles to insert new validated ones for a specific committee member.
+ *
+ * @name POST/users/:id/committee-role
+ * @function
+ * @memberof module:routers/admin
+ * @param {express.Request} req - The request specifying a list of committee roles.
+ * @param {express.Response} res - The response object.
+ * @returns {void} Success response if the roles are successfully mapped.
+ */
 router.post('/users/:id/committee-role', authenticateToken, requireCommittee, (req: any, res) => {
     // Accept either committeeRoles (array) or legacy committeeRole (string) for backward compat
     let roles: string[] = [];

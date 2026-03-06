@@ -21,7 +21,17 @@ if (!fs.existsSync(uploadDir)) {
 }
 
 
-/** Get current user's membership rows */
+/**
+ * Get current user's membership rows.
+ * Fetches all membership records for the authenticated user, ordered by year and type.
+ *
+ * @name GET/me/memberships
+ * @function
+ * @memberof module:routers/users
+ * @param {express.Request} req - The incoming request object containing the authenticated user.
+ * @param {express.Response} res - The outgoing response object.
+ * @returns {void} Array of user membership rows.
+ */
 router.get('/me/memberships', authenticateToken, (req: any, res) => {
     db.all('SELECT * FROM user_memberships WHERE userId = ? ORDER BY membershipYear DESC, membershipType ASC', [req.user.id], (err, rows) => {
         if (err) return res.status(500).json({ error: 'Database error' });
@@ -29,7 +39,17 @@ router.get('/me/memberships', authenticateToken, (req: any, res) => {
     });
 });
 
-/** Get current user's full profile details */
+/**
+ * Get current user's full profile details.
+ * Retrieves comprehensive profile information including emergency contacts, pronouns, and dietary preferences.
+ *
+ * @name GET/me/profile
+ * @function
+ * @memberof module:routers/users
+ * @param {express.Request} req - The incoming request object.
+ * @param {express.Response} res - The outgoing response object.
+ * @returns {void} JSON object containing user profile data.
+ */
 router.get('/me/profile', authenticateToken, (req: any, res) => {
     db.get('SELECT firstName, lastName, emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements, profilePhoto, registrationNumber, membershipStatus, membershipYear FROM users WHERE id = ?', [req.user.id], (err, user) => {
         if (err) return res.status(500).json({ error: 'Database error' });
@@ -38,7 +58,18 @@ router.get('/me/profile', authenticateToken, (req: any, res) => {
     });
 });
 
-/** POST /api/users/me/photo - Upload profile photo */
+/**
+ * Upload and process a new profile photo.
+ * Uses multer memory storage and sharp to validate, resize, format to WEBP, and save the image.
+ * Safely removes the previous profile photo from the file system.
+ *
+ * @name POST/me/photo
+ * @function
+ * @memberof module:routers/users
+ * @param {express.Request} req - The incoming multipart/form-data request containing the photo.
+ * @param {express.Response} res - The outgoing response object.
+ * @returns {void} Success response containing the saved photo path.
+ */
 router.post('/me/photo', authenticateToken, (req: any, res) => {
     upload.single('photo')(req, res, async (uploadErr: any) => {
         if (uploadErr instanceof multer.MulterError && uploadErr.code === 'LIMIT_FILE_SIZE') {
@@ -89,7 +120,18 @@ router.post('/me/photo', authenticateToken, (req: any, res) => {
     });
 });
 
-/** Request an additional (or new) membership type */
+/**
+ * Request an additional (or new) membership type for the current academic year.
+ * Committee members requests are automatically approved; others are set to pending.
+ * If a rejected or pending request exists, it will be upgraded appropriately.
+ *
+ * @name POST/me/memberships
+ * @function
+ * @memberof module:routers/users
+ * @param {express.Request} req - The request object containing membershipType and optional membershipYear.
+ * @param {express.Response} res - The response object.
+ * @returns {void} Success state of the inserted or updated membership row.
+ */
 router.post('/me/memberships', authenticateToken, (req: any, res) => {
     const { membershipType, membershipYear } = req.body;
 
@@ -137,7 +179,18 @@ router.post('/me/memberships', authenticateToken, (req: any, res) => {
     });
 });
 
-/** Renew overall membership (resets to pending for current year, or active for committee) */
+/**
+ * Renew overall membership for a new academic year.
+ * Resets standard members to pending status, while preserving active status for committee members.
+ * Includes optional provisioning of specific membership types along with the renewal.
+ *
+ * @name POST/me/membership-renewal
+ * @function
+ * @memberof module:routers/users
+ * @param {express.Request} req - The request body must contain membershipYear and optional membershipTypes array.
+ * @param {express.Response} res - The response object.
+ * @returns {void} Updated membershipYear and membershipStatus.
+ */
 router.post('/me/membership-renewal', authenticateToken, (req: any, res) => {
     const { membershipYear, membershipTypes } = req.body;
     if (!membershipYear) return res.status(400).json({ error: 'Missing membership year' });

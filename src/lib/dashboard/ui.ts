@@ -5,6 +5,14 @@ import { bindGeneralHandlers } from './ui.generalHandlers';
 import { renderMembershipCard } from './ui.membershipCard';
 import { initSkillsTracker } from './ui.skills';
 
+/**
+ * Core UI rendering loop for the user dashboard.
+ * Evaluates the authenticated user's state (role, current membership status, profile details)
+ * and dynamically toggles the visibility of HTML elements.
+ * Bootstraps sub-components like the membership renewal overlay, admin portal shortcut, and calendar logic.
+ *
+ * @returns {Promise<void>}
+ */
 export async function updateUI() {
     const user = authState.getUser();
 
@@ -282,6 +290,10 @@ export async function updateUI() {
     }
 }
 
+/**
+ * Initialize generic UI interactions across the dashboard (e.g., mobile menu toggle, logout sequence).
+ * This binds behaviors to common navigation elements independent of the core dynamic state.
+ */
 export function initGeneralHandlers() {
     bindGeneralHandlers(() => authState.logout());
 }

@@ -7,6 +7,15 @@ type MemberRowRenderContext = {
     currentUserEmail?: string;
 };
 
+/**
+ * Generates the HTML string for a pending membership registration row in the admin view.
+ * Includes interactive buttons to approve or reject the request.
+ *
+ * @param {User} user - The user object representing the applicant.
+ * @param {any} membership - The specific membership row under review.
+ * @param {(typeId: string) => string} membershipTypeLabel - Label mapping function for membership IDs.
+ * @returns {string} The HTML layout for the pending row.
+ */
 export function createPendingMembershipRow(
     user: User,
     membership: any,
@@ -49,6 +58,16 @@ export function createPendingMembershipRow(
     `;
 }
 
+/**
+ * Generates the HTML string for an active user in the main admin roster.
+ * Includes contextual actions based on the user's role and the admin's privileges (e.g., Promote to Admin, Delete User, Edit Committee Roles).
+ * Also lists all active membership rows attached to the user.
+ *
+ * @param {User} user - The active user details.
+ * @param {boolean} isPending - Legacy flag (currently expected strictly false for this function instance).
+ * @param {MemberRowRenderContext} context - Dependency context providing IDs and mapping functions.
+ * @returns {string} HTML layout representing the user.
+ */
 export function createMemberRow(user: User, isPending: boolean, context: MemberRowRenderContext) {
     const displayName = `${(user as any).firstName || ''} ${(user as any).lastName || ''}`.trim() || user.name || user.email;
     const safeName = escapeHTML(displayName);

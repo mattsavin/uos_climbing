@@ -6,7 +6,17 @@ import { authenticateToken, requireCommittee } from '../middleware/auth';
 const router = express.Router();
 
 
-/** GET /api/committee - Get all committee members */
+/**
+ * Get all committee members.
+ * Retrieves a list of users with the 'committee' role, aggregating their specific committee roles.
+ *
+ * @name GET/
+ * @function
+ * @memberof module:routers/committee
+ * @param {express.Request} req - The incoming request object.
+ * @param {express.Response} res - The outgoing response object.
+ * @returns {void} Array of committee member objects.
+ */
 router.get('/', (req, res) => {
     const query = `
         SELECT u.id, u.firstName, u.lastName, u.name, u.email, u.instagram, u.faveCrag, u.bio, u.profilePhoto, u.committeeRole,
@@ -23,7 +33,17 @@ router.get('/', (req, res) => {
     });
 });
 
-/** PUT /api/committee/me - Update current member's profile */
+/**
+ * Update current member's committee profile.
+ * Allows a committee member to update specific fields like instagram, faveCrag, and bio.
+ *
+ * @name PUT/me
+ * @function
+ * @memberof module:routers/committee
+ * @param {express.Request} req - The request object containing updated profile fields.
+ * @param {express.Response} res - The response object.
+ * @returns {void} Success status mapped by standardDbResponse.
+ */
 router.put('/me', authenticateToken, (req: any, res) => {
     if (req.user.role !== 'committee') {
         return res.status(403).json({ error: 'Only committee members can edit their committee profile' });
@@ -38,7 +58,17 @@ router.put('/me', authenticateToken, (req: any, res) => {
 });
 
 
-/** GET /api/committee/export/members - Export members with verified membership type as CSV */
+/**
+ * Export members with a verified membership type as CSV.
+ * Fetches users who have an active status for the requested membership type and converts the result into a CSV download.
+ *
+ * @name GET/export/members
+ * @function
+ * @memberof module:routers/committee
+ * @param {express.Request} req - The incoming request containing the membershipType query parameter.
+ * @param {express.Response} res - The response object for initiating the file download.
+ * @returns {void} The CSV string containing member details.
+ */
 router.get('/export/members', authenticateToken, requireCommittee, (req: any, res) => {
     const membershipType = req.query.membershipType as string;
 

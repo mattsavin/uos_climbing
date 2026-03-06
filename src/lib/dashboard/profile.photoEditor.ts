@@ -2,6 +2,13 @@ import { showToast } from '../../utils';
 import { authState } from '../../auth';
 import { apiFetch } from '../../lib/api/http';
 
+/**
+ * Initializes the profile photo crop editor modal and returns an interface to open or close it.
+ * Uses native DOM events for pinch-to-zoom and drag-to-pan within a circular staging area.
+ * Returns a Blob generated from a canvas export when saving.
+ *
+ * @returns {Object|null} A controller object `{ open, close }` if elements exist, else `null`.
+ */
 export function initProfilePhotoCropEditor() {
     const modal = document.getElementById('profile-crop-modal');
     const backdrop = document.getElementById('profile-crop-backdrop');
@@ -246,6 +253,13 @@ export function initProfilePhotoCropEditor() {
         });
     }
 
+    /**
+     * Opens the crop editor with a given File.
+     *
+     * @param {File} file - The image file to load into the cropper.
+     * @param {function(Blob): Promise<string>} uploadFn - Async function returning the uploaded URL upon save.
+     * @param {function(string): void} [successCallback] - Optional callback triggered after a successful upload.
+     */
     const open = (file: File, uploadFn: (blob: Blob) => Promise<string>, successCallback?: (photoPath: string) => void) => {
         currentUploadFn = uploadFn;
         onSuccess = successCallback ?? null;

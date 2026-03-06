@@ -19,6 +19,14 @@ type GalleryViewerOptions = {
     cropEditorStateByImageContext: Map<string, CropEditorState>;
 };
 
+/**
+ * Factory function creating a controller for the gallery management viewer modal.
+ * Encapsulates state related to navigating between images, toggling featured status,
+ * initiating caption edits, deleting images, and launching the crop editor.
+ *
+ * @param {GalleryViewerOptions} options - Dependency injection for state access and UI render callbacks.
+ * @returns {Object} Methods to open, close, and initialize the viewer modal.
+ */
 export function createGalleryViewerController(options: GalleryViewerOptions) {
     const {
         getCurrentGalleryImages,

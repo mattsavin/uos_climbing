@@ -11,6 +11,10 @@ export type CropEditorState = {
     boxCenterY: number;
 };
 
+/**
+ * Configuration mapping for the different contexts an image might be cropped for.
+ * Defines the aspect ratios and the specific database keys used to store crop offsets.
+ */
 export const CROP_CONTEXT_CONFIG: Record<CropContextKey, {
     title: string;
     aspect: number;
@@ -41,21 +45,48 @@ export const CROP_CONTEXT_CONFIG: Record<CropContextKey, {
     }
 };
 
+/** Mouse drag sensitivity multiplier when panning the background image. */
 export const IMAGE_DRAG_SENSITIVITY = 1.2;
+/** Mouse drag sensitivity multiplier when panning the crop selection box. */
 export const BOX_DRAG_SENSITIVITY = 1.0;
+/** Maximum allowed size for a single photo upload (50MB). */
 export const GALLERY_UPLOAD_MAX_FILE_SIZE = 50 * 1024 * 1024;
+/** Maximum allowed size for a batch of photo uploads (90MB to stay strictly under Cloudflare's 100MB limit). */
 export const GALLERY_UPLOAD_MAX_BATCH_SIZE = 90 * 1024 * 1024;
 
+/**
+ * Formats the current crop coordinates and zoom level into a human-readable string.
+ *
+ * @param {number} x - The X offset percentage (0-100).
+ * @param {number} y - The Y offset percentage (0-100).
+ * @param {number} zoom - The zoom level multiplier.
+ * @returns {string} Formatted label, e.g., 'Center • 1.00x' or '45% / 60% • 1.50x'.
+ */
 export function formatCropSummary(x: number, y: number, zoom: number): string {
     const centered = Math.abs(x - 50) < 0.5 && Math.abs(y - 50) < 0.5;
     if (centered) return `Center • ${zoom.toFixed(2)}x`;
     return `${Math.round(x)}% / ${Math.round(y)}% • ${zoom.toFixed(2)}x`;
 }
 
+/**
+ * Generates a unique state key combining the image ID and the current crop context.
+ * Useful for caching crop states locally before saving.
+ *
+ * @param {string | number} imageId - The unique ID of the image in the database.
+ * @param {CropContextKey} context - The active crop context ('heroDesktop', etc.).
+ * @returns {string} A composite key like '123:heroDesktop'.
+ */
 export function getCropStateKey(imageId: string | number, context: CropContextKey): string {
     return `${imageId}:${context}`;
 }
 
+/**
+ * Checks if a gallery image is marked as featured.
+ * Handles boolean or numeric string representations.
+ *
+ * @param {any} image - The gallery image object.
+ * @returns {boolean} True if the image is explicitly flagged as featured.
+ */
 export function isFeaturedImage(image: any): boolean {
     return image?.featured === true || image?.featured === 1 || image?.featured === '1';
 }
@@ -99,6 +130,13 @@ export function getCropBounds(naturalWidth: number, naturalHeight: number, frame
     return { minX, maxX, minY, maxY, widthRatio, heightRatio };
 }
 
+/**
+ * Validates a batch of files against single-file and batch-total size limits.
+ * Designed to prevent Cloudflare 413 Payload Too Large errors.
+ *
+ * @param {FileList} files - The native FileList object from the file input.
+ * @returns {{ error?: string; totalBytes: number }} A validation failure message if limits are exceeded.
+ */
 export function validateGalleryUploadBatch(files: FileList): { error?: string; totalBytes: number } {
     let totalSize = 0;
 

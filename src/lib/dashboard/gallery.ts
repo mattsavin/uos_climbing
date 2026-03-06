@@ -18,6 +18,11 @@ const galleryViewer = createGalleryViewerController({
     cropEditorStateByImageContext
 });
 
+/**
+ * Fetch the base array of gallery images from the backend.
+ *
+ * @returns {Promise<any[]>} The array of image objects, or an empty array on failure.
+ */
 export async function fetchGalleryImages() {
     try {
         return await apiFetch('/api/gallery');
@@ -27,6 +32,12 @@ export async function fetchGalleryImages() {
     }
 }
 
+/**
+ * Render the gallery list inside the dashboard management view.
+ * Fetches fresh images, clears the container, and injects the photo thumbnail grid.
+ *
+ * @returns {Promise<void>}
+ */
 export async function renderGalleryList() {
     const listContainer = document.getElementById('gallery-management-list');
     if (!listContainer) return;
@@ -52,6 +63,12 @@ export function initGalleryHandlers() {
     initGalleryUploadHandlers(renderGalleryList);
 }
 
+/**
+ * Top-level initialization for the Dashboard's Gallery Management tab.
+ * Hooks up upload handlers, viewers, and triggers the initial fetch & render cycle.
+ *
+ * @returns {Promise<void>}
+ */
 export async function initGalleryTab() {
     initGalleryHandlers();
     await renderGalleryList();

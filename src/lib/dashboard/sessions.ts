@@ -5,6 +5,14 @@ import { openSessionModal } from '../../components/sessionModal';
 let currentCalendarDate = new Date();
 let activeFilter: string = 'all';
 
+/**
+ * Fetches and renders the club calendar sessions onto the custom grid.
+ * Handles parsing filter views (e.g. basic members vs committee only), fetching user bookings,
+ * and binding the callback to open the session interaction modal.
+ *
+ * @param {boolean} isAdmin - Dictates whether the current user has committee-level event controls.
+ * @returns {Promise<void>}
+ */
 export async function renderSessions(isAdmin: boolean) {
     const calendarGrid = document.getElementById('calendar-grid');
     const calendarLegend = document.getElementById('calendar-legend');
@@ -84,6 +92,11 @@ export async function renderSessions(isAdmin: boolean) {
     );
 }
 
+/**
+ * Initializes DOM listeners for the sessions panel.
+ * Sets up calendar navigation (prev/next month), filter chips logic,
+ * and the committee-only add session form.
+ */
 export function initSessionHandlers() {
     window.addEventListener('resize', () => {
         const isAdmin = !!document.getElementById('committee-tabs');

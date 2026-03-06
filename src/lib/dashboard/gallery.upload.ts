@@ -2,6 +2,13 @@ import { showToast } from '../../utils';
 import { validateGalleryUploadBatch } from './gallery.helpers';
 import { apiFetch } from '../api/http';
 
+/**
+ * Initialize event handlers for the gallery image upload modal.
+ * Supports batch selection, client-side batch validation, dynamic caption inputs,
+ * and form submission posting multiple multipart files simultaneously.
+ *
+ * @param {() => Promise<void>} renderGalleryList - Callback invoked after a successful upload to refresh the dashboard gallery view.
+ */
 export function initGalleryUploadHandlers(renderGalleryList: () => Promise<void>) {
     const openBtn = document.getElementById('open-gallery-upload-btn');
     const uploadModal = document.getElementById('upload-gallery-modal');

@@ -6,6 +6,13 @@ type PhotoCropEditor = {
     open: (file: File, uploadFn: (blob: Blob) => Promise<string>, onSuccess?: (photoPath: string) => void) => void;
 };
 
+/**
+ * Initialize DOM listeners for the Committee Profile edit panel.
+ * Connects the photo upload cropper modal to the committee profile view
+ * and handles bio, instagram, and favorite crag data persistence.
+ *
+ * @param {PhotoCropEditor | null} [photoCropEditor] - The initialized crop editor module instance used for profile photos.
+ */
 export function initCommitteeProfileHandlers(photoCropEditor?: PhotoCropEditor | null) {
     const committeeProfileCard = document.getElementById('committee-profile-card');
     const profilePhotoInput = document.getElementById('profile-photo-input') as HTMLInputElement;
@@ -127,6 +134,10 @@ export function initCommitteeProfileHandlers(photoCropEditor?: PhotoCropEditor |
     }
 }
 
+/**
+ * Initialize event listeners and DOM logic for the Committee's CSV Member Export modal.
+ * Fetches the latest membership types iteratively to populate the select dropdown when opened.
+ */
 export async function initCsvExportModal() {
     const modal = document.getElementById('csv-export-modal');
     const backdrop = document.getElementById('csv-export-backdrop');

@@ -91,6 +91,13 @@ export interface Session {
 export const authState = {
     user: null as User | null,
 
+    /**
+     * Initialize the authentication state.
+     * Fetches the current user profile from the backend on page load.
+     * Logs the user out locally if the session is invalid.
+     *
+     * @returns {Promise<void>}
+     */
     async init() {
         try {
             const data = await apiFetch('/api/auth/me');
@@ -100,6 +107,14 @@ export const authState = {
         }
     },
 
+    /**
+     * Authenticate a user with email and password.
+     *
+     * @param {string} email - The user's email address.
+     * @param {string} [password] - The user's password.
+     * @returns {Promise<User>} The authenticated user object.
+     * @throws Will throw an error if login fails or if email verification is pending.
+     */
     async login(email: string, password?: string) {
         try {
             const data = await apiFetch('/api/auth/login', {
@@ -117,6 +132,13 @@ export const authState = {
         }
     },
 
+    /**
+     * Verify a user's email using the provided OTP code.
+     *
+     * @param {string} userId - The unique identifier of the user.
+     * @param {string} code - The 6-digit OTP code sent via email.
+     * @returns {Promise<User>} The verified user object.
+     */
     async verifyEmail(userId: string, code: string) {
         const data = await apiFetch('/api/auth/verify-email', {
             method: 'POST',
@@ -126,6 +148,12 @@ export const authState = {
         return this.user;
     },
 
+    /**
+     * Request a new email verification OTP.
+     *
+     * @param {string} userId - The ID of the user needing verification.
+     * @returns {Promise<any>} The server response.
+     */
     async requestVerification(userId: string) {
         return apiFetch('/api/auth/request-verification', {
             method: 'POST',
@@ -133,6 +161,19 @@ export const authState = {
         });
     },
 
+    /**
+     * Register a new user account.
+     *
+     * @param {string} firstName - User's first name.
+     * @param {string} lastName - User's last name.
+     * @param {string} email - User's university email address.
+     * @param {string} passwordHash - The user's chosen password (hashed or plain depending on frontend handling prior to this call).
+     * @param {string} passwordConfirm - The confirmation password.
+     * @param {string} registrationNumber - University registration number.
+     * @param {string[]} membershipTypes - Selected initial membership types.
+     * @returns {Promise<any>} Server response containing user data or pending verification status.
+     * @throws Throws error if validation fails or email already exists.
+     */
     async register(firstName: string, lastName: string, email: string, passwordHash: string, passwordConfirm: string, registrationNumber: string, membershipTypes: string[]) {
         try {
             const data = await apiFetch('/api/auth/register', {
@@ -150,10 +191,26 @@ export const authState = {
         }
     },
 
+    /**
+     * Fetch the complete profile data for the currently authenticated user.
+     *
+     * @returns {Promise<any>} Profile data.
+     */
     async getProfile() {
         return apiFetch('/api/users/me/profile');
     },
 
+    /**
+     * Update the authenticated user's profile details.
+     *
+     * @param {string} fname - First name.
+     * @param {string} sname - Last/surname.
+     * @param {string} emergencyContactName - Emergency contact's name.
+     * @param {string} emergencyContactMobile - Emergency contact's phone number.
+     * @param {string} pronouns - User's pronouns.
+     * @param {string} dietaryRequirements - User's dietary requirements.
+     * @returns {Promise<User>} The updated user object.
+     */
     async updateProfile(fname: string, sname: string, emergencyContactName: string, emergencyContactMobile: string, pronouns: string, dietaryRequirements: string) {
         if (!this.user) throw new Error("Not logged in");
 

@@ -1,6 +1,11 @@
 import { authState } from '../../auth';
 import { showToast, showPromptModal } from '../../utils';
 
+/**
+ * Initializes the event listeners for the user profile form.
+ * Handles updating name, pronouns, diet, and emergency contact details.
+ * Also initializes the password change form and self-account deletion logic.
+ */
 export function initProfileHandlers() {
     const profileForm = document.getElementById('profile-form');
     const profileFName = document.getElementById('profile-fname') as HTMLInputElement;
@@ -108,6 +113,11 @@ export function initProfileHandlers() {
     }
 }
 
+/**
+ * Initializes event handlers for the account settings modal (Profile & Password tabs).
+ * Wires up tab switching logic, photo upload triggers, and dynamically pre-fills
+ * the modal fields with the user's latest information upon opening.
+ */
 export function initAccountModalHandlers() {
     // Photo upload and crop is handled by initProfilePhotoCropEditor in profile.photoEditor.ts.
     // Wire up the trigger button to open the hidden file input.
