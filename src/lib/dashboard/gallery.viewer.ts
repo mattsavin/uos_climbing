@@ -129,6 +129,8 @@ export function createGalleryViewerController(options: GalleryViewerOptions) {
             counterEl.textContent = `${index + 1} / ${currentGalleryImages.length}`;
         }
 
+        // De-serialize cropped coordinates (0-100) from the DB back into the viewer UI state
+        // The fallback is 50/50 for X/Y (centered image) and Zoom 1.0 (unscaled)
         const heroDesktopX = normalizeCrop(data.heroDesktopX, 50);
         const heroDesktopY = normalizeCrop(data.heroDesktopY, 50);
         const heroMobileX = normalizeCrop(data.heroMobileX, 50);
@@ -139,6 +141,7 @@ export function createGalleryViewerController(options: GalleryViewerOptions) {
         const galleryY = normalizeCrop(data.galleryLandscapeY, 50);
         const galleryZoom = normalizeZoom(data.galleryLandscapeZoom, 1);
 
+        // Map text values to the "Current configuration" readout in the advanced editor panel
         if (desktopSummary) desktopSummary.textContent = formatCropSummary(heroDesktopX, heroDesktopY, heroDesktopZoom);
         if (mobileSummary) mobileSummary.textContent = formatCropSummary(heroMobileX, heroMobileY, heroMobileZoom);
         if (gallerySummary) gallerySummary.textContent = formatCropSummary(galleryX, galleryY, galleryZoom);
@@ -189,6 +192,8 @@ export function createGalleryViewerController(options: GalleryViewerOptions) {
             if (context === 'galleryLandscape' && gallerySummary) gallerySummary.textContent = text;
         };
 
+        // Initialize the sub-module responsible for the drag-to-crop modal geometry
+        // Hand off state management maps to it.
         const cropController = initCropEditor({
             cropEditorStateByImageContext,
             getCurrentImage: () => {
@@ -272,10 +277,13 @@ export function createGalleryViewerController(options: GalleryViewerOptions) {
             const targetIdx = direction === 'up' ? reelIdx - 1 : reelIdx + 1;
             if (targetIdx < 0 || targetIdx >= reel.length) return;
 
+            // Mutate the local highlighted reel queue structurally before pushing the new sequence numbers to the DB
             const swapped = [...reel];
             [swapped[reelIdx], swapped[targetIdx]] = [swapped[targetIdx], swapped[reelIdx]];
 
             try {
+                // Iteratively save the correct sort indices
+                // To avoid 500s or mismatched network states, we lock all promises before returning
                 for (let i = 0; i < swapped.length; i++) {
                     const img = swapped[i];
                     await apiFetch(`/api/gallery/${img.id}`, {

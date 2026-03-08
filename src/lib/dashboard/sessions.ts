@@ -32,6 +32,7 @@ export async function renderSessions(isAdmin: boolean) {
     }
 
     // Update filter buttons if they exist
+    // Dynamically generate filter pills based on the session types retrieved from the backend
     const filtersContainer = document.getElementById('calendar-filters-container');
     if (filtersContainer) {
         const filters = [
@@ -45,7 +46,7 @@ export async function renderSessions(isAdmin: boolean) {
             </button>
         `).join('');
 
-        // Re-attach filter listeners since we just replaced the HTML
+        // Re-attach filter listeners since we just replaced the HTML container's inner contents
         filtersContainer.querySelectorAll('.session-filter-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 activeFilter = (btn as HTMLElement).dataset.filter!;
@@ -55,6 +56,7 @@ export async function renderSessions(isAdmin: boolean) {
     }
 
     // Apply membership type filter (note: session.type is what we filter on)
+    // Limits the events handed to the calendar render engine based on the active pill
     const sessions = activeFilter === 'all'
         ? allSessions
         : allSessions.filter((s: Session) => s.type === activeFilter);
@@ -193,6 +195,7 @@ export function initSessionHandlers() {
     if (addSessionForm) {
         addSessionForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            // Collect strongly typed inputs for creating a new session entity
             const title = (document.getElementById('session-title') as HTMLInputElement).value;
             const type = (document.getElementById('session-type') as HTMLSelectElement).value as any;
             const location = (document.getElementById('session-location') as HTMLInputElement).value;
@@ -200,6 +203,8 @@ export function initSessionHandlers() {
             const capacity = parseInt((document.getElementById('session-capacity') as HTMLInputElement).value, 10);
             const registrationRule = ((document.getElementById('session-registration-rule') as HTMLSelectElement)?.value || 'basic');
             const visibility = ((document.getElementById('session-visibility') as HTMLSelectElement)?.value || 'all') as 'all' | 'committee_only';
+
+            // Derive specialized flags: if only committees can register, the overarching visibility falls back to committee_only implicitly in the payload
             const registrationVisibility = registrationRule === 'committee_only' ? 'committee_only' : 'all';
             const requiredMembership = registrationRule === 'committee_only' ? undefined : registrationRule;
 
@@ -207,6 +212,8 @@ export function initSessionHandlers() {
                 await adminApi.addSession({ title, type, date: dateStr, location, capacity, requiredMembership, visibility, registrationVisibility });
                 (addSessionForm as HTMLFormElement).reset();
                 addSessionFormContainer?.classList.add('hidden');
+
+                // Refresh the calendar with the new session immediately
                 await renderSessions(getIsCommittee());
             }
         });
