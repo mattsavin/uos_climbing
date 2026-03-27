@@ -182,6 +182,150 @@
     animation: shimmer 2s infinite;
   }
 
+  .social-agm-stage {
+    @apply overflow-x-auto rounded-2xl border border-white/10 bg-slate-950/70 p-3 md:p-6;
+  }
+
+  .social-agm-artboard {
+    width: min(100%, 900px);
+    aspect-ratio: 4 / 5;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+    border-radius: 1.5rem;
+    border: 1px solid rgba(253, 185, 19, 0.35);
+    background: linear-gradient(160deg, #0f1116 0%, #171717 50%, #090909 100%);
+    color: #fefefe;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: clamp(1.25rem, 3vw, 2.2rem);
+    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.45);
+  }
+
+  .social-agm-photo {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    transform: scale(1.04);
+    filter: saturate(1.05) contrast(1.04);
+    opacity: 0;
+    transition: opacity 220ms ease;
+  }
+
+  .social-agm-artboard.has-photo .social-agm-photo {
+    opacity: 0.55;
+  }
+
+  .social-agm-overlay {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 15% 5%, rgba(253, 185, 19, 0.28), transparent 42%),
+      radial-gradient(circle at 88% 85%, rgba(0, 0, 0, 0.45), transparent 45%),
+      linear-gradient(185deg, rgba(0, 0, 0, 0.58) 0%, rgba(0, 0, 0, 0.66) 48%, rgba(0, 0, 0, 0.76) 100%);
+  }
+
+  .social-agm-glow {
+    position: absolute;
+    top: -10%;
+    right: -15%;
+    width: 50%;
+    height: 65%;
+    border-radius: 999px;
+    background: radial-gradient(circle, rgba(253, 185, 19, 0.3) 0%, rgba(253, 185, 19, 0.08) 40%, transparent 70%);
+    filter: blur(22px);
+    pointer-events: none;
+  }
+
+  .social-agm-topbar {
+    @apply relative z-10 flex items-center justify-between gap-4;
+  }
+
+  .social-agm-logo {
+    width: clamp(48px, 6vw, 68px);
+    height: auto;
+  }
+
+  .social-agm-badge {
+    @apply text-xs md:text-sm font-black uppercase tracking-[0.2em] px-3 py-2 rounded-full border;
+    border-color: rgba(253, 185, 19, 0.45);
+    color: #fdb913;
+    background: rgba(253, 185, 19, 0.08);
+  }
+
+  .social-agm-body {
+    @apply relative z-10 mt-4;
+  }
+
+  .social-agm-kicker {
+    @apply text-xs md:text-sm uppercase tracking-[0.35em] text-brand-gold font-black mb-4;
+  }
+
+  .social-agm-title {
+    @apply font-black tracking-tight leading-[1.05] text-white;
+    font-size: clamp(2rem, 5.1vw, 3.8rem);
+    max-width: 18ch;
+  }
+
+  .social-agm-detail {
+    @apply mt-6 flex gap-4 flex-wrap text-lg md:text-2xl font-bold text-slate-100;
+  }
+
+  .social-agm-detail > span {
+    @apply inline-block px-3 py-1 rounded-xl border border-white/15 bg-white/5;
+  }
+
+  .social-agm-detail-muted {
+    @apply mt-3 text-base md:text-xl font-semibold text-brand-gold-muted;
+  }
+
+  .social-agm-points {
+    @apply mt-6 space-y-2.5 text-sm md:text-base text-slate-200;
+  }
+
+  .social-agm-points li {
+    @apply pl-5 relative leading-relaxed;
+  }
+
+  .social-agm-points li::before {
+    content: "";
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 999px;
+    background: #fdb913;
+    position: absolute;
+    left: 0;
+    top: 0.55em;
+  }
+
+  .social-agm-footer {
+    @apply relative z-10 mt-6 pt-4 border-t border-white/10 flex flex-col md:flex-row md:items-end md:justify-between gap-2;
+  }
+
+  .social-agm-tag {
+    @apply text-[11px] md:text-xs uppercase tracking-[0.22em] font-bold text-slate-300;
+  }
+
+  .social-agm-cta {
+    @apply text-sm md:text-base font-black text-brand-gold;
+  }
+
+  #slide-dots button {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 999px;
+    border: 1px solid rgba(253, 185, 19, 0.35);
+    background: rgba(255, 255, 255, 0.2);
+    transition: all 180ms ease;
+  }
+
+  #slide-dots button.active {
+    background: #fdb913;
+    transform: scale(1.15);
+  }
+
   @keyframes shimmer {
     0% {
       transform: translateX(-100%);

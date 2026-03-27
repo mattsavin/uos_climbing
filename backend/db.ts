@@ -362,6 +362,7 @@ function initializeDatabase() {
                     ['Chair', 'Chair'],
                     ['Secretary', 'Secretary'],
                     ['Treasurer', 'Treasurer'],
+                    ['Indoor & Competitions', 'Indoor & Competitions'],
                     ['Welfare & Inclusions', 'Welfare & Inclusions'],
                     ['Team Captain', 'Team Captain'],
                     ['Social Sec', 'Social Sec'],

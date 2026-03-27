@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="/climbing%20team%20logo.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <title>Social AGM Asset | University of Sheffield Mountaineering & Climbing Club (USMC)</title>
+</head>
+
+<body>
+  <div id="app">
+    <main class="pt-32 pb-16 px-4">
+      <section class="max-w-7xl mx-auto space-y-6">
+        <div class="glass-card !p-6 md:!p-8">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+            <div>
+              <h1 class="heading-md text-white">Instagram AGM Asset Studio</h1>
+              <p class="text-slate-400 text-sm">Committee-only internal page. Portrait artboard with photo background and carousel-ready slides.</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button id="prev-slide" class="btn-outline !px-4 !py-2 !text-xs" type="button">Prev</button>
+              <button id="next-slide" class="btn-outline !px-4 !py-2 !text-xs" type="button">Next</button>
+              <button id="download-agm-png" class="btn-primary !px-5 !py-2.5 !text-xs" type="button">Download Slide</button>
+              <button id="download-all-agm-png" class="btn-outline !px-5 !py-2.5 !text-xs" type="button">Download All</button>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between mb-3 px-1">
+            <p id="slide-counter" class="text-slate-300 text-sm font-bold tracking-wide">Slide 1 / 3</p>
+            <div id="slide-dots" class="flex items-center gap-2" aria-label="Slide indicators"></div>
+          </div>
+
+          <div class="social-agm-stage">
+            <article id="social-agm-artboard" class="social-agm-artboard" aria-label="AGM Instagram post design">
+              <div id="social-agm-photo" class="social-agm-photo" aria-hidden="true"></div>
+              <div class="social-agm-overlay" aria-hidden="true"></div>
+              <div class="social-agm-glow"></div>
+              <header class="social-agm-topbar">
+                <img src="/climbing%20team%20logo.png" alt="USMC Logo" class="social-agm-logo" />
+                <div id="social-agm-badge" class="social-agm-badge">Indoor & Competitions</div>
+              </header>
+
+              <div class="social-agm-body">
+                <p id="social-agm-kicker" class="social-agm-kicker">USMC Announcement</p>
+                <h2 id="social-agm-title" class="social-agm-title">AGM: New Indoor & Competitions Subcommittee</h2>
+                <p class="social-agm-detail"><span id="social-agm-date">Wednesday 22 April</span><span id="social-agm-time">18:00</span></p>
+                <p id="social-agm-venue" class="social-agm-detail-muted">Venue TBC</p>
+
+                <ul id="social-agm-points" class="social-agm-points">
+                  <li>All USMC members can vote, comp team or not.</li>
+                  <li>Anyone in USMC can run for a role.</li>
+                  <li>Help shape next year of training, events, and comps.</li>
+                </ul>
+              </div>
+
+              <footer class="social-agm-footer">
+                <p class="social-agm-tag">University of Sheffield Mountaineering & Climbing Club (USMC)</p>
+                <p id="social-agm-cta" class="social-agm-cta">Updates: usmc site elections page</p>
+              </footer>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="/src/social-agm.ts"></script>
+</body>
+
+</html>

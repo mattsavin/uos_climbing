@@ -160,9 +160,9 @@ router.post('/register', authLimiter, async (req, res) => {
                             // Send verification email (fire-and-forget)
                             sendEmail(
                                 normalizedEmail,
-                                'Verify your USCC email address',
-                                `Hi ${firstName},\n\nYour verification code is: ${otp}\n\nThis code expires in 15 minutes.\n\nIf you did not register for the University of Sheffield Climbing Club, please ignore this email.`,
-                                `<p>Hi ${firstName},</p><p>Your verification code is:</p><h2 style="letter-spacing:8px;font-size:32px;">${otp}</h2><p>This code expires in 15 minutes.</p><p style="color:#999;font-size:12px;">If you did not register for the University of Sheffield Climbing Club, please ignore this email.</p>`
+                                'Verify your USMC email address',
+                                `Hi ${firstName},\n\nYour verification code is: ${otp}\n\nThis code expires in 15 minutes.\n\nIf you did not register for University of Sheffield Mountaineering & Climbing Club (USMC), please ignore this email.`,
+                                `<p>Hi ${firstName},</p><p>Your verification code is:</p><h2 style="letter-spacing:8px;font-size:32px;">${otp}</h2><p>This code expires in 15 minutes.</p><p style="color:#999;font-size:12px;">If you did not register for University of Sheffield Mountaineering &amp; Climbing Club (USMC), please ignore this email.</p>`
                             ).catch(e => console.error('Failed to send verification email:', e));
 
                             res.json({ pendingVerification: true, userId: id });
@@ -254,9 +254,9 @@ router.post('/verify-email', authLimiter, (req, res) => {
                     // Send welcome email now that they've verified
                     sendEmail(
                         user.email,
-                        'Welcome to USCC!',
-                        `Hi ${user.firstName},\n\nWelcome to the University of Sheffield Climbing Club! Your email has been verified and your registration is complete.`,
-                        `<p>Hi ${user.firstName},</p><p>Welcome to the University of Sheffield Climbing Club! Your email has been verified and your registration is complete.</p>`
+                        'Welcome to USMC!',
+                        `Hi ${user.firstName},\n\nWelcome to University of Sheffield Mountaineering & Climbing Club (USMC)! Your email has been verified and your registration is complete.`,
+                        `<p>Hi ${user.firstName},</p><p>Welcome to University of Sheffield Mountaineering &amp; Climbing Club (USMC)! Your email has been verified and your registration is complete.</p>`
                     ).catch(e => console.error('Failed to send welcome email:', e));
 
                     const token = jwt.sign(user, SECRET_KEY, { expiresIn: '24h' });
@@ -295,7 +295,7 @@ router.post('/request-verification', authLimiter, (req, res) => {
 
                 sendEmail(
                     user.email,
-                    'Your new USCC verification code',
+                    'Your new USMC verification code',
                     `Hi ${user.firstName},\n\nYour new verification code is: ${otp}\n\nThis code expires in 15 minutes.`,
                     `<p>Hi ${user.firstName},</p><p>Your new verification code is:</p><h2 style="letter-spacing:8px;font-size:32px;">${otp}</h2><p>This code expires in 15 minutes.</p>`
                 ).catch(e => console.error('Failed to send verification email:', e));
@@ -339,7 +339,7 @@ router.post('/forgot-password', authLimiter, (req, res) => {
 
                 sendEmail(
                     user.email,
-                    'Reset your USCC password',
+                    'Reset your USMC password',
                     `Hi ${user.firstName},\n\nClick the link below to reset your password (expires in 15 minutes):\n\n${resetLink}\n\nIf you did not request a password reset, please ignore this email.`,
                     `<p>Hi ${user.firstName},</p><p>Click the button below to reset your password. This link expires in <strong>15 minutes</strong>.</p><p style="text-align:center;margin:32px 0;"><a href="${resetLink}" style="background:#fdb913;color:#1a1a2e;padding:14px 28px;border-radius:8px;font-weight:900;text-decoration:none;letter-spacing:1px;font-size:14px;">Reset Password</a></p><p style="color:#999;font-size:12px;">If you did not request a password reset, please ignore this email.</p>`
                 ).catch(e => console.error('Failed to send reset email:', e));

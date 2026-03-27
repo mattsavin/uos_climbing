@@ -10,7 +10,7 @@ type NavLink = {
 const primaryNavLinks = [
   { href: '/', label: 'Home' },
   { href: '/about', label: 'About' },
-  { href: '/competitions', label: 'Competitions' },
+  { href: '/competitions', label: 'Indoor & Competitions', mobileLabel: 'Indoor & Comps' },
   { href: '/gallery', label: 'Gallery' },
   { href: '/schedule', label: 'Schedule' }
 ] as const satisfies readonly NavLink[];
@@ -51,10 +51,10 @@ const createNavbar = () => `
       <div class="flex items-center justify-between h-20">
         <div class="flex-shrink-0">
           <a href="/" class="flex items-center gap-4">
-            <img src="/climbing%20team%20logo.png" alt="USCC Logo" class="h-14 md:h-16 w-auto drop-shadow-md" />
+            <img src="/climbing%20team%20logo.png" alt="USMC Logo" class="h-14 md:h-16 w-auto drop-shadow-md" />
             <div class="flex flex-col">
-              <span class="text-xl md:text-2xl font-black tracking-tighter text-white leading-none">USCC</span>
-              <span class="text-[0.5rem] md:text-[0.6rem] font-bold tracking-widest text-brand-gold uppercase mt-1">Climbing Club</span>
+              <span class="text-xl md:text-2xl font-black tracking-tighter text-white leading-none">USMC</span>
+              <span class="text-[0.5rem] md:text-[0.6rem] font-bold tracking-widest text-brand-gold uppercase mt-1">Indoor & Competitions</span>
             </div>
           </a>
         </div>
@@ -142,8 +142,8 @@ const createFooter = () => `
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-12 mb-12">
         <div>
-          <h3 class="text-2xl font-black text-white mb-4">USCC</h3>
-          <p class="text-slate-400">The indoor climbing club within the University of Sheffield Mountaineering and Climbing Club (USMCC). Social sessions, structured training, and competition — for every level.</p>
+          <h3 class="text-2xl font-black text-white mb-4">USMC</h3>
+          <p class="text-slate-400">Indoor & Competitions within University of Sheffield Mountaineering & Climbing Club (USMC). Social sessions, structured training, and competition for every level.</p>
         </div>
         <div class="grid grid-cols-2 gap-6">
           <div>
@@ -185,7 +185,7 @@ const createFooter = () => `
         </div>
       </div>
       <div class="border-t border-white/5 pt-8 flex flex-col gap-3 md:flex-row md:justify-between md:items-center">
-        <p class="text-slate-500 text-sm text-center md:text-left">&copy; ${new Date().getFullYear()} University of Sheffield Mountaineering and Climbing Club.</p>
+        <p class="text-slate-500 text-sm text-center md:text-left">&copy; ${new Date().getFullYear()} University of Sheffield Mountaineering & Climbing Club (USMC).</p>
         <p class="text-slate-500 text-sm text-center md:text-right">Forged in South Yorkshire.</p>
       </div>
     </div>
