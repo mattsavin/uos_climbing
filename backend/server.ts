@@ -145,7 +145,8 @@ if (process.env.NODE_ENV === 'production') {
             { from: /^\/elections$/, to: '/elections.html' },
             { from: /^\/gallery$/, to: '/gallery.html' },
             { from: /^\/gallery-manager$/, to: '/gallery-manager.html' },
-            { from: /^\/social-agm$/, to: '/social-agm.html' },
+            { from: /^\/social-agm$/, to: '/social-post.html' },
+            { from: /^\/dashboard\/social-post$/, to: '/social-post.html' },
             { from: /^\/beta-gate$/, to: '/beta-gate.html' },
             { from: /^\/verify$/, to: '/verify.html' },
             { from: /^\/verify\/.*$/, to: '/verify.html' }

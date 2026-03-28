@@ -182,6 +182,15 @@ function renderDownloadLinks(container: HTMLElement, assets: ExportedAsset[]) {
   container.appendChild(list);
 }
 
+function shuffle<T>(arr: T[]): T[] {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
 async function fetchBackgroundImages(maxCount: number): Promise<string[]> {
   const collect = (rows: any[]) => rows
     .map((row: any) => row?.filepath)
@@ -189,14 +198,15 @@ async function fetchBackgroundImages(maxCount: number): Promise<string[]> {
 
   try {
     const featured = await apiFetch('/api/gallery?featured=1');
-    const featuredPaths = collect(Array.isArray(featured) ? featured : []);
+    const featuredPaths = shuffle(collect(Array.isArray(featured) ? featured : []));
     if (featuredPaths.length >= maxCount) {
       return featuredPaths.slice(0, maxCount);
     }
 
     const all = await apiFetch('/api/gallery');
-    const allPaths = collect(Array.isArray(all) ? all : []);
-    return [...featuredPaths, ...allPaths].filter((value, index, arr) => arr.indexOf(value) === index).slice(0, maxCount);
+    const allPaths = shuffle(collect(Array.isArray(all) ? all : []));
+    const combined = [...featuredPaths, ...allPaths].filter((value, index, arr) => arr.indexOf(value) === index);
+    return combined.slice(0, maxCount);
   } catch (error) {
     console.warn('Could not load gallery backgrounds for social slides:', error);
     return [];

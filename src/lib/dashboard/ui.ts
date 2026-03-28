@@ -22,6 +22,7 @@ export async function updateUI() {
         const icalLinkBooked = document.getElementById('ical-link-booked') as HTMLAnchorElement | null;
         const adminPortalCard = document.getElementById('admin-portal-card'); // Element to toggle
         const galleryCard = document.getElementById('gallery-portal-card');
+        const socialPostCard = document.getElementById('social-post-portal-card');
 
         let membershipTypes: MembershipType[] = [];
         try {
@@ -241,9 +242,8 @@ export async function updateUI() {
 
         if (isCommittee) {
             if (adminPortalCard) adminPortalCard.classList.remove('hidden');
-            if (galleryCard) {
-                galleryCard.classList.remove('hidden');
-            }
+            if (galleryCard) galleryCard.classList.remove('hidden');
+            if (socialPostCard) socialPostCard.classList.remove('hidden');
             if (manageTypesShortcut) {
                 manageTypesShortcut.classList.remove('hidden');
                 manageTypesShortcut.onclick = () => {
@@ -254,6 +254,7 @@ export async function updateUI() {
         } else {
             if (adminPortalCard) adminPortalCard.classList.add('hidden');
             if (galleryCard) galleryCard.classList.add('hidden');
+            if (socialPostCard) socialPostCard.classList.add('hidden');
             if (manageTypesShortcut) manageTypesShortcut.classList.add('hidden');
             if (addSessionToggleBtn) addSessionToggleBtn.classList.add('hidden');
             if (addSessionFormContainer) addSessionFormContainer.classList.add('hidden');
