@@ -2,8 +2,10 @@ import './style.css';
 import { authState } from './auth';
 import { initApp } from './main';
 import { apiFetch } from './lib/api/http';
+import { toPng } from 'html-to-image';
 
 type SocialSlide = {
+  theme: 'summit' | 'pulse' | 'night';
   kicker: string;
   title: string;
   date: string;
@@ -14,8 +16,14 @@ type SocialSlide = {
   badge?: string;
 };
 
+type ExportedAsset = {
+  filename: string;
+  blob: Blob;
+};
+
 const socialSlides: SocialSlide[] = [
   {
+    theme: 'summit',
     kicker: 'USMC Announcement',
     title: 'AGM: New Indoor & Competitions Subcommittee',
     date: 'Wednesday 22 April',
@@ -26,14 +34,15 @@ const socialSlides: SocialSlide[] = [
       'Anyone in USMC can run for a role.',
       'Help shape next year of training, events, and comps.'
     ],
-    cta: 'Updates: usmc site elections page',
+    cta: 'Updates: @sheffieldmountaineering and @uos_climb',
     badge: 'Indoor & Competitions'
   },
   {
+    theme: 'pulse',
     kicker: 'Why You Should Be There',
     title: 'Your Vote Shapes Training, Events, and Comps',
-    date: '22 April',
-    time: '18:00 AGM Start',
+    date: 'Wednesday 22 April',
+    time: '18:00',
     venue: 'Venue TBC',
     points: [
       'Vote on who leads Indoor & Competitions.',
@@ -44,63 +53,133 @@ const socialSlides: SocialSlide[] = [
     badge: 'USMC AGM'
   },
   {
+    theme: 'night',
     kicker: 'Run for a Role',
-    title: 'Step Up for the New Subcommittee',
+    title: 'Roles Open for the New Subcommittee',
     date: 'Nominations Open',
     time: 'Before AGM',
     venue: 'USMC Members Welcome',
     points: [
-      'Anyone in USMC can run for a position.',
-      'No previous committee experience required.',
-      'Lead the direction of Indoor & Competitions.'
+      'Chair',
+      'Treasurer',
+      'Secretary',
+      'Welfare & Inclusions',
+      "Men's Team Captain",
+      "Women's Team Captain",
+      'Social Secretary',
+      'Publicity',
+      'Training Secretary'
     ],
-    cta: 'Get your manifesto ready',
+    cta: 'DM to ask about any role',
     badge: 'Indoor & Competitions'
   }
 ];
 
-function dataUrlToBlob(dataUrl: string): Blob {
-  const [meta, base64Data] = dataUrl.split(',');
-  if (!meta || !base64Data) {
-    throw new Error('Invalid image data URL');
-  }
+const themeClassNames = ['social-agm-theme-summit', 'social-agm-theme-pulse', 'social-agm-theme-night'] as const;
 
-  const mimeMatch = /data:(.*?);base64/.exec(meta);
-  const mimeType = mimeMatch?.[1] ?? 'image/png';
-  const binary = atob(base64Data);
-  const bytes = new Uint8Array(binary.length);
-
-  for (let i = 0; i < binary.length; i += 1) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-
-  return new Blob([bytes], { type: mimeType });
+function setExportMessage(container: HTMLElement, message: string, kind: 'info' | 'error' = 'info') {
+  const colorClass = kind === 'error' ? 'text-red-300' : 'text-slate-300';
+  container.innerHTML = `<p class="text-xs ${colorClass} font-semibold mt-3">${message}</p>`;
 }
 
-async function exportArtboardAsPng(artboard: HTMLElement, filename: string): Promise<void> {
-  const width = 1080;
-  const height = 1350;
-  const htmlToImage = await import('html-to-image');
-  const dataUrl = await htmlToImage.toPng(artboard, {
-    width,
-    height,
-    canvasWidth: width,
-    canvasHeight: height,
-    pixelRatio: 1,
-    cacheBust: true,
-    skipAutoScale: true,
-    backgroundColor: '#000000'
-  });
+function normalizeErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  return String(error);
+}
 
-  const blob = dataUrlToBlob(dataUrl);
-  const objectUrl = URL.createObjectURL(blob);
+// Fetch the Outfit font CSS and embed all font files as base64 data URIs.
+// This bypasses html-to-image's stylesheet scanner (which crashes on Tailwind v4
+// @layer/@keyframes rules) AND ensures fonts render correctly in the SVG foreignObject
+// (external font URLs are blocked or unreliable in that context).
+let cachedFontCSS: string | null = null;
+async function getFontEmbedCSS(): Promise<string> {
+  if (cachedFontCSS !== null) return cachedFontCSS;
+  try {
+    const cssRes = await fetch('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&display=swap');
+    const cssText = await cssRes.text();
+
+    // Collect unique font file URLs
+    const urlSet = new Set<string>();
+    const urlRe = /url\((['"]?)([^)'"]+)\1\)\s+format\(['"]woff2['"]\)/g;
+    let m;
+    while ((m = urlRe.exec(cssText)) !== null) urlSet.add(m[2]);
+
+    // Fetch each font file and convert to base64 data URI in parallel
+    const dataUriMap = new Map<string, string>();
+    await Promise.all([...urlSet].map(async (url) => {
+      try {
+        const buf = await (await fetch(url)).arrayBuffer();
+        const bytes = new Uint8Array(buf);
+        let bin = '';
+        for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+        dataUriMap.set(url, `data:font/woff2;base64,${btoa(bin)}`);
+      } catch { /* keep URL if fetch fails */ }
+    }));
+
+    cachedFontCSS = cssText.replace(/url\((['"]?)([^)'"]+)\1\)/g, (match, _quote, url) => {
+      const dataUri = dataUriMap.get(url);
+      return dataUri ? `url('${dataUri}')` : match;
+    });
+  } catch {
+    cachedFontCSS = '';
+  }
+  return cachedFontCSS;
+}
+
+// Capture the rendered artboard element as a PNG, scaled to 1080px wide.
+async function captureArtboard(artboard: HTMLElement, filename: string): Promise<ExportedAsset> {
+  const fontEmbedCSS = await getFontEmbedCSS();
+  const pixelRatio = 1080 / artboard.offsetWidth;
+  const dataUrl = await toPng(artboard, { pixelRatio, cacheBust: true, fontEmbedCSS, style: { margin: '0' } });
+  const res = await fetch(dataUrl);
+  const blob = await res.blob();
+  return { filename, blob };
+}
+
+function triggerAssetDownload(asset: ExportedAsset): void {
+  const objectUrl = URL.createObjectURL(asset.blob);
   const link = document.createElement('a');
   link.href = objectUrl;
-  link.download = filename;
+  link.download = asset.filename;
+  link.rel = 'noopener';
+  link.style.display = 'none';
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(objectUrl);
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
+}
+
+function renderDownloadLinks(container: HTMLElement, assets: ExportedAsset[]) {
+  container.innerHTML = '';
+
+  if (assets.length === 0) {
+    return;
+  }
+
+  const heading = document.createElement('p');
+  heading.className = 'text-xs text-slate-400 font-bold uppercase tracking-[0.18em] mt-3 mb-2';
+  heading.textContent = 'Downloads Ready';
+  container.appendChild(heading);
+
+  const list = document.createElement('div');
+  list.className = 'flex flex-wrap gap-2';
+
+  assets.forEach((asset) => {
+    const objectUrl = URL.createObjectURL(asset.blob);
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = asset.filename;
+    link.textContent = asset.filename;
+    link.className = 'text-xs font-semibold text-brand-gold hover:text-brand-gold-muted underline underline-offset-4';
+    link.addEventListener('click', () => {
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
+    }, { once: true });
+    list.appendChild(link);
+  });
+
+  container.appendChild(list);
 }
 
 async function fetchBackgroundImages(maxCount: number): Promise<string[]> {
@@ -122,12 +201,6 @@ async function fetchBackgroundImages(maxCount: number): Promise<string[]> {
     console.warn('Could not load gallery backgrounds for social slides:', error);
     return [];
   }
-}
-
-function nextAnimationFrame(): Promise<void> {
-  return new Promise((resolve) => {
-    requestAnimationFrame(() => resolve());
-  });
 }
 
 function buildFilename(index: number): string {
@@ -152,6 +225,7 @@ async function initSocialAgmPage() {
   const nextBtn = document.getElementById('next-slide') as HTMLButtonElement | null;
   const slideCounter = document.getElementById('slide-counter') as HTMLParagraphElement | null;
   const slideDots = document.getElementById('slide-dots') as HTMLDivElement | null;
+  const downloadsOutput = document.getElementById('downloads-output') as HTMLDivElement | null;
 
   const badgeEl = document.getElementById('social-agm-badge') as HTMLDivElement | null;
   const kickerEl = document.getElementById('social-agm-kicker') as HTMLParagraphElement | null;
@@ -163,7 +237,7 @@ async function initSocialAgmPage() {
   const ctaEl = document.getElementById('social-agm-cta') as HTMLParagraphElement | null;
   const photoEl = document.getElementById('social-agm-photo') as HTMLDivElement | null;
   const artboard = document.getElementById('social-agm-artboard') as HTMLElement | null;
-  if (!downloadBtn || !downloadAllBtn || !prevBtn || !nextBtn || !slideCounter || !slideDots || !badgeEl || !kickerEl || !titleEl || !dateEl || !timeEl || !venueEl || !pointsEl || !ctaEl || !photoEl || !artboard) {
+  if (!downloadBtn || !downloadAllBtn || !prevBtn || !nextBtn || !slideCounter || !slideDots || !downloadsOutput || !badgeEl || !kickerEl || !titleEl || !dateEl || !timeEl || !venueEl || !pointsEl || !ctaEl || !photoEl || !artboard) {
     return;
   }
 
@@ -184,6 +258,9 @@ async function initSocialAgmPage() {
 
   const renderSlide = () => {
     const slide = socialSlides[currentSlideIndex];
+    artboard.classList.remove(...themeClassNames);
+    artboard.classList.add(`social-agm-theme-${slide.theme}`);
+
     slideCounter.textContent = `Slide ${currentSlideIndex + 1} / ${socialSlides.length}`;
     badgeEl.textContent = slide.badge ?? 'Indoor & Competitions';
     kickerEl.textContent = slide.kicker;
@@ -216,6 +293,7 @@ async function initSocialAgmPage() {
 
   const setExportState = (isBusy: boolean, mode: 'single' | 'all') => {
     if (isBusy) {
+      downloadsOutput.innerHTML = '';
       downloadBtn.disabled = true;
       downloadAllBtn.disabled = true;
       downloadBtn.textContent = mode === 'single' ? 'Exporting...' : 'Please wait...';
@@ -243,11 +321,16 @@ async function initSocialAgmPage() {
 
   downloadBtn.addEventListener('click', async () => {
     setExportState(true, 'single');
+    setExportMessage(downloadsOutput, 'Preparing your slide export...');
 
     try {
-      await exportArtboardAsPng(artboard, buildFilename(currentSlideIndex));
+      const asset = await captureArtboard(artboard, buildFilename(currentSlideIndex));
+      triggerAssetDownload(asset);
+      renderDownloadLinks(downloadsOutput, [asset]);
     } catch (error) {
       console.error('Failed to export AGM artboard:', error);
+      const reason = normalizeErrorMessage(error);
+      setExportMessage(downloadsOutput, `Export failed: ${reason}`, 'error');
     } finally {
       setExportState(false, 'single');
     }
@@ -255,19 +338,28 @@ async function initSocialAgmPage() {
 
   downloadAllBtn.addEventListener('click', async () => {
     setExportState(true, 'all');
-    const startIndex = currentSlideIndex;
+    setExportMessage(downloadsOutput, 'Preparing all slides for export...');
 
+    const savedIndex = currentSlideIndex;
     try {
-      for (let index = 0; index < socialSlides.length; index += 1) {
-        currentSlideIndex = index;
+      const exportedAssets: ExportedAsset[] = [];
+      for (let i = 0; i < socialSlides.length; i++) {
+        currentSlideIndex = i;
         renderSlide();
-        await nextAnimationFrame();
-        await exportArtboardAsPng(artboard, buildFilename(index));
+        // Allow layout to settle before capture
+        await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+        const asset = await captureArtboard(artboard, buildFilename(i));
+        exportedAssets.push(asset);
       }
+
+      exportedAssets.forEach((asset) => triggerAssetDownload(asset));
+      renderDownloadLinks(downloadsOutput, exportedAssets);
     } catch (error) {
       console.error('Failed to export all AGM slides:', error);
+      const reason = normalizeErrorMessage(error);
+      setExportMessage(downloadsOutput, `Bulk export failed: ${reason}`, 'error');
     } finally {
-      currentSlideIndex = startIndex;
+      currentSlideIndex = savedIndex;
       renderSlide();
       setExportState(false, 'all');
     }
