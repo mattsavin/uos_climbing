@@ -210,7 +210,8 @@ describe('Auth Router Branches', () => {
 
         expect(res.status).toBe(400);
         expect(res.body.error).toBe('Invalid or expired reset token');
-        expect(runSpy).toHaveBeenCalledWith('DELETE FROM password_resets WHERE token = ?', ['tok']);
+        // dbRun (promisified helper) always appends a callback to db.run
+        expect(runSpy).toHaveBeenCalledWith('DELETE FROM password_resets WHERE token = ?', ['tok'], expect.any(Function));
     });
 
     it('reset-password returns 500 when password hashing throws', async () => {
