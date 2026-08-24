@@ -22,8 +22,15 @@ export const betaGate = (req: Request, res: Response, next: NextFunction) => {
         return res.redirect('/beta-gate');
     }
 
+    // No fallback secret: config.ts fails fast at boot when IS_BETA=true without
+    // BETA_ACCESS_SECRET, so this branch only trips on a badly mutated runtime environment.
+    // Read per-request (not bound at module load) so tests can configure the env dynamically.
+    const secret = process.env.BETA_ACCESS_SECRET;
+    if (!secret) {
+        return res.status(500).send('Beta access is not configured');
+    }
+
     try {
-        const secret = process.env.BETA_ACCESS_SECRET || 'default_beta_secret';
         jwt.verify(token, secret);
         next();
     } catch (err) {

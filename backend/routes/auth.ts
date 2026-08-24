@@ -90,7 +90,7 @@ router.post('/register', authLimiter, async (req, res) => {
             });
 
             const passwordHash = await bcrypt.hash(password, 12);
-            const id = 'user_' + Date.now() + Math.random().toString(36).substr(2, 5);
+            const id = 'user_' + crypto.randomUUID();
 
             let role = 'member';
             let membershipStatus = 'pending';
@@ -128,7 +128,7 @@ router.post('/register', authLimiter, async (req, res) => {
                     const membershipRowStatus = (IS_TEST || preApproved || isRootAdminTestBypass) ? 'active' : 'pending';
                     const stmt = db.prepare('INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)');
                     types.forEach((t: string) => {
-                        stmt.run(['umem_' + Date.now() + Math.random().toString(36).substr(2, 5), id, t, membershipRowStatus, membershipYear]);
+                        stmt.run(['umem_' + crypto.randomUUID(), id, t, membershipRowStatus, membershipYear]);
                     });
                     stmt.finalize();
 

@@ -19,6 +19,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import history from 'connect-history-api-fallback';
 import cookieParser from 'cookie-parser';
+import crypto from 'crypto';
 import { betaGate } from './middleware/beta-gate';
 import jwt from 'jsonwebtoken';
 import { UPLOAD_BASE_DIR } from './config';
@@ -76,21 +77,32 @@ app.post('/api/beta-auth', (req, res) => {
         return res.status(500).json({ success: false, message: 'BETA_PASSCODE not configured' });
     }
 
-    if (passcode === correctPasscode) {
-        const secret = process.env.BETA_ACCESS_SECRET || 'default_beta_secret';
-        const token = jwt.sign({ access: true }, secret, { expiresIn: '7d' });
+    // Constant-time comparison so response latency can't be used to recover the passcode.
+    const given = Buffer.from(String(passcode ?? ''), 'utf8');
+    const expected = Buffer.from(correctPasscode, 'utf8');
+    const passcodeOk = given.length === expected.length && crypto.timingSafeEqual(given, expected);
 
-        res.cookie('BETA_ACCESS_TOKEN', token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-        });
-
-        return res.json({ success: true });
+    if (!passcodeOk) {
+        return res.status(401).json({ success: false, message: 'Invalid passcode' });
     }
 
-    return res.status(401).json({ success: false, message: 'Invalid passcode' });
+    // No fallback secret: config.ts fails fast at boot when IS_BETA=true without
+    // BETA_ACCESS_SECRET. This 500 is belt-and-braces for misconfigured environments.
+    const secret = process.env.BETA_ACCESS_SECRET;
+    if (!secret) {
+        return res.status(500).json({ success: false, message: 'BETA_ACCESS_SECRET not configured' });
+    }
+
+    const token = jwt.sign({ access: true }, secret, { expiresIn: '7d' });
+
+    res.cookie('BETA_ACCESS_TOKEN', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
+    return res.json({ success: true });
 });
 
 // Routes
