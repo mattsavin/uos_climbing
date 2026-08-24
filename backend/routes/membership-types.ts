@@ -1,5 +1,5 @@
 import express from 'express';
-import { db } from '../db';
+import { dbAll, dbGet, dbRun } from '../utils/db';
 import { authenticateToken, requireCommittee } from '../middleware/auth';
 
 const router = express.Router();
@@ -12,14 +12,15 @@ function normalizeMembershipTypeId(input: string): string {
         .replace(/^_+|_+$/g, '');
 }
 
-router.get('/', (req, res) => {
-    db.all('SELECT * FROM membership_types ORDER BY deprecated DESC, label ASC', [], (err, rows) => {
-        if (err) return res.status(500).json({ error: 'Database error' });
-        res.json(rows || []);
-    });
+router.get('/', async (req, res) => {
+    try {
+        res.json(await dbAll('SELECT * FROM membership_types ORDER BY deprecated DESC, label ASC'));
+    } catch {
+        res.status(500).json({ error: 'Database error' });
+    }
 });
 
-router.post('/', authenticateToken, requireCommittee, (req, res) => {
+router.post('/', authenticateToken, requireCommittee, async (req, res) => {
     const label = (req.body?.label || '').toString().trim();
     const providedId = (req.body?.id || '').toString().trim();
     const id = normalizeMembershipTypeId(providedId || label);
@@ -27,50 +28,50 @@ router.post('/', authenticateToken, requireCommittee, (req, res) => {
     if (!label) return res.status(400).json({ error: 'Label is required' });
     if (!id) return res.status(400).json({ error: 'Invalid membership type id' });
 
-    db.run('INSERT INTO membership_types (id, label) VALUES (?, ?)', [id, label], function (err) {
-        if (err) {
-            if ((err as any).code === 'SQLITE_CONSTRAINT') {
-                return res.status(400).json({ error: 'Membership type already exists' });
-            }
-            return res.status(500).json({ error: 'Database error' });
-        }
+    try {
+        await dbRun('INSERT INTO membership_types (id, label) VALUES (?, ?)', [id, label]);
         res.json({ id, label });
-    });
+    } catch (err: any) {
+        if (err?.code === 'SQLITE_CONSTRAINT') {
+            return res.status(400).json({ error: 'Membership type already exists' });
+        }
+        res.status(500).json({ error: 'Database error' });
+    }
 });
 
-router.put('/:id', authenticateToken, requireCommittee, (req, res) => {
+router.put('/:id', authenticateToken, requireCommittee, async (req, res) => {
     const label = (req.body?.label || '').toString().trim();
     const deprecated = req.body?.deprecated ? 1 : 0;
     if (!label) return res.status(400).json({ error: 'Label is required' });
 
-    db.run(
+    const { changes } = await dbRun(
         'UPDATE membership_types SET label = ?, deprecated = ? WHERE id = ?',
-        [label, deprecated, req.params.id],
-        function (err) {
-            if (err) return res.status(500).json({ error: 'Database error' });
-            if (this.changes === 0) return res.status(404).json({ error: 'Membership type not found' });
-            res.json({ id: req.params.id, label, deprecated });
-        }
-    );
+        [label, deprecated, req.params.id]
+    ).catch(() => ({ changes: -1 }));
+
+    if (changes < 0) return res.status(500).json({ error: 'Database error' });
+    if (changes === 0) return res.status(404).json({ error: 'Membership type not found' });
+    res.json({ id: req.params.id, label, deprecated });
 });
 
-router.delete('/:id', authenticateToken, requireCommittee, (req, res) => {
+router.delete('/:id', authenticateToken, requireCommittee, async (req, res) => {
     if (req.params.id === 'basic') {
         return res.status(400).json({ error: 'The basic membership type cannot be deleted' });
     }
 
-    db.get('SELECT COUNT(*) AS count FROM membership_types', [], (countErr, countRow: any) => {
-        if (countErr) return res.status(500).json({ error: 'Database error' });
-        if ((countRow?.count || 0) <= 1) {
-            return res.status(400).json({ error: 'At least one membership type must remain' });
-        }
+    const countRow = await dbGet<{ count: number }>('SELECT COUNT(*) AS count FROM membership_types');
+    if (countRow === undefined) return res.status(500).json({ error: 'Database error' });
+    if ((countRow?.count || 0) <= 1) {
+        return res.status(400).json({ error: 'At least one membership type must remain' });
+    }
 
-        db.run('DELETE FROM membership_types WHERE id = ?', [req.params.id], function (err) {
-            if (err) return res.status(500).json({ error: 'Database error' });
-            if (this.changes === 0) return res.status(404).json({ error: 'Membership type not found' });
-            res.json({ success: true });
-        });
-    });
+    try {
+        const { changes } = await dbRun('DELETE FROM membership_types WHERE id = ?', [req.params.id]);
+        if (changes === 0) return res.status(404).json({ error: 'Membership type not found' });
+        res.json({ success: true });
+    } catch {
+        res.status(500).json({ error: 'Database error' });
+    }
 });
 
 export default router;
