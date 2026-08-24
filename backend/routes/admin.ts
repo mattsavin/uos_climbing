@@ -39,9 +39,9 @@ router.post('/test-email', authenticateToken, requireCommittee, async (req: any,
     const target = req.user.email;
     const sent = await sendEmail(
         target,
-        'USCC Test Email',
-        'This is a test email from the USCC admin portal.',
-        '<p>This is a test email from the USCC admin portal.</p>'
+        'USMC Test Email',
+        'This is a test email from the USMC admin portal.',
+        '<p>This is a test email from the USMC admin portal.</p>'
     );
 
     res.json({
@@ -218,8 +218,8 @@ router.post('/users/:id/approve', authenticateToken, requireCommittee, (req, res
                 sendEmail(
                     user.email,
                     'Membership Approved',
-                    `Hi ${displayName},\n\nYour membership for the University of Sheffield Climbing Club has been approved.`,
-                    `<p>Hi ${displayName},</p><p>Your membership for the University of Sheffield Climbing Club has been approved.</p>`
+                    `Hi ${displayName},\n\nYour membership for University of Sheffield Mountaineering & Climbing Club (USMC) has been approved.`,
+                    `<p>Hi ${displayName},</p><p>Your membership for University of Sheffield Mountaineering &amp; Climbing Club (USMC) has been approved.</p>`
                 ).catch((e: any) => console.error("Failed to send approval email:", e));
             }
         });
@@ -249,8 +249,8 @@ router.post('/users/:id/reject', authenticateToken, requireCommittee, (req, res)
                 sendEmail(
                     user.email,
                     'Membership Rejected',
-                    `Hi ${displayName},\n\nUnfortunately, your membership for the University of Sheffield Climbing Club has been rejected.`,
-                    `<p>Hi ${displayName},</p><p>Unfortunately, your membership for the University of Sheffield Climbing Club has been rejected.</p>`
+                    `Hi ${displayName},\n\nUnfortunately, your membership for University of Sheffield Mountaineering & Climbing Club (USMC) has been rejected.`,
+                    `<p>Hi ${displayName},</p><p>Unfortunately, your membership for University of Sheffield Mountaineering &amp; Climbing Club (USMC) has been rejected.</p>`
                 ).catch((e: any) => console.error("Failed to send rejection email:", e));
             }
         });

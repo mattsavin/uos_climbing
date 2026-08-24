@@ -3,6 +3,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
+import { DEV_ROOT_PASSWORD } from './config';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -300,7 +301,16 @@ function initializeDatabase() {
         // Create root admin if not exists
         db.get('SELECT id, membershipYear FROM users WHERE email = ?', [ROOT_ADMIN_EMAIL], async (err, row: any) => {
             if (!row) {
-                const rootHash = await bcrypt.hash('SuperSecret123!', 12);
+                // First boot for this database.
+                // Production/beta must never start with a publicly-known credential, so generate a
+                // one-off random password and print it exactly once (visible in container logs).
+                // Rotate immediately after first login. Dev/test: stable DEV_ROOT_PASSWORD keeps
+                // local logins and the backend test suite predictable.
+                const isFirstBootInProd = process.env.NODE_ENV === 'production';
+                const initialRootPassword = isFirstBootInProd
+                    ? crypto.randomBytes(18).toString('base64url')
+                    : DEV_ROOT_PASSWORD;
+                const rootHash = await bcrypt.hash(initialRootPassword, 12);
                 const currentYear = new Date().getFullYear();
                 const currentMonth = new Date().getMonth();
                 const membershipYear = currentMonth < 8 ? `${currentYear - 1}/${currentYear}` : `${currentYear}/${currentYear + 1}`;
@@ -317,12 +327,15 @@ function initializeDatabase() {
                     }
                 );
                 console.log('Root admin created.');
+                if (isFirstBootInProd) {
+                    console.log(`=== ROOT ADMIN FIRST-TIME PASSWORD for ${ROOT_ADMIN_EMAIL} (rotate immediately): ${initialRootPassword} ===`);
+                }
             } else {
                 // Ensure existing root admin is always marked as active + verified
                 db.run('UPDATE users SET emailVerified = 1, membershipStatus = ? WHERE email = ?', ['active', ROOT_ADMIN_EMAIL]);
                 // In non-production, keep local root credentials stable for troubleshooting/dev access
                 if (process.env.NODE_ENV !== 'production') {
-                    const rootHash = await bcrypt.hash('SuperSecret123!', 12);
+                    const rootHash = await bcrypt.hash(DEV_ROOT_PASSWORD, 12);
                     db.run(
                         'UPDATE users SET passwordHash = ?, role = ?, firstName = ?, lastName = ?, name = ? WHERE email = ?',
                         [rootHash, 'committee', 'Root', 'Admin', 'Root Admin', ROOT_ADMIN_EMAIL]
@@ -362,6 +375,7 @@ function initializeDatabase() {
                     ['Chair', 'Chair'],
                     ['Secretary', 'Secretary'],
                     ['Treasurer', 'Treasurer'],
+                    ['Indoor & Competitions', 'Indoor & Competitions'],
                     ['Welfare & Inclusions', 'Welfare & Inclusions'],
                     ['Team Captain', 'Team Captain'],
                     ['Social Sec', 'Social Sec'],

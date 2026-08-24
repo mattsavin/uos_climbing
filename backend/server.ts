@@ -19,6 +19,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import history from 'connect-history-api-fallback';
 import cookieParser from 'cookie-parser';
+import crypto from 'crypto';
 import { betaGate } from './middleware/beta-gate';
 import jwt from 'jsonwebtoken';
 import { UPLOAD_BASE_DIR } from './config';
@@ -43,9 +44,29 @@ app.use(cors({
 }));
 
 // Apply security headers
+// CSP ships in report-only mode: browsers evaluate the policy and POST violations
+// to /api/csp-report, but nothing is blocked yet. Once reports are quiet for a
+// while, set CSP_ENFORCE=true (env var, no redeploy needed) to switch to an
+// enforcing Content-Security-Policy.
 app.use(helmet({
-    contentSecurityPolicy: false, // Vite/React needs inline scripts in dev, can configure properly for prod if needed
     crossOriginEmbedderPolicy: false,
+    contentSecurityPolicy: {
+        reportOnly: process.env.CSP_ENFORCE !== 'true',
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            scriptSrcAttr: ["'none'"], // no inline event handlers anywhere in the templates
+            styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+            fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+            imgSrc: ["'self'", 'data:', 'blob:'], // blob: for photo-crop previews
+            connectSrc: ["'self'"],
+            objectSrc: ["'none'"],
+            baseUri: ["'self'"],
+            formAction: ["'self'"],
+            frameAncestors: ["'self'"],
+            reportUri: ['/api/csp-report'],
+        },
+    },
 }));
 
 // Global rate limiting
@@ -60,6 +81,32 @@ app.use(globalLimiter);
 
 app.use(express.json());
 app.use(cookieParser());
+
+// Collect Content-Security-Policy violation reports from browsers.
+// Browsers POST application/csp-report bodies here when a directive trips,
+// including from the beta gate page (path is allow-listed in beta-gate.ts).
+const cspReportLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 50,
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+app.post('/api/csp-report',
+    cspReportLimiter,
+    express.json({ type: ['application/csp-report', 'application/reports+json'] }),
+    (req, res) => {
+        const report = req.body?.['csp-report'] ?? req.body;
+        if (report && typeof report === 'object') {
+            console.warn('[CSP]', JSON.stringify({
+                directive: report['violated-directive'] ?? report.effectiveDirective,
+                blocked: report['blocked-uri'] ?? report.blockedURL,
+                page: report['document-uri'] ?? report.documentURI,
+                sourceFile: report['source-file'],
+                line: report['line-number'],
+            }));
+        }
+        res.status(204).end();
+    });
 
 // Serve profile photos
 app.use('/uploads', express.static(UPLOAD_BASE_DIR));
@@ -76,21 +123,32 @@ app.post('/api/beta-auth', (req, res) => {
         return res.status(500).json({ success: false, message: 'BETA_PASSCODE not configured' });
     }
 
-    if (passcode === correctPasscode) {
-        const secret = process.env.BETA_ACCESS_SECRET || 'default_beta_secret';
-        const token = jwt.sign({ access: true }, secret, { expiresIn: '7d' });
+    // Constant-time comparison so response latency can't be used to recover the passcode.
+    const given = Buffer.from(String(passcode ?? ''), 'utf8');
+    const expected = Buffer.from(correctPasscode, 'utf8');
+    const passcodeOk = given.length === expected.length && crypto.timingSafeEqual(given, expected);
 
-        res.cookie('BETA_ACCESS_TOKEN', token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-        });
-
-        return res.json({ success: true });
+    if (!passcodeOk) {
+        return res.status(401).json({ success: false, message: 'Invalid passcode' });
     }
 
-    return res.status(401).json({ success: false, message: 'Invalid passcode' });
+    // No fallback secret: config.ts fails fast at boot when IS_BETA=true without
+    // BETA_ACCESS_SECRET. This 500 is belt-and-braces for misconfigured environments.
+    const secret = process.env.BETA_ACCESS_SECRET;
+    if (!secret) {
+        return res.status(500).json({ success: false, message: 'BETA_ACCESS_SECRET not configured' });
+    }
+
+    const token = jwt.sign({ access: true }, secret, { expiresIn: '7d' });
+
+    res.cookie('BETA_ACCESS_TOKEN', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
+    return res.json({ success: true });
 });
 
 // Routes
@@ -145,6 +203,8 @@ if (process.env.NODE_ENV === 'production') {
             { from: /^\/elections$/, to: '/elections.html' },
             { from: /^\/gallery$/, to: '/gallery.html' },
             { from: /^\/gallery-manager$/, to: '/gallery-manager.html' },
+            { from: /^\/social-agm$/, to: '/social-post.html' },
+            { from: /^\/dashboard\/social-post$/, to: '/social-post.html' },
             { from: /^\/beta-gate$/, to: '/beta-gate.html' },
             { from: /^\/verify$/, to: '/verify.html' },
             { from: /^\/verify\/.*$/, to: '/verify.html' }

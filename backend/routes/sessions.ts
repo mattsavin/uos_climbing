@@ -1,6 +1,7 @@
 import { standardDbResponse } from '../utils/response';
 import express from 'express';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { db } from '../db';
 import { authenticateToken, requireCommittee } from '../middleware/auth';
 import { SECRET_KEY } from '../config';
@@ -126,7 +127,7 @@ router.get('/ical/:calendarToken/all', (req, res) => {
 
 router.post('/', authenticateToken, requireCommittee, (req, res) => {
     const { title, type, date, capacity, location, requiredMembership, visibility, registrationVisibility } = req.body;
-    const id = 'sess_' + Date.now();
+    const id = 'sess_' + crypto.randomUUID();
     const eventVisibility = visibility === 'committee_only' ? 'committee_only' : 'all';
     const eventRegistrationVisibility = registrationVisibility === 'committee_only' ? 'committee_only' : 'all';
     getDefaultMembershipType((typeErr, defaultMembershipType) => {

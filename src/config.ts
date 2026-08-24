@@ -1,6 +1,7 @@
 /**
- * Central configuration for the USCC Web Application.
- * USCC is the climbing committee of the University of Sheffield Mountaineering and Climbing Club (USMCC).
+ * Central configuration for the USMC web application.
+ * Indoor & Competitions is the indoor and competition branch within
+ * University of Sheffield Mountaineering & Climbing Club (USMC).
  * This file contains data that is dynamically rendered across the site to avoid hardcoding.
  */
 
@@ -67,7 +68,7 @@ export const config = {
         { id: "basic", label: "Basic Membership (All Members)" },
         { id: "bouldering", label: "Bouldering Add-on" },
         { id: "comp_team", label: "Competition Team" },
-        { id: "joint", label: "Joint Membership (USCC + USMCC)" }
+        { id: "joint", label: "Joint Membership (Indoor & Competitions + Mountaineering)" }
     ],
 
     // Membership Add-on Options (for Dashboard additional membership requests)
@@ -75,7 +76,7 @@ export const config = {
         { id: "basic", label: "Basic Membership" },
         { id: "bouldering", label: "Bouldering Add-on" },
         { id: "comp_team", label: "Competition Team" },
-        { id: "joint", label: "Joint Membership (USCC + USMCC)" }
+        { id: "joint", label: "Joint Membership (Indoor & Competitions + Mountaineering)" }
     ],
 
     // Calendar Filters
@@ -101,8 +102,8 @@ export const config = {
     // FAQ Data
     faqs: [
         {
-            question: "What is USMCC and how does USCC fit in?",
-            answer: "USMCC stands for the University of Sheffield Mountaineering and Climbing Club — the renamed version of the former USMC. USCC is the climbing club within USMCC, with its own committee, membership, and programme. A joint membership is also available if you want to be part of both sides of the club."
+            question: "What is USMC and how does Indoor & Competitions fit in?",
+            answer: "USMC is University of Sheffield Mountaineering & Climbing Club. Indoor & Competitions is the indoor-climbing and competition branch within USMC, with its own committee, membership pathways, and programme. A joint membership is available if you want activity across both Indoor & Competitions and the mountaineering side."
         },
         {
             question: "Do I need my own gear to start?",
@@ -110,7 +111,7 @@ export const config = {
         },
         {
             question: "How do I join the competition team?",
-            answer: "The comp team is open to USCC members. Keep an eye on our Instagram and schedule for training sessions and any trial announcements. You don't need to be an experienced competitor to get involved."
+            answer: "The comp team is open to USMC Indoor & Competitions members. Keep an eye on our Instagram and schedule for training sessions and any trial announcements. You don't need to be an experienced competitor to get involved."
         },
         {
             question: "Are memberships refundable?",
