@@ -39,6 +39,8 @@ async function initGallery() {
 
         const imgEl = document.createElement('img');
         imgEl.src = img.filepath;
+        imgEl.loading = 'lazy';
+        imgEl.decoding = 'async';
         imgEl.alt = img.caption || 'Club climbing photo';
         imgEl.className = 'w-full h-full object-cover transition-transform duration-700';
         imgEl.style.objectPosition = `${normalizeCrop(img.galleryLandscapeX, 50)}% ${normalizeCrop(img.galleryLandscapeY, 50)}%`;

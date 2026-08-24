@@ -9,12 +9,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const ROOT_ADMIN_EMAIL = (process.env.ROOT_ADMIN_EMAIL || 'committee@sheffieldclimbing.org').toLowerCase();
 
+// DB_PATH overrides the location everywhere except the test suite (which always
+// uses :memory:) — enables prod-mode smoke tests outside containers.
 const dbPath =
     process.env.NODE_ENV === 'test'
         ? ':memory:'
-        : process.env.NODE_ENV === 'production'
-          ? '/data/uscc.db'
-          : join(__dirname, 'uscc.db');
+        : process.env.DB_PATH ||
+          (process.env.NODE_ENV === 'production' ? '/data/uscc.db' : join(__dirname, 'uscc.db'));
 export const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('Error opening database', err.message);
@@ -26,6 +27,11 @@ export const db = new sqlite3.Database(dbPath, (err) => {
 
 function initializeDatabase() {
     db.serialize(() => {
+        // Write-Ahead Logging: readers no longer block the writer (and vice versa)
+        // under concurrent booking traffic. Safe with our backup script, which uses
+        // SQLite's online backup API.
+        db.run('PRAGMA journal_mode = WAL;');
+
         // Users Table
         db.run(`CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,

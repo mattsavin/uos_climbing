@@ -29,6 +29,10 @@ RUN mkdir -p /data
 # Expose port
 EXPOSE 3000
 
+# Container self-reports health via the /api/health probe
+HEALTHCHECK --interval=30s --timeout=5s --start-period=25s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:3000/api/health || exit 1
+
 # Set production environment
 ENV NODE_ENV=production
 ENV PORT=3000

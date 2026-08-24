@@ -29,8 +29,9 @@ export const EMAIL_FROM = process.env.EMAIL_FROM || '';
 
 // Uploads Directory Configuration
 export const UPLOAD_BASE_DIR =
-    process.env.NODE_ENV === 'production'
+    process.env.UPLOAD_BASE_DIR ||
+    (process.env.NODE_ENV === 'production'
         ? '/data/uploads'
         : process.env.NODE_ENV === 'test'
           ? path.join(os.tmpdir(), 'uos_test_uploads')
-          : path.join(process.cwd(), 'uploads');
+          : path.join(process.cwd(), 'uploads'));

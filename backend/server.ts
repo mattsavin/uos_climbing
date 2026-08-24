@@ -17,7 +17,6 @@ import verifyRoutes from './routes/verify';
 import galleryRoutes from './routes/gallery';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import history from 'connect-history-api-fallback';
 import cookieParser from 'cookie-parser';
 import crypto from 'crypto';
 import { betaGate } from './middleware/beta-gate';
@@ -88,6 +87,34 @@ app.use(globalLimiter);
 
 app.use(express.json());
 app.use(cookieParser());
+
+// Liveness/readiness probe: verifies the process can reach its database.
+// Public (allow-listed through the beta gate) so uptime monitors and Docker
+// HEALTHCHECK work regardless of gate state.
+app.get('/api/health', (_req, res) => {
+    // Fail-safe: if the database never opens (e.g. unwritable volume), sqlite3
+    // queues operations without invoking callbacks — answer 503 rather than hang,
+    // because a health probe that hangs defeats its own purpose.
+    let settled = false;
+    const timeout = setTimeout(() => {
+        if (!settled) {
+            settled = true;
+            res.status(503).json({ ok: false, db: 'timeout' });
+        }
+    }, 2000);
+    timeout.unref?.();
+
+    db.get('SELECT 1', [], err => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        if (err) {
+            console.error('Health check DB failure:', err.message);
+            return res.status(503).json({ ok: false, db: false });
+        }
+        res.json({ ok: true, db: true, uptime: Math.round(process.uptime()) });
+    });
+});
 
 // Collect Content-Security-Policy violation reports from browsers.
 // Browsers POST application/csp-report bodies here when a directive trips,
@@ -182,48 +209,64 @@ if (process.env.NODE_ENV === 'production') {
     console.log(`Serving static files from: ${distPath}`);
     app.use(express.static(distPath));
 
-    // 2. Fallback for SPA routing - handles page refreshes on sub-routes
-    app.use(
-        history({
-            rewrites: [
-                // Ensure requests to '/api' aren't intercepted by history
-                {
-                    from: /^\/api\/.*$/,
-                    to: function (context: any) {
-                        return context.parsedUrl?.pathname || '/';
-                    }
-                },
+    // Single source of truth for clean page routes on this server.
+    // (vite.config.ts keeps its own dev-server copy — see backlog note.)
+    const PAGE_ROUTES: Record<string, string> = {
+        '/': 'index.html',
+        '/about': 'about.html',
+        '/competitions': 'competitions.html',
+        '/schedule': 'schedule.html',
+        '/dashboard': 'dashboard.html',
+        '/dashboard/elections': 'elections.html',
+        '/dashboard/gear': 'gear.html',
+        '/dashboard/admin': 'admin.html',
+        '/dashboard/gallery-manager': 'gallery-manager.html',
+        '/dashboard/social-post': 'social-post.html',
+        '/beginners': 'beginners.html',
+        '/walls': 'walls.html',
+        '/faq': 'faq.html',
+        '/gear': 'gear.html',
+        '/login': 'login.html',
+        '/elections': 'elections.html',
+        '/gallery': 'gallery.html',
+        '/gallery-manager': 'gallery-manager.html',
+        '/social-agm': 'social-post.html',
+        '/beta-gate': 'beta-gate.html',
+        '/verify': 'verify.html'
+    };
 
-                // Re-route Vite's HTML entrypoints
-                { from: /^\/dashboard$/, to: '/dashboard.html' },
-                { from: /^\/dashboard\/$/, to: '/dashboard.html' },
-                { from: /^\/dashboard\/elections$/, to: '/elections.html' },
-                { from: /^\/dashboard\/gear$/, to: '/gear.html' },
-                { from: /^\/dashboard\/admin$/, to: '/admin.html' },
-                { from: /^\/dashboard\/gallery-manager$/, to: '/gallery-manager.html' },
-                { from: /^\/about$/, to: '/about.html' },
-                { from: /^\/schedule$/, to: '/schedule.html' },
-                { from: /^\/competitions$/, to: '/competitions.html' },
-                { from: /^\/beginners$/, to: '/beginners.html' },
-                { from: /^\/walls$/, to: '/walls.html' },
-                { from: /^\/faq$/, to: '/faq.html' },
-                { from: /^\/gear$/, to: '/gear.html' },
-                { from: /^\/admin$/, to: '/admin.html' },
-                { from: /^\/login$/, to: '/login.html' },
-                { from: /^\/elections$/, to: '/elections.html' },
-                { from: /^\/gallery$/, to: '/gallery.html' },
-                { from: /^\/gallery-manager$/, to: '/gallery-manager.html' },
-                { from: /^\/social-agm$/, to: '/social-post.html' },
-                { from: /^\/dashboard\/social-post$/, to: '/social-post.html' },
-                { from: /^\/beta-gate$/, to: '/beta-gate.html' },
-                { from: /^\/verify$/, to: '/verify.html' },
-                { from: /^\/verify\/.*$/, to: '/verify.html' }
-            ]
-        })
-    );
+    // 2. Page routing: known clean routes serve their entry files directly.
+    //    (Replaces connect-history-api-fallback: an explicit map is typed,
+    //    testable, and lets unknown URLs fall through to the branded 404
+    //    instead of soft-404ing as index.html.)
+    app.use((req, res, next) => {
+        if (req.method !== 'GET' || req.path.startsWith('/api')) return next();
+        const pathname = req.path.replace(/\/+$/, '') || '/';
+        if (pathname === '/') {
+            return res.sendFile(path.join(distPath, 'index.html'));
+        }
+        const page = PAGE_ROUTES[pathname];
+        if (page) {
+            return res.sendFile(path.join(distPath, page));
+        }
+        if (pathname.startsWith('/verify/')) {
+            return res.sendFile(path.join(distPath, 'verify.html'));
+        }
+        next(); // unknown -> terminal 404 below
+    });
 
-    // 3. Serve static files again AFTER history fallback has rewritten the URL
-    app.use(express.static(distPath));
+
+    // 4. Terminal handler: everything still unmatched is a genuine 404.
+    //    (Previously unknown pages silently served index.html — soft-404s.)
+    app.use((req, res) => {
+        if (req.path.startsWith('/api')) {
+            return res.status(404).json({ error: 'Not found' });
+        }
+        if (String(req.headers.accept || '').includes('text/html')) {
+            return res.status(404).sendFile(path.join(distPath, '404.html'));
+        }
+        res.status(404).json({ error: 'Not found' });
+    });
 } else {
     // Also handle beta-gate in dev for testing
     app.get('/beta-gate', (req, res) => {

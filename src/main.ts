@@ -53,7 +53,7 @@ const createNavbar = () => `
       <div class="flex items-center justify-between h-20">
         <div class="flex-shrink-0">
           <a href="/" class="flex items-center gap-4">
-            <img src="/climbing%20team%20logo.png" alt="USMC Logo" class="h-14 md:h-16 w-auto drop-shadow-md" />
+            <img src="/logo-mark.png" alt="USMC Logo" class="h-14 md:h-16 w-auto drop-shadow-md" />
             <div class="flex flex-col">
               <span class="text-xl md:text-2xl font-black tracking-tighter text-white leading-none">USMC</span>
               <span class="text-[0.5rem] md:text-[0.6rem] font-bold tracking-widest text-brand-gold uppercase mt-1">Indoor & Competitions</span>
