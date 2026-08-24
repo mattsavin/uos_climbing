@@ -72,6 +72,9 @@ jobs:
               echo "FATAL: pre-deploy backup failed - aborting deploy to protect data"
               exit 1
             fi
+            # Keep an instant-rollback reference to the currently running image.
+            # '|| true' guards a first-ever deploy where no image exists yet.
+            docker tag uos_climbing:latest uos_climbing:last-known-good || true
             docker build -t uos_climbing .
             docker stop uos_climbing || true
             docker rm uos_climbing || true
@@ -118,6 +121,7 @@ jobs:
               echo "FATAL: pre-deploy backup failed - aborting deploy to protect data"
               exit 1
             fi
+            docker tag uos_climbing_beta:latest uos_climbing_beta:last-known-good || true
             docker build -t uos_climbing_beta .
             docker stop uos_climbing_beta || true
             docker rm uos_climbing_beta || true
