@@ -3,14 +3,7 @@ import express from 'express';
 import { db } from '../db';
 import { authenticateToken, requireCommittee } from '../middleware/auth';
 import { sendEmail } from '../services/email';
-import {
-    ROOT_ADMIN_EMAIL,
-    runDb,
-    getDb,
-    isRootAdmin,
-    parseSuRoster,
-    newMembershipRowId
-} from './admin.helpers';
+import { ROOT_ADMIN_EMAIL, runDb, getDb, isRootAdmin, parseSuRoster, newMembershipRowId } from './admin.helpers';
 import { getMembershipLabel, getDefaultMembershipType } from '../services/membership';
 
 const router = express.Router();
@@ -97,13 +90,7 @@ router.post('/memberships/import-su-roster', authenticateToken, requireCommittee
         const raw = (req.body?.raw || '').toString();
         if (!raw.trim()) return res.status(400).json({ error: 'No roster text provided' });
 
-        const {
-            lines,
-            parsed,
-            skipped,
-            yearParsedFromSubscription,
-            yearFallbackUsed
-        } = parseSuRoster(raw);
+        const { lines, parsed, skipped, yearParsedFromSubscription, yearFallbackUsed } = parseSuRoster(raw);
 
         if (!lines.length) return res.status(400).json({ error: 'No valid lines found' });
 
@@ -120,16 +107,16 @@ router.post('/memberships/import-su-roster', authenticateToken, requireCommittee
         let preapprovedOnly = 0;
 
         for (const row of parsed) {
-            const existingUser: any = await getDb(
-                'SELECT id FROM users WHERE registrationNumber = ?',
-                [row.registrationNumber]
-            );
+            const existingUser: any = await getDb('SELECT id FROM users WHERE registrationNumber = ?', [
+                row.registrationNumber
+            ]);
 
             if (existingUser?.id) {
-                await runDb(
-                    'UPDATE users SET membershipStatus = ?, membershipYear = ? WHERE id = ?',
-                    ['active', row.membershipYear, existingUser.id]
-                );
+                await runDb('UPDATE users SET membershipStatus = ?, membershipYear = ? WHERE id = ?', [
+                    'active',
+                    row.membershipYear,
+                    existingUser.id
+                ]);
 
                 await runDb(
                     'UPDATE user_memberships SET status = ? WHERE userId = ? AND membershipYear = ? AND status = ?',
@@ -195,15 +182,18 @@ router.post('/users/:id/approve', authenticateToken, requireCommittee, (req, res
                 if (userRow) {
                     const userId = req.params.id;
                     const year = userRow.membershipYear;
-                    db.get('SELECT id FROM user_memberships WHERE userId = ? AND membershipType = ? AND membershipYear = ?',
+                    db.get(
+                        'SELECT id FROM user_memberships WHERE userId = ? AND membershipType = ? AND membershipYear = ?',
                         [userId, defaultMembershipType, year],
                         (err3, existing: any) => {
                             if (existing) {
                                 db.run('UPDATE user_memberships SET status = ? WHERE id = ?', ['active', existing.id]);
                             } else {
                                 const crypto = require('crypto');
-                                db.run('INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)',
-                                    ['umem_' + crypto.randomUUID(), userId, defaultMembershipType, 'active', year]);
+                                db.run(
+                                    'INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)',
+                                    ['umem_' + crypto.randomUUID(), userId, defaultMembershipType, 'active', year]
+                                );
                             }
                         }
                     );
@@ -220,7 +210,7 @@ router.post('/users/:id/approve', authenticateToken, requireCommittee, (req, res
                     'Membership Approved',
                     `Hi ${displayName},\n\nYour membership for University of Sheffield Mountaineering & Climbing Club (USMC) has been approved.`,
                     `<p>Hi ${displayName},</p><p>Your membership for University of Sheffield Mountaineering &amp; Climbing Club (USMC) has been approved.</p>`
-                ).catch((e: any) => console.error("Failed to send approval email:", e));
+                ).catch((e: any) => console.error('Failed to send approval email:', e));
             }
         });
 
@@ -236,8 +226,10 @@ router.post('/users/:id/reject', authenticateToken, requireCommittee, (req, res)
             if (typeErr || !defaultMembershipType) return;
             db.get('SELECT membershipYear FROM users WHERE id = ?', [req.params.id], (err2, userRow: any) => {
                 if (userRow) {
-                    db.run('UPDATE user_memberships SET status = ? WHERE userId = ? AND membershipType = ? AND membershipYear = ?',
-                        ['rejected', req.params.id, defaultMembershipType, userRow.membershipYear]);
+                    db.run(
+                        'UPDATE user_memberships SET status = ? WHERE userId = ? AND membershipType = ? AND membershipYear = ?',
+                        ['rejected', req.params.id, defaultMembershipType, userRow.membershipYear]
+                    );
                 }
             });
         });
@@ -251,7 +243,7 @@ router.post('/users/:id/reject', authenticateToken, requireCommittee, (req, res)
                     'Membership Rejected',
                     `Hi ${displayName},\n\nUnfortunately, your membership for University of Sheffield Mountaineering & Climbing Club (USMC) has been rejected.`,
                     `<p>Hi ${displayName},</p><p>Unfortunately, your membership for University of Sheffield Mountaineering &amp; Climbing Club (USMC) has been rejected.</p>`
-                ).catch((e: any) => console.error("Failed to send rejection email:", e));
+                ).catch((e: any) => console.error('Failed to send rejection email:', e));
             }
         });
 
@@ -276,12 +268,16 @@ router.post('/users/:id/demote', authenticateToken, requireCommittee, (req: any,
             return res.status(403).json({ error: 'Cannot demote the Root Admin' });
         }
 
-        db.run('UPDATE users SET role = ?, committeeRole = ? WHERE id = ?', ['member', null, req.params.id], function (err) {
-            if (err) return res.status(500).json({ error: 'Database error' });
-            // Also clear all committee roles from the junction table
-            db.run('DELETE FROM committee_roles WHERE userId = ?', [req.params.id]);
-            res.json({ success: true });
-        });
+        db.run(
+            'UPDATE users SET role = ?, committeeRole = ? WHERE id = ?',
+            ['member', null, req.params.id],
+            function (err) {
+                if (err) return res.status(500).json({ error: 'Database error' });
+                // Also clear all committee roles from the junction table
+                db.run('DELETE FROM committee_roles WHERE userId = ?', [req.params.id]);
+                res.json({ success: true });
+            }
+        );
     });
 });
 
@@ -299,9 +295,9 @@ router.post('/users/:id/committee-role', authenticateToken, requireCommittee, (r
     db.all('SELECT id FROM available_roles', [], (err, validRolesRows: any[]) => {
         if (err) return res.status(500).json({ error: 'Database error' });
 
-        const validRoles = (validRolesRows || []).map(r => r.id);
+        const validRoles = (validRolesRows || []).map((r) => r.id);
 
-        const invalidRole = roles.find(r => !validRoles.includes(r));
+        const invalidRole = roles.find((r) => !validRoles.includes(r));
         if (invalidRole) {
             return res.status(400).json({ error: 'Invalid committee role' });
         }
@@ -320,7 +316,7 @@ router.post('/users/:id/committee-role', authenticateToken, requireCommittee, (r
                 }
 
                 const stmt = db.prepare('INSERT OR IGNORE INTO committee_roles (userId, role) VALUES (?, ?)');
-                roles.forEach(r => stmt.run([req.params.id, r]));
+                roles.forEach((r) => stmt.run([req.params.id, r]));
                 stmt.finalize((err3: any) => {
                     if (err3) return res.status(500).json({ error: 'Database error' });
                     res.json({ success: true });
@@ -486,7 +482,11 @@ router.delete('/committee-roles/:id', authenticateToken, requireCommittee, (req:
         if (err) return res.status(500).json({ error: 'Database error' });
 
         if (row && row.count > 0) {
-            return res.status(400).json({ error: 'Cannot delete a role that is assigned to users. Remove the role from all users first.' });
+            return res
+                .status(400)
+                .json({
+                    error: 'Cannot delete a role that is assigned to users. Remove the role from all users first.'
+                });
         }
 
         db.run('DELETE FROM available_roles WHERE id = ?', [req.params.id], function (err2) {

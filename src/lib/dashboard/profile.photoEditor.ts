@@ -39,8 +39,8 @@ export function initProfilePhotoCropEditor() {
 
     const clampPan = () => {
         const radius = getCircleRadius();
-        const halfImgW = cropImage.naturalWidth * getScale() / 2;
-        const halfImgH = cropImage.naturalHeight * getScale() / 2;
+        const halfImgW = (cropImage.naturalWidth * getScale()) / 2;
+        const halfImgH = (cropImage.naturalHeight * getScale()) / 2;
         const maxTx = Math.max(0, halfImgW - radius);
         const maxTy = Math.max(0, halfImgH - radius);
         tx = Math.min(maxTx, Math.max(-maxTx, tx));
@@ -49,8 +49,8 @@ export function initProfilePhotoCropEditor() {
 
     const applyTransform = () => {
         const scale = getScale();
-        cropImage.style.left = `${stageSize / 2 - cropImage.naturalWidth * scale / 2 + tx}px`;
-        cropImage.style.top = `${stageSize / 2 - cropImage.naturalHeight * scale / 2 + ty}px`;
+        cropImage.style.left = `${stageSize / 2 - (cropImage.naturalWidth * scale) / 2 + tx}px`;
+        cropImage.style.top = `${stageSize / 2 - (cropImage.naturalHeight * scale) / 2 + ty}px`;
         cropImage.style.width = `${cropImage.naturalWidth * scale}px`;
         cropImage.style.height = `${cropImage.naturalHeight * scale}px`;
     };
@@ -67,9 +67,11 @@ export function initProfilePhotoCropEditor() {
         return true;
     };
 
-    cropImage.addEventListener('load', () => requestAnimationFrame(() => {
-        if (initImagePosition()) saveBtn.disabled = false;
-    }));
+    cropImage.addEventListener('load', () =>
+        requestAnimationFrame(() => {
+            if (initImagePosition()) saveBtn.disabled = false;
+        })
+    );
 
     zoomInput.addEventListener('input', () => {
         userZoom = parseFloat(zoomInput.value);
@@ -81,9 +83,13 @@ export function initProfilePhotoCropEditor() {
     stage.style.touchAction = 'none';
     const activePointers = new Map<number, { x: number; y: number }>();
     let isDragging = false;
-    let dragStartX = 0, dragStartY = 0, dragStartTx = 0, dragStartTy = 0;
+    let dragStartX = 0,
+        dragStartY = 0,
+        dragStartTx = 0,
+        dragStartTy = 0;
     let isPinching = false;
-    let pinchStartDist = 0, pinchStartZoom = 1;
+    let pinchStartDist = 0,
+        pinchStartZoom = 1;
 
     stage.addEventListener('pointerdown', (e: PointerEvent) => {
         if (e.button !== 0) return;
@@ -148,13 +154,17 @@ export function initProfilePhotoCropEditor() {
         finishPointer(e);
     });
 
-    stage.addEventListener('wheel', (e: WheelEvent) => {
-        e.preventDefault();
-        userZoom = Math.min(5, Math.max(1, userZoom - e.deltaY * 0.003));
-        zoomInput.value = String(userZoom);
-        clampPan();
-        applyTransform();
-    }, { passive: false });
+    stage.addEventListener(
+        'wheel',
+        (e: WheelEvent) => {
+            e.preventDefault();
+            userZoom = Math.min(5, Math.max(1, userZoom - e.deltaY * 0.003));
+            zoomInput.value = String(userZoom);
+            clampPan();
+            applyTransform();
+        },
+        { passive: false }
+    );
 
     const close = () => {
         modal.classList.add('hidden');
@@ -169,36 +179,45 @@ export function initProfilePhotoCropEditor() {
         stage.style.cursor = 'grab';
     };
 
-    [cancelBtn, cancelXBtn, backdrop].forEach(el => {
+    [cancelBtn, cancelXBtn, backdrop].forEach((el) => {
         if (el) el.addEventListener('click', close);
     });
 
-    const exportCrop = (): Promise<Blob> => new Promise((resolve, reject) => {
-        if (!cropImage.complete || cropImage.naturalWidth === 0 || stageSize === 0) {
-            return reject(new Error('Image not ready'));
-        }
-        const outputSize = 500;
-        const canvas = document.createElement('canvas');
-        canvas.width = outputSize;
-        canvas.height = outputSize;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return reject(new Error('Canvas not available'));
+    const exportCrop = (): Promise<Blob> =>
+        new Promise((resolve, reject) => {
+            if (!cropImage.complete || cropImage.naturalWidth === 0 || stageSize === 0) {
+                return reject(new Error('Image not ready'));
+            }
+            const outputSize = 500;
+            const canvas = document.createElement('canvas');
+            canvas.width = outputSize;
+            canvas.height = outputSize;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return reject(new Error('Canvas not available'));
 
-        const scale = getScale();
-        const radius = getCircleRadius();
-        const imgLeft = stageSize / 2 - cropImage.naturalWidth * scale / 2 + tx;
-        const imgTop = stageSize / 2 - cropImage.naturalHeight * scale / 2 + ty;
+            const scale = getScale();
+            const radius = getCircleRadius();
+            const imgLeft = stageSize / 2 - (cropImage.naturalWidth * scale) / 2 + tx;
+            const imgTop = stageSize / 2 - (cropImage.naturalHeight * scale) / 2 + ty;
 
-        // Crop box in stage coords: centered, diameter = radius * 2
-        const natLeft = (stageSize / 2 - radius - imgLeft) / scale;
-        const natTop = (stageSize / 2 - radius - imgTop) / scale;
-        const natSize = (radius * 2) / scale;
+            // Crop box in stage coords: centered, diameter = radius * 2
+            const natLeft = (stageSize / 2 - radius - imgLeft) / scale;
+            const natTop = (stageSize / 2 - radius - imgTop) / scale;
+            const natSize = (radius * 2) / scale;
 
-        ctx.drawImage(cropImage, natLeft, natTop, natSize, natSize, 0, 0, outputSize, outputSize);
-        canvas.toBlob(blob => {
-            blob ? resolve(blob) : reject(new Error('Failed to export crop'));
-        }, 'image/jpeg', 0.92);
-    });
+            ctx.drawImage(cropImage, natLeft, natTop, natSize, natSize, 0, 0, outputSize, outputSize);
+            canvas.toBlob(
+                (blob) => {
+                    if (blob) {
+                        resolve(blob);
+                    } else {
+                        reject(new Error('Failed to export crop'));
+                    }
+                },
+                'image/jpeg',
+                0.92
+            );
+        });
 
     saveBtn.addEventListener('click', async () => {
         const originalText = saveBtn.textContent;
@@ -246,7 +265,11 @@ export function initProfilePhotoCropEditor() {
         });
     }
 
-    const open = (file: File, uploadFn: (blob: Blob) => Promise<string>, successCallback?: (photoPath: string) => void) => {
+    const open = (
+        file: File,
+        uploadFn: (blob: Blob) => Promise<string>,
+        successCallback?: (photoPath: string) => void
+    ) => {
         currentUploadFn = uploadFn;
         onSuccess = successCallback ?? null;
         if (cropImage.src.startsWith('blob:')) URL.revokeObjectURL(cropImage.src);

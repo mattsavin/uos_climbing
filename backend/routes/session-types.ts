@@ -20,19 +20,15 @@ router.post('/', authenticateToken, requireCommittee, (req, res) => {
 
     const id = label; // Using label as ID for simplicity and backward compatibility
 
-    db.run(
-        'INSERT INTO session_types (id, label) VALUES (?, ?)',
-        [id, label],
-        function (err) {
-            if (err) {
-                if ((err as any).code === 'SQLITE_CONSTRAINT') {
-                    return res.status(400).json({ error: 'Session type already exists' });
-                }
-                return res.status(500).json({ error: 'Database error' });
+    db.run('INSERT INTO session_types (id, label) VALUES (?, ?)', [id, label], function (err) {
+        if (err) {
+            if ((err as any).code === 'SQLITE_CONSTRAINT') {
+                return res.status(400).json({ error: 'Session type already exists' });
             }
-            res.json({ id, label });
+            return res.status(500).json({ error: 'Database error' });
         }
-    );
+        res.json({ id, label });
+    });
 });
 
 // PUT update session type (committee only)
@@ -40,14 +36,10 @@ router.put('/:id', authenticateToken, requireCommittee, (req, res) => {
     const { label } = req.body;
     if (!label) return res.status(400).json({ error: 'Label is required' });
 
-    db.run(
-        'UPDATE session_types SET label = ? WHERE id = ?',
-        [label, req.params.id],
-        function (err) {
-            if (err) return res.status(500).json({ error: 'Database error' });
-            res.json({ id: req.params.id, label });
-        }
-    );
+    db.run('UPDATE session_types SET label = ? WHERE id = ?', [label, req.params.id], function (err) {
+        if (err) return res.status(500).json({ error: 'Database error' });
+        res.json({ id: req.params.id, label });
+    });
 });
 
 // DELETE session type (committee only)

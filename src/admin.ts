@@ -42,7 +42,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const isCommittee = user.role === 'committee' || !!user.committeeRole || (Array.isArray(user.committeeRoles) && user.committeeRoles.length > 0);
+        const isCommittee =
+            user.role === 'committee' ||
+            !!user.committeeRole ||
+            (Array.isArray(user.committeeRoles) && user.committeeRoles.length > 0);
 
         // Boot non-committee users back to dashboard
         if (!isCommittee && user.email !== 'committee@sheffieldclimbing.org') {
@@ -64,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const prevText = newBtn.textContent || 'Send Test Email';
                 newBtn.textContent = 'Sending...';
                 try {
-                    const result = await adminApi.sendTestEmail() as any;
+                    const result = (await adminApi.sendTestEmail()) as any;
                     if (result?.sent) {
                         showToast(`Test email sent to ${result.target}`, 'success');
                     } else {

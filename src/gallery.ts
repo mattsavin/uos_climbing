@@ -49,7 +49,8 @@ async function initGallery() {
 
         if (img.caption) {
             const captionDiv = document.createElement('div');
-            captionDiv.className = 'absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/80 to-transparent p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300';
+            captionDiv.className =
+                'absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/80 to-transparent p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300';
 
             const captionP = document.createElement('p');
             captionP.className = 'text-white text-sm font-bold text-center';
@@ -69,7 +70,7 @@ async function initGallery() {
     const closeBtn = document.getElementById('close-image-modal');
 
     // Open Modal
-    document.querySelectorAll('.gallery-item').forEach(item => {
+    document.querySelectorAll('.gallery-item').forEach((item) => {
         item.addEventListener('click', (e) => {
             const el = e.currentTarget as HTMLElement;
             const src = el.getAttribute('data-src');

@@ -1,7 +1,6 @@
 import { authState, committeeApi, adminApi } from '../../auth';
 import { showToast } from '../../utils';
 
-
 type PhotoCropEditor = {
     open: (file: File, uploadFn: (blob: Blob) => Promise<string>, onSuccess?: (photoPath: string) => void) => void;
 };
@@ -21,10 +20,11 @@ export function initCommitteeProfileHandlers(photoCropEditor?: PhotoCropEditor |
     const committeeProfileCardEl = committeeProfileCard as HTMLElement;
 
     function isCommitteeUser(user: any) {
-        return !!user && (
-            user.role === 'committee'
-            || !!user.committeeRole
-            || (Array.isArray(user.committeeRoles) && user.committeeRoles.length > 0)
+        return (
+            !!user &&
+            (user.role === 'committee' ||
+                !!user.committeeRole ||
+                (Array.isArray(user.committeeRoles) && user.committeeRoles.length > 0))
         );
     }
 
@@ -143,7 +143,7 @@ export async function initCsvExportModal() {
             const membershipTypes = await adminApi.getMembershipTypes();
             if (typeSelect) {
                 typeSelect.innerHTML = '<option value="">-- Select a type --</option>';
-                membershipTypes.forEach(type => {
+                membershipTypes.forEach((type) => {
                     const option = document.createElement('option');
                     option.value = type.id;
                     option.textContent = type.label;

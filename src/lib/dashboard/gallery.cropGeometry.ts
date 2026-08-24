@@ -1,7 +1,14 @@
 import { CROP_CONTEXT_CONFIG, clamp, getCropBounds } from './gallery.helpers';
 import type { CropContextKey } from './gallery.helpers';
 
-export function getBoxMetrics(width: number, height: number, aspect: number, boxScale: number, centerX: number, centerY: number) {
+export function getBoxMetrics(
+    width: number,
+    height: number,
+    aspect: number,
+    boxScale: number,
+    centerX: number,
+    centerY: number
+) {
     if (width / height >= aspect) {
         const boxHeight = height * boxScale;
         const boxWidth = boxHeight * aspect;
@@ -72,21 +79,21 @@ export function getEditorGeometry(input: {
     draftBoxCenterX: number;
     draftBoxCenterY: number;
 }) {
-    const {
-        activeCropContext,
-        cropStage,
-        cropImage,
-        draftZoom,
-        draftBoxScale,
-        draftBoxCenterX,
-        draftBoxCenterY
-    } = input;
+    const { activeCropContext, cropStage, cropImage, draftZoom, draftBoxScale, draftBoxCenterX, draftBoxCenterY } =
+        input;
 
     if (!activeCropContext || !cropStage || !cropImage) return null;
     const config = CROP_CONTEXT_CONFIG[activeCropContext];
     const stageRect = cropStage.getBoundingClientRect();
     const viewport = getImageViewport(stageRect, cropImage.naturalWidth, cropImage.naturalHeight);
     const bounds = getCropBounds(cropImage.naturalWidth, cropImage.naturalHeight, config.aspect, draftZoom);
-    const metrics = getBoxMetrics(viewport.width, viewport.height, config.aspect, clamp(draftBoxScale, 1 / 3, 1), draftBoxCenterX, draftBoxCenterY);
+    const metrics = getBoxMetrics(
+        viewport.width,
+        viewport.height,
+        config.aspect,
+        clamp(draftBoxScale, 1 / 3, 1),
+        draftBoxCenterX,
+        draftBoxCenterY
+    );
     return { stageRect, viewport, bounds, metrics };
 }

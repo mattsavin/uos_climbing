@@ -25,7 +25,10 @@ const diskStorage = multer.diskStorage({
         cb(null, os.tmpdir());
     },
     filename: (req, file, cb) => {
-        cb(null, 'tmp-upload-' + Date.now() + '-' + crypto.randomBytes(4).toString('hex') + path.extname(file.originalname));
+        cb(
+            null,
+            'tmp-upload-' + Date.now() + '-' + crypto.randomBytes(4).toString('hex') + path.extname(file.originalname)
+        );
     }
 });
 

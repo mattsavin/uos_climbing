@@ -17,8 +17,8 @@ export function showToast(message: string, type: 'success' | 'error' | 'info' = 
     toast.id = 'global-toast';
     toast.className = `fixed top-6 left-1/2 -translate-x-1/2 z-[9999] glass-card px-6 py-4 flex items-center gap-3 shadow-2xl transition-all duration-300 transform translate-y-[-100%] opacity-0`;
 
-    let icon = '';
-    let textColor = '';
+    let icon: string;
+    let textColor: string;
 
     if (type === 'error') {
         icon = `<svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
@@ -64,7 +64,8 @@ export function showConfirmModal(message: string): Promise<boolean> {
         backdrop.className = 'absolute inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity opacity-0';
 
         const modal = document.createElement('div');
-        modal.className = 'glass-card border border-white/10 p-6 md:p-8 max-w-sm w-full mx-4 shadow-2xl transform scale-95 opacity-0 transition-all duration-300 relative z-10';
+        modal.className =
+            'glass-card border border-white/10 p-6 md:p-8 max-w-sm w-full mx-4 shadow-2xl transform scale-95 opacity-0 transition-all duration-300 relative z-10';
 
         modal.innerHTML = `
             <div class="flex items-start gap-4 mb-6">
@@ -120,7 +121,8 @@ export function showPromptModal(message: string, placeholder = ''): Promise<stri
         backdrop.className = 'absolute inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity opacity-0';
 
         const modal = document.createElement('div');
-        modal.className = 'glass-card border border-white/10 p-6 md:p-8 max-w-sm w-full mx-4 shadow-2xl transform scale-95 opacity-0 transition-all duration-300 relative z-10';
+        modal.className =
+            'glass-card border border-white/10 p-6 md:p-8 max-w-sm w-full mx-4 shadow-2xl transform scale-95 opacity-0 transition-all duration-300 relative z-10';
 
         modal.innerHTML = `
             <div class="mb-6">
@@ -166,11 +168,45 @@ export function showPromptModal(message: string, placeholder = ''): Promise<stri
 }
 export function getVerificationWord(): string {
     const words = [
-        'GRIPPED', 'CRUX', 'SEND', 'FLASH', 'DYNO', 'SMEAR', 'EDGING', 'MANTEL',
-        'JUG', 'SLOPER', 'CRIMP', 'POCKET', 'PINCH', 'CHALK', 'BELAY', 'BOLT',
-        'CARABINER', 'HARNESS', 'SLING', 'QUICKDRAW', 'PITCH', 'STANCE', 'ANCHOR',
-        'RAPPEL', 'ABSEIL', 'WHIPPER', 'FALL', 'SPOT', 'PAD', 'BOULDER', 'TRAVERSE',
-        'OVERHANG', 'SLAB', 'ARETE', 'DIEDRE', 'CHIMNEY', 'JAM', 'LOCK', 'ROPE'
+        'GRIPPED',
+        'CRUX',
+        'SEND',
+        'FLASH',
+        'DYNO',
+        'SMEAR',
+        'EDGING',
+        'MANTEL',
+        'JUG',
+        'SLOPER',
+        'CRIMP',
+        'POCKET',
+        'PINCH',
+        'CHALK',
+        'BELAY',
+        'BOLT',
+        'CARABINER',
+        'HARNESS',
+        'SLING',
+        'QUICKDRAW',
+        'PITCH',
+        'STANCE',
+        'ANCHOR',
+        'RAPPEL',
+        'ABSEIL',
+        'WHIPPER',
+        'FALL',
+        'SPOT',
+        'PAD',
+        'BOULDER',
+        'TRAVERSE',
+        'OVERHANG',
+        'SLAB',
+        'ARETE',
+        'DIEDRE',
+        'CHIMNEY',
+        'JAM',
+        'LOCK',
+        'ROPE'
     ];
 
     const today = new Date();
@@ -180,7 +216,7 @@ export function getVerificationWord(): string {
     let hash = 0;
     for (let i = 0; i < dateStr.length; i++) {
         const char = dateStr.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
+        hash = (hash << 5) - hash + char;
         hash = hash & hash; // Convert to 32bit integer
     }
 

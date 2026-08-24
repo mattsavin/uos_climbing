@@ -27,19 +27,15 @@ router.post('/', authenticateToken, requireCommittee, (req, res) => {
     if (!label) return res.status(400).json({ error: 'Label is required' });
     if (!id) return res.status(400).json({ error: 'Invalid membership type id' });
 
-    db.run(
-        'INSERT INTO membership_types (id, label) VALUES (?, ?)',
-        [id, label],
-        function (err) {
-            if (err) {
-                if ((err as any).code === 'SQLITE_CONSTRAINT') {
-                    return res.status(400).json({ error: 'Membership type already exists' });
-                }
-                return res.status(500).json({ error: 'Database error' });
+    db.run('INSERT INTO membership_types (id, label) VALUES (?, ?)', [id, label], function (err) {
+        if (err) {
+            if ((err as any).code === 'SQLITE_CONSTRAINT') {
+                return res.status(400).json({ error: 'Membership type already exists' });
             }
-            res.json({ id, label });
+            return res.status(500).json({ error: 'Database error' });
         }
-    );
+        res.json({ id, label });
+    });
 });
 
 router.put('/:id', authenticateToken, requireCommittee, (req, res) => {

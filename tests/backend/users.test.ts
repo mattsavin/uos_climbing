@@ -10,19 +10,17 @@ describe('Users API', () => {
 
     beforeAll(async () => {
         // Wait for DB initialization if needed
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
 
         // Login as the pre-seeded root admin
-        const adminRes = await request(app)
-            .post('/api/auth/login')
-            .send({
-                email: 'committee@sheffieldclimbing.org',
-                password: 'SuperSecret123!'
-            });
+        const adminRes = await request(app).post('/api/auth/login').send({
+            email: 'committee@sheffieldclimbing.org',
+            password: 'SuperSecret123!'
+        });
         const cookies = adminRes.headers['set-cookie'];
-        const cookieArray = Array.isArray(cookies) ? cookies : (cookies ? [cookies] : []);
+        const cookieArray = Array.isArray(cookies) ? cookies : cookies ? [cookies] : [];
         const adminCookie = cookieArray.find((c: string) => c.startsWith('uscc_token='));
-        rootToken = adminCookie ? adminCookie.split(';')[0].split('=')[1] : (adminRes.body.token || '');
+        rootToken = adminCookie ? adminCookie.split(';')[0].split('=')[1] : adminRes.body.token || '';
     });
 
     afterAll(async () => {
@@ -32,17 +30,20 @@ describe('Users API', () => {
     const createTestUser = async (prefix: string) => {
         const ts = Date.now() + Math.floor(Math.random() * 1000);
         const email = `${prefix}${ts}_user@example.com`;
-        const userRes = await request(app).post('/api/auth/register').send({
-            firstName: prefix + ts,
-            lastName: 'Test User',
-            email,
-            password: 'Password123!', passwordConfirm: 'Password123!',
-            registrationNumber: `${prefix}${ts} 123`
-        });
+        const userRes = await request(app)
+            .post('/api/auth/register')
+            .send({
+                firstName: prefix + ts,
+                lastName: 'Test User',
+                email,
+                password: 'Password123!',
+                passwordConfirm: 'Password123!',
+                registrationNumber: `${prefix}${ts} 123`
+            });
         const cookies = userRes.headers['set-cookie'];
-        const cookieArray = Array.isArray(cookies) ? cookies : (cookies ? [cookies] : []);
+        const cookieArray = Array.isArray(cookies) ? cookies : cookies ? [cookies] : [];
         const tokenCookie = cookieArray.find((c: string) => c.startsWith('uscc_token='));
-        const token = tokenCookie ? tokenCookie.split(';')[0].split('=')[1] : (userRes.body.token || '');
+        const token = tokenCookie ? tokenCookie.split(';')[0].split('=')[1] : userRes.body.token || '';
         const id = userRes.body.user?.id || userRes.body.id || '';
         return { token, id, email };
     };
@@ -59,9 +60,7 @@ describe('Users API', () => {
         expect(res.body).toHaveProperty('membershipStatus', 'pending');
 
         // Let's verify it created the rows
-        const memsRes = await request(app)
-            .get('/api/users/me/memberships')
-            .set('Authorization', `Bearer ${token}`);
+        const memsRes = await request(app).get('/api/users/me/memberships').set('Authorization', `Bearer ${token}`);
 
         expect(memsRes.status).toBe(200);
         expect(Array.isArray(memsRes.body)).toBe(true);
@@ -92,9 +91,7 @@ describe('Users API', () => {
         expect(res.status).toBe(200);
         expect(res.body).toHaveProperty('success', true);
 
-        const memsRes = await request(app)
-            .get('/api/users/me/memberships')
-            .set('Authorization', `Bearer ${token}`);
+        const memsRes = await request(app).get('/api/users/me/memberships').set('Authorization', `Bearer ${token}`);
 
         expect(memsRes.body.length).toBeGreaterThanOrEqual(2); // 'basic' from register + 'comp_team'
         const compTeam = memsRes.body.find((m: any) => m.membershipType === 'comp_team');
@@ -134,17 +131,14 @@ describe('Users API', () => {
 
     it('should update user profile', async () => {
         const { token, id } = await createTestUser('update');
-        const res = await request(app)
-            .put(`/api/users/${id}`)
-            .set('Authorization', `Bearer ${token} `)
-            .send({
-                firstName: 'Updated',
-                lastName: 'Name',
-                emergencyContactName: 'John Doe',
-                emergencyContactMobile: '01234567890',
-                pronouns: 'They/Them',
-                dietaryRequirements: 'Vegan'
-            });
+        const res = await request(app).put(`/api/users/${id}`).set('Authorization', `Bearer ${token} `).send({
+            firstName: 'Updated',
+            lastName: 'Name',
+            emergencyContactName: 'John Doe',
+            emergencyContactMobile: '01234567890',
+            pronouns: 'They/Them',
+            dietaryRequirements: 'Vegan'
+        });
 
         expect(res.status).toBe(200);
         expect(res.body).toHaveProperty('success', true);
@@ -188,36 +182,28 @@ describe('Users API', () => {
 
     it('should update password with correct current password', async () => {
         const { token, email } = await createTestUser('pwd_success');
-        const res = await request(app)
-            .put('/api/users/me/password')
-            .set('Authorization', `Bearer ${token} `)
-            .send({
-                currentPassword: 'Password123!',
-                newPassword: 'NewPassword1!'
-            });
+        const res = await request(app).put('/api/users/me/password').set('Authorization', `Bearer ${token} `).send({
+            currentPassword: 'Password123!',
+            newPassword: 'NewPassword1!'
+        });
 
         expect(res.status).toBe(200);
         expect(res.body).toHaveProperty('success', true);
 
         // Verify login works with new password
-        const loginRes = await request(app)
-            .post('/api/auth/login')
-            .send({
-                email: email,
-                password: 'NewPassword1!'
-            });
+        const loginRes = await request(app).post('/api/auth/login').send({
+            email: email,
+            password: 'NewPassword1!'
+        });
         expect(loginRes.status).toBe(200);
     });
 
     it('should fail password update with incorrect current password', async () => {
         const { token } = await createTestUser('pwd_fail');
-        const res = await request(app)
-            .put('/api/users/me/password')
-            .set('Authorization', `Bearer ${token} `)
-            .send({
-                currentPassword: 'WrongPassword!',
-                newPassword: 'NewPassword1!'
-            });
+        const res = await request(app).put('/api/users/me/password').set('Authorization', `Bearer ${token} `).send({
+            currentPassword: 'WrongPassword!',
+            newPassword: 'NewPassword1!'
+        });
 
         expect(res.status).toBe(401);
         expect(res.body).toHaveProperty('error', 'Current password is incorrect');
@@ -225,12 +211,9 @@ describe('Users API', () => {
 
     it('should fail password update missing fields', async () => {
         const { token } = await createTestUser('pwd_missing');
-        const res = await request(app)
-            .put('/api/users/me/password')
-            .set('Authorization', `Bearer ${token} `)
-            .send({
-                newPassword: 'NewPassword1!'
-            });
+        const res = await request(app).put('/api/users/me/password').set('Authorization', `Bearer ${token} `).send({
+            newPassword: 'NewPassword1!'
+        });
 
         expect(res.status).toBe(400);
         expect(res.body).toHaveProperty('error', 'Missing required fields');
@@ -238,16 +221,16 @@ describe('Users API', () => {
 
     it('should allow user to delete themselves', async () => {
         const { token, id, email } = await createTestUser('delete_self');
-        const res = await request(app)
-            .delete(`/api/users/${id}`)
-            .set('Authorization', `Bearer ${token} `);
+        const res = await request(app).delete(`/api/users/${id}`).set('Authorization', `Bearer ${token} `);
 
         expect(res.status).toBe(200);
         expect(res.body).toHaveProperty('success', true);
 
         // Verify deletion
         const loginRes = await request(app).post('/api/auth/login').send({
-            email, password: 'Password123!', passwordConfirm: 'Password123!'
+            email,
+            password: 'Password123!',
+            passwordConfirm: 'Password123!'
         });
         expect(loginRes.status).toBe(401);
     });
@@ -265,9 +248,7 @@ describe('Users API', () => {
 
     it('should allow committee to delete regular user', async () => {
         const target = await createTestUser('committee_delete_target');
-        const res = await request(app)
-            .delete(`/api/users/${target.id}`)
-            .set('Authorization', `Bearer ${rootToken} `);
+        const res = await request(app).delete(`/api/users/${target.id}`).set('Authorization', `Bearer ${rootToken} `);
 
         expect(res.status).toBe(200);
         expect(res.body).toHaveProperty('success', true);
@@ -278,9 +259,7 @@ describe('Users API', () => {
         // Promote target
         await request(app).post(`/api/admin/users/${target.id}/promote`).set('Authorization', `Bearer ${rootToken}`);
 
-        const res = await request(app)
-            .delete(`/api/users/${target.id}`)
-            .set('Authorization', `Bearer ${rootToken}`);
+        const res = await request(app).delete(`/api/users/${target.id}`).set('Authorization', `Bearer ${rootToken}`);
 
         expect(res.status).toBe(403);
         expect(res.body).toHaveProperty('error', 'Cannot delete another committee member');
@@ -302,7 +281,10 @@ describe('Users API', () => {
                     return originalRun(query, params as any, cb as any);
                 }
             });
-            const res = await request(app).post('/api/users/me/membership-renewal').set('Authorization', `Bearer ${token}`).send({ membershipYear: '2027/2028' });
+            const res = await request(app)
+                .post('/api/users/me/membership-renewal')
+                .set('Authorization', `Bearer ${token}`)
+                .send({ membershipYear: '2027/2028' });
             expect(res.status).toBe(500);
             spy.mockRestore();
         });
@@ -318,7 +300,10 @@ describe('Users API', () => {
                     return originalRun(query, params as any, cb as any);
                 }
             });
-            const res = await request(app).put(`/api/users/${id}`).set('Authorization', `Bearer ${token}`).send({ name: 'A' });
+            const res = await request(app)
+                .put(`/api/users/${id}`)
+                .set('Authorization', `Bearer ${token}`)
+                .send({ name: 'A' });
             expect(res.status).toBe(500);
             spy.mockRestore();
         });
@@ -334,7 +319,10 @@ describe('Users API', () => {
                     return originalGet(query, params as any, cb as any);
                 }
             });
-            const res = await request(app).put('/api/users/me/password').set('Authorization', `Bearer ${token}`).send({ currentPassword: '1', newPassword: '2' });
+            const res = await request(app)
+                .put('/api/users/me/password')
+                .set('Authorization', `Bearer ${token}`)
+                .send({ currentPassword: '1', newPassword: '2' });
             expect(res.status).toBe(500);
             spy.mockRestore();
         });
@@ -373,7 +361,7 @@ describe('Users API', () => {
             const { token } = await createTestUser('mem_upg_err');
             const originalRun = db.run.bind(db);
             const spy = vi.spyOn(db, 'run').mockImplementation((query, params, cb) => {
-                const callback = typeof params === 'function' ? params : (typeof cb === 'function' ? cb : null);
+                const callback = typeof params === 'function' ? params : typeof cb === 'function' ? cb : null;
                 if (typeof query === 'string' && query.includes('UPDATE user_memberships SET status = ?')) {
                     if (callback) (callback as Function).call({}, new Error('DB Error'));
                     return db;
@@ -385,7 +373,10 @@ describe('Users API', () => {
                 return originalRun(query, params as any, cb as any);
             });
 
-            const res = await request(app).post('/api/users/me/memberships').set('Authorization', `Bearer ${token}`).send({ membershipType: 'basic', membershipYear: '2025/2026' });
+            const res = await request(app)
+                .post('/api/users/me/memberships')
+                .set('Authorization', `Bearer ${token}`)
+                .send({ membershipType: 'basic', membershipYear: '2025/2026' });
             expect(res.status).toBe(500);
             spy.mockRestore();
         });
@@ -405,10 +396,14 @@ describe('Users API', () => {
             });
             const originalRun = db.run.bind(db);
             const spyRun = vi.spyOn(db, 'run').mockImplementation((query, params, cb) => {
-                const callback = typeof params === 'function' ? params : (typeof cb === 'function' ? cb : null);
+                const callback = typeof params === 'function' ? params : typeof cb === 'function' ? cb : null;
                 const actualParams = Array.isArray(params) ? params : [];
 
-                if (typeof query === 'string' && query.includes('INSERT INTO user_memberships') && actualParams.includes('basic')) {
+                if (
+                    typeof query === 'string' &&
+                    query.includes('INSERT INTO user_memberships') &&
+                    actualParams.includes('basic')
+                ) {
                     insertCalled = true;
                     if (callback) (callback as Function).call({}, null);
                     return db;
@@ -416,13 +411,15 @@ describe('Users API', () => {
                 return originalRun(query, params as any, cb as any);
             });
 
-            const res = await request(app).post('/api/users/me/request-membership').set('Authorization', `Bearer ${token}`);
+            const res = await request(app)
+                .post('/api/users/me/request-membership')
+                .set('Authorization', `Bearer ${token}`);
             expect(res.status).toBe(200);
 
             // Wait for background queries to execute
             let attempts = 0;
             while (!insertCalled && attempts < 15) {
-                await new Promise(r => setTimeout(r, 100));
+                await new Promise((r) => setTimeout(r, 100));
                 attempts++;
             }
 

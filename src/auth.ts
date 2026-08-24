@@ -67,8 +67,6 @@ export function getCurrentAcademicYear() {
     return `${year}/${year + 1}`;
 }
 
-
-
 export interface SessionType {
     id: string;
     label: string;
@@ -133,11 +131,27 @@ export const authState = {
         });
     },
 
-    async register(firstName: string, lastName: string, email: string, passwordHash: string, passwordConfirm: string, registrationNumber: string, membershipTypes: string[]) {
+    async register(
+        firstName: string,
+        lastName: string,
+        email: string,
+        passwordHash: string,
+        passwordConfirm: string,
+        registrationNumber: string,
+        membershipTypes: string[]
+    ) {
         try {
             const data = await apiFetch('/api/auth/register', {
                 method: 'POST',
-                body: JSON.stringify({ firstName, lastName, email, password: passwordHash, passwordConfirm, registrationNumber, membershipTypes })
+                body: JSON.stringify({
+                    firstName,
+                    lastName,
+                    email,
+                    password: passwordHash,
+                    passwordConfirm,
+                    registrationNumber,
+                    membershipTypes
+                })
             });
             this.user = data.user;
             return data;
@@ -154,14 +168,28 @@ export const authState = {
         return apiFetch('/api/users/me/profile');
     },
 
-    async updateProfile(fname: string, sname: string, emergencyContactName: string, emergencyContactMobile: string, pronouns: string, dietaryRequirements: string) {
-        if (!this.user) throw new Error("Not logged in");
+    async updateProfile(
+        fname: string,
+        sname: string,
+        emergencyContactName: string,
+        emergencyContactMobile: string,
+        pronouns: string,
+        dietaryRequirements: string
+    ) {
+        if (!this.user) throw new Error('Not logged in');
 
         const name = `${fname} ${sname}`.trim();
 
         await apiFetch(`/api/users/${this.user.id}`, {
             method: 'PUT',
-            body: JSON.stringify({ firstName: fname, lastName: sname, emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements })
+            body: JSON.stringify({
+                firstName: fname,
+                lastName: sname,
+                emergencyContactName,
+                emergencyContactMobile,
+                pronouns,
+                dietaryRequirements
+            })
         });
 
         this.user.firstName = fname;
@@ -175,7 +203,7 @@ export const authState = {
     },
 
     async confirmMembershipRenewal(membershipYear: string, membershipTypes: string[]) {
-        if (!this.user) throw new Error("Not logged in");
+        if (!this.user) throw new Error('Not logged in');
 
         const data = await apiFetch('/api/users/me/membership-renewal', {
             method: 'POST',
@@ -188,7 +216,7 @@ export const authState = {
     },
 
     async changePassword(currentPassword: string, newPassword: string) {
-        if (!this.user) throw new Error("Not logged in");
+        if (!this.user) throw new Error('Not logged in');
 
         return apiFetch('/api/users/me/password', {
             method: 'PUT',
@@ -232,7 +260,7 @@ export const authState = {
     },
 
     async deleteAccount(password: string) {
-        if (!this.user) throw new Error("Not logged in");
+        if (!this.user) throw new Error('Not logged in');
 
         try {
             await apiFetch('/api/auth/login', {
@@ -242,7 +270,7 @@ export const authState = {
         } catch (error: any) {
             const status = error?.status ?? error?.response?.status;
             if (status === 401 || status === 403) {
-                throw new Error("Incorrect password.");
+                throw new Error('Incorrect password.', { cause: error });
             }
             // For other errors (network/server/etc.), rethrow so they can be handled upstream
             throw error;

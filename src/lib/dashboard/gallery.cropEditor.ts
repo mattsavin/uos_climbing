@@ -134,7 +134,8 @@ export function initCropEditor(options: InitCropEditorOptions) {
         cropStage.style.cursor = 'grab';
 
         if (cropTitle) cropTitle.textContent = `${config.title} Crop`;
-        if (cropSubtitle) cropSubtitle.textContent = 'Drag image, resize crop corners, or zoom with slider / mouse wheel.';
+        if (cropSubtitle)
+            cropSubtitle.textContent = 'Drag image, resize crop corners, or zoom with slider / mouse wheel.';
 
         cropModal.classList.remove('hidden');
         requestAnimationFrame(() => applyCropEditorVisuals());
@@ -157,7 +158,7 @@ export function initCropEditor(options: InitCropEditorOptions) {
     if (cropStage) {
         cropStage.style.touchAction = 'none';
 
-        const activePointers = new Map<number, { x: number, y: number }>();
+        const activePointers = new Map<number, { x: number; y: number }>();
         let isDraggingImage = false;
         let dragStartX = 0;
         let dragStartY = 0;
@@ -167,7 +168,7 @@ export function initCropEditor(options: InitCropEditorOptions) {
         let pinchStartDistance = 0;
         let pinchStartZoom = 1;
 
-        const getDistance = (a: { x: number, y: number }, b: { x: number, y: number }) => {
+        const getDistance = (a: { x: number; y: number }, b: { x: number; y: number }) => {
             return Math.hypot(a.x - b.x, a.y - b.y);
         };
 
@@ -246,8 +247,10 @@ export function initCropEditor(options: InitCropEditorOptions) {
             const dynamicXSensitivity = IMAGE_DRAG_SENSITIVITY * Math.max(1, bounds.widthRatio);
             const dynamicYSensitivity = IMAGE_DRAG_SENSITIVITY * Math.max(1, bounds.heightRatio);
 
-            const deltaXNorm = ((event.clientX - dragStartX) / (metrics.boxWidth * bounds.widthRatio)) * 100 * dynamicXSensitivity;
-            const deltaYNorm = ((event.clientY - dragStartY) / (metrics.boxHeight * bounds.heightRatio)) * 100 * dynamicYSensitivity;
+            const deltaXNorm =
+                ((event.clientX - dragStartX) / (metrics.boxWidth * bounds.widthRatio)) * 100 * dynamicXSensitivity;
+            const deltaYNorm =
+                ((event.clientY - dragStartY) / (metrics.boxHeight * bounds.heightRatio)) * 100 * dynamicYSensitivity;
 
             draftCropX = clamp(dragStartCropX - deltaXNorm, bounds.minX, bounds.maxX);
             draftCropY = clamp(dragStartCropY - deltaYNorm, bounds.minY, bounds.maxY);
@@ -294,13 +297,17 @@ export function initCropEditor(options: InitCropEditorOptions) {
             finishPointer(event);
         });
 
-        cropStage.addEventListener('wheel', (event: WheelEvent) => {
-            if (!activeCropContext) return;
-            event.preventDefault();
-            draftZoom = normalizeZoom(draftZoom - event.deltaY * 0.002, draftZoom);
-            draftBoxScale = clamp(1 / draftZoom, 1 / 3, 1);
-            applyCropEditorVisuals();
-        }, { passive: false });
+        cropStage.addEventListener(
+            'wheel',
+            (event: WheelEvent) => {
+                if (!activeCropContext) return;
+                event.preventDefault();
+                draftZoom = normalizeZoom(draftZoom - event.deltaY * 0.002, draftZoom);
+                draftBoxScale = clamp(1 / draftZoom, 1 / 3, 1);
+                applyCropEditorVisuals();
+            },
+            { passive: false }
+        );
     }
 
     cropHandles.forEach((handle) => {
@@ -318,7 +325,10 @@ export function initCropEditor(options: InitCropEditorOptions) {
             const startScale = draftBoxScale;
 
             const onMove = (moveEvent: PointerEvent) => {
-                const currentDistance = Math.max(20, Math.hypot(moveEvent.clientX - centerX, moveEvent.clientY - centerY));
+                const currentDistance = Math.max(
+                    20,
+                    Math.hypot(moveEvent.clientX - centerX, moveEvent.clientY - centerY)
+                );
                 const nextScale = clamp(startScale * (currentDistance / startDistance), 1 / 3, 1);
                 draftBoxScale = nextScale;
                 draftZoom = normalizeZoom(1 / nextScale, draftZoom);
@@ -366,15 +376,16 @@ export function initCropEditor(options: InitCropEditorOptions) {
         },
         getCurrentImage,
         getCurrentImageIndex,
-        getEditorGeometry: () => getEditorGeometry({
-            activeCropContext,
-            cropStage,
-            cropImage,
-            draftZoom,
-            draftBoxScale,
-            draftBoxCenterX,
-            draftBoxCenterY
-        }),
+        getEditorGeometry: () =>
+            getEditorGeometry({
+                activeCropContext,
+                cropStage,
+                cropImage,
+                draftZoom,
+                draftBoxScale,
+                draftBoxCenterX,
+                draftBoxCenterY
+            }),
         cropEditorStateByImageContext,
         setSummaryText,
         applyCropEditorVisuals,

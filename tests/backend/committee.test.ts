@@ -13,25 +13,26 @@ describe('Committee API', () => {
 
     beforeAll(async () => {
         // Wait for DB
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
 
         // Login as root
-        const adminRes = await request(app)
-            .post('/api/auth/login')
-            .send({
-                email: 'committee@sheffieldclimbing.org',
-                password: 'SuperSecret123!'
-            });
+        const adminRes = await request(app).post('/api/auth/login').send({
+            email: 'committee@sheffieldclimbing.org',
+            password: 'SuperSecret123!'
+        });
         const cookies = adminRes.headers['set-cookie'];
-        const cookieArray = Array.isArray(cookies) ? cookies : (cookies ? [cookies] : []);
+        const cookieArray = Array.isArray(cookies) ? cookies : cookies ? [cookies] : [];
         const adminCookie = cookieArray.find((c: string) => c.startsWith('uscc_token='));
         rootToken = adminCookie ? adminCookie.split(';')[0].split('=')[1] : '';
 
         // Create a committee user
         const commEmail = `comm_${Date.now()}@example.com`;
         const regRes = await request(app).post('/api/auth/register').send({
-            firstName: 'Comm', lastName: 'User', email: commEmail,
-            password: 'Password123!', passwordConfirm: 'Password123!',
+            firstName: 'Comm',
+            lastName: 'User',
+            email: commEmail,
+            password: 'Password123!',
+            passwordConfirm: 'Password123!',
             registrationNumber: 'COMM123'
         });
         committeeId = regRes.body.user.id;
@@ -40,27 +41,34 @@ describe('Committee API', () => {
         await request(app).post(`/api/admin/users/${committeeId}/promote`).set('Authorization', `Bearer ${rootToken}`);
 
         // Assign a role
-        await request(app).post(`/api/admin/users/${committeeId}/committee-role`).set('Authorization', `Bearer ${rootToken}`).send({
-            committeeRoles: ['Social Sec']
-        });
+        await request(app)
+            .post(`/api/admin/users/${committeeId}/committee-role`)
+            .set('Authorization', `Bearer ${rootToken}`)
+            .send({
+                committeeRoles: ['Social Sec']
+            });
 
         const loginRes = await request(app).post('/api/auth/login').send({
-            email: commEmail, password: 'Password123!'
+            email: commEmail,
+            password: 'Password123!'
         });
         const commCookies = loginRes.headers['set-cookie'];
-        const commCookieArray = Array.isArray(commCookies) ? commCookies : (commCookies ? [commCookies] : []);
+        const commCookieArray = Array.isArray(commCookies) ? commCookies : commCookies ? [commCookies] : [];
         const commCookie = commCookieArray.find((c: string) => c.startsWith('uscc_token='));
         committeeToken = commCookie ? commCookie.split(';')[0].split('=')[1] : '';
 
         // Create a regular member
         const memEmail = `mem_${Date.now()}@example.com`;
         const memRegRes = await request(app).post('/api/auth/register').send({
-            firstName: 'Mem', lastName: 'User', email: memEmail,
-            password: 'Password123!', passwordConfirm: 'Password123!',
+            firstName: 'Mem',
+            lastName: 'User',
+            email: memEmail,
+            password: 'Password123!',
+            passwordConfirm: 'Password123!',
             registrationNumber: 'MEM123'
         });
         const memCookies = memRegRes.headers['set-cookie'];
-        const memCookieArray = Array.isArray(memCookies) ? memCookies : (memCookies ? [memCookies] : []);
+        const memCookieArray = Array.isArray(memCookies) ? memCookies : memCookies ? [memCookies] : [];
         const memCookie = memCookieArray.find((c: string) => c.startsWith('uscc_token='));
         memberToken = memCookie ? memCookie.split(';')[0].split('=')[1] : '';
     });
@@ -82,14 +90,11 @@ describe('Committee API', () => {
     });
 
     it('should allow committee member to update their own profile', async () => {
-        const res = await request(app)
-            .put('/api/committee/me')
-            .set('Authorization', `Bearer ${committeeToken}`)
-            .send({
-                instagram: 'test_insta',
-                faveCrag: 'Stanage Popular',
-                bio: 'Love crimps and cracks.'
-            });
+        const res = await request(app).put('/api/committee/me').set('Authorization', `Bearer ${committeeToken}`).send({
+            instagram: 'test_insta',
+            faveCrag: 'Stanage Popular',
+            bio: 'Love crimps and cracks.'
+        });
 
         expect(res.status).toBe(200);
         expect(res.body).toHaveProperty('success', true);
@@ -111,8 +116,6 @@ describe('Committee API', () => {
         expect(res.status).toBe(403);
     });
 
-
-
     it('should export members with verified membership type as CSV', async () => {
         // Create test users with verified memberships
         const user1Email = `csv_test_user1_${Date.now()}@example.com`;
@@ -120,31 +123,43 @@ describe('Committee API', () => {
 
         // Register users
         const user1Res = await request(app).post('/api/auth/register').send({
-            firstName: 'CSV', lastName: 'User1', email: user1Email,
-            password: 'Password123!', passwordConfirm: 'Password123!',
+            firstName: 'CSV',
+            lastName: 'User1',
+            email: user1Email,
+            password: 'Password123!',
+            passwordConfirm: 'Password123!',
             registrationNumber: 'CSV001'
         });
         const user1Id = user1Res.body.user.id;
 
         const user2Res = await request(app).post('/api/auth/register').send({
-            firstName: 'CSV', lastName: 'User2', email: user2Email,
-            password: 'Password123!', passwordConfirm: 'Password123!',
+            firstName: 'CSV',
+            lastName: 'User2',
+            email: user2Email,
+            password: 'Password123!',
+            passwordConfirm: 'Password123!',
             registrationNumber: 'CSV002'
         });
         const user2Id = user2Res.body.user.id;
 
         // Add verified memberships
-        db.run('INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)',
+        db.run(
+            'INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)',
             [`mem_1_${Date.now()}`, user1Id, 'basic', 'active', '2024'],
-            (err) => { if (err) console.error('Error inserting user1 membership:', err); }
+            (err) => {
+                if (err) console.error('Error inserting user1 membership:', err);
+            }
         );
-        db.run('INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)',
+        db.run(
+            'INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)',
             [`mem_2_${Date.now()}`, user2Id, 'basic', 'active', '2024'],
-            (err) => { if (err) console.error('Error inserting user2 membership:', err); }
+            (err) => {
+                if (err) console.error('Error inserting user2 membership:', err);
+            }
         );
 
         // Wait a moment for DB writes
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
 
         // Request CSV export
         const res = await request(app)

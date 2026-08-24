@@ -64,7 +64,8 @@ export function initGalleryUploadHandlers(renderGalleryList: () => Promise<void>
 
                 const input = document.createElement('input');
                 input.type = 'text';
-                input.className = 'gallery-staging-caption w-full bg-slate-900 border border-slate-700/50 rounded px-2 py-1 text-white text-xs focus:outline-none focus:border-pink-500';
+                input.className =
+                    'gallery-staging-caption w-full bg-slate-900 border border-slate-700/50 rounded px-2 py-1 text-white text-xs focus:outline-none focus:border-pink-500';
                 input.placeholder = `Caption for ${file.name} (Optional)`;
 
                 itemDiv.appendChild(label);
@@ -120,7 +121,6 @@ export function initGalleryUploadHandlers(renderGalleryList: () => Promise<void>
                 if (uploadModal) uploadModal.classList.add('hidden');
 
                 await renderGalleryList();
-
             } catch (err: any) {
                 showToast(err.message || 'Failed to upload image', 'error');
             } finally {

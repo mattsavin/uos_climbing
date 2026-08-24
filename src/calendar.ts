@@ -18,7 +18,7 @@ const SESSION_COLOR_PALETTE: SessionColorStyle[] = [
 ];
 
 function hashText(value: string): number {
-    return Array.from(value).reduce((acc, char) => ((acc * 31) + char.charCodeAt(0)) >>> 0, 0);
+    return Array.from(value).reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) >>> 0, 0);
 }
 
 function getSessionTypeColorMap(typeIds: string[]): Record<string, SessionColorStyle> {
@@ -48,15 +48,17 @@ function renderCalendarLegend(
     legendContainer.classList.remove('hidden');
     legendContainer.innerHTML = `
         <div class="mt-6 mb-4 flex flex-wrap gap-4 items-center text-xs text-slate-300 backdrop-blur-sm bg-brand-dark/30 p-4 rounded-xl border border-white/5 shadow-lg mx-auto w-fit max-w-full">
-            ${uniqueLegendTypes.map(type => {
-        const style = colorMap[type] || SESSION_COLOR_PALETTE[0];
-        return `
+            ${uniqueLegendTypes
+                .map((type) => {
+                    const style = colorMap[type] || SESSION_COLOR_PALETTE[0];
+                    return `
                     <div class="flex items-center gap-2 min-w-0">
                         <span class="w-2.5 h-2.5 rounded-full ${style.dot} shrink-0"></span>
                         <span class="truncate max-w-42.5">${escapeHTML(type)}</span>
                     </div>
                 `;
-    }).join('')}
+                })
+                .join('')}
         </div>
     `;
 }
@@ -78,11 +80,13 @@ export function renderCalendarEvents(
     const month = currentDate.getMonth();
 
     if (monthDisplay) {
-        monthDisplay.textContent = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(currentDate);
+        monthDisplay.textContent = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(
+            currentDate
+        );
     }
 
     const isMobile = window.innerWidth < 768;
-    const colorMap = getSessionTypeColorMap([...availableSessionTypes, ...sessions.map(s => s.type)]);
+    const colorMap = getSessionTypeColorMap([...availableSessionTypes, ...sessions.map((s) => s.type)]);
     let html = '';
 
     if (isMobile) {
@@ -91,10 +95,12 @@ export function renderCalendarEvents(
         const lastDayOfMonth = new Date(year, month + 1, 0);
 
         // Filter and sort sessions for this month
-        const monthSessions = sessions.filter(s => {
-            const d = new Date(s.date);
-            return d >= firstDayOfMonth && d <= lastDayOfMonth;
-        }).sort((a, b) => a.date.localeCompare(b.date));
+        const monthSessions = sessions
+            .filter((s) => {
+                const d = new Date(s.date);
+                return d >= firstDayOfMonth && d <= lastDayOfMonth;
+            })
+            .sort((a, b) => a.date.localeCompare(b.date));
 
         if (monthSessions.length === 0) {
             html = `
@@ -105,7 +111,7 @@ export function renderCalendarEvents(
         } else {
             // Group by day
             const grouped: Record<string, Session[]> = {};
-            monthSessions.forEach(s => {
+            monthSessions.forEach((s) => {
                 const dateKey = s.date.split('T')[0];
                 if (!grouped[dateKey]) grouped[dateKey] = [];
                 grouped[dateKey].push(s);
@@ -119,10 +125,14 @@ export function renderCalendarEvents(
                 const suffix = (dayNum: number) => {
                     if (dayNum > 3 && dayNum < 21) return 'th';
                     switch (dayNum % 10) {
-                        case 1: return "st";
-                        case 2: return "nd";
-                        case 3: return "rd";
-                        default: return "th";
+                        case 1:
+                            return 'st';
+                        case 2:
+                            return 'nd';
+                        case 3:
+                            return 'rd';
+                        default:
+                            return 'th';
                     }
                 };
 
@@ -133,7 +143,7 @@ export function renderCalendarEvents(
                             <span class="text-slate-400 font-bold uppercase tracking-widest text-sm">${dayName}</span>
                         </div>
                         <div class="flex flex-col gap-3">
-                            ${daySessions.map(session => renderSessionChip(session, myBookings, !!onSessionClick, colorMap)).join('')}
+                            ${daySessions.map((session) => renderSessionChip(session, myBookings, !!onSessionClick, colorMap)).join('')}
                         </div>
                     </div>
                 `;
@@ -149,9 +159,13 @@ export function renderCalendarEvents(
         // Dynamic Headers
         html = `
             <div class="grid grid-cols-7 border-b border-white/10 bg-slate-900/50">
-                ${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => `
+                ${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+                    .map(
+                        (day) => `
                     <div class="py-2 text-center text-[10px] font-bold text-slate-500 uppercase tracking-tighter">${day}</div>
-                `).join('')}
+                `
+                    )
+                    .join('')}
             </div>
             <div class="grid grid-cols-7 auto-rows-[minmax(110px,auto)] bg-white/5 gap-px">
         `;
@@ -166,9 +180,11 @@ export function renderCalendarEvents(
 
         for (let day = 1; day <= daysInMonth; day++) {
             const isToday = isCurrentMonth && today.getDate() === day;
-            const dayClass = isToday ? 'text-brand-gold font-bold bg-brand-gold/10 rounded w-6 h-6 flex items-center justify-center' : 'text-slate-500 text-xs font-bold';
+            const dayClass = isToday
+                ? 'text-brand-gold font-bold bg-brand-gold/10 rounded w-6 h-6 flex items-center justify-center'
+                : 'text-slate-500 text-xs font-bold';
             const dayStr = `${year}-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-            const daySessions = sessions.filter(s => s.date.startsWith(dayStr));
+            const daySessions = sessions.filter((s) => s.date.startsWith(dayStr));
 
             html += `
                 <div class="bg-slate-800/60 p-2 min-h-27.5 border border-white/5 hover:border-brand-gold/30 transition-colors flex flex-col">
@@ -176,7 +192,7 @@ export function renderCalendarEvents(
                         <span class="${dayClass}">${day}</span>
                     </div>
                     <div class="flex-1 flex flex-col gap-1 w-full overflow-hidden">
-                        ${daySessions.map(session => renderSessionChip(session, myBookings, !!onSessionClick, colorMap)).join('')}
+                        ${daySessions.map((session) => renderSessionChip(session, myBookings, !!onSessionClick, colorMap)).join('')}
                     </div>
                 </div>
             `;
@@ -196,10 +212,10 @@ export function renderCalendarEvents(
     container.innerHTML = html;
 
     if (onSessionClick) {
-        container.querySelectorAll('.session-chip').forEach(chip => {
+        container.querySelectorAll('.session-chip').forEach((chip) => {
             chip.addEventListener('click', (e) => {
                 const id = (e.currentTarget as HTMLElement).dataset.id;
-                const session = sessions.find(s => s.id === id);
+                const session = sessions.find((s) => s.id === id);
                 if (session) {
                     onSessionClick(session, myBookings.includes(session.id));
                 }
@@ -236,24 +252,27 @@ function renderSessionChip(
     const clickable = isClickable && !isPast;
 
     const reqMemb = (session as any).requiredMembership || 'basic';
-    const membBadge = reqMemb === 'comp_team'
-        ? `<span class="text-[8px] font-black uppercase tracking-widest opacity-90 bg-purple-500/30 text-purple-300 px-1 rounded">Comp Team</span>`
-        : reqMemb === 'bouldering'
-            ? `<span class="text-[8px] font-black uppercase tracking-widest opacity-90 bg-blue-500/30 text-blue-300 px-1 rounded">Bouldering</span>`
+    const membBadge =
+        reqMemb === 'comp_team'
+            ? `<span class="text-[8px] font-black uppercase tracking-widest opacity-90 bg-purple-500/30 text-purple-300 px-1 rounded">Comp Team</span>`
+            : reqMemb === 'bouldering'
+              ? `<span class="text-[8px] font-black uppercase tracking-widest opacity-90 bg-blue-500/30 text-blue-300 px-1 rounded">Bouldering</span>`
+              : '';
+    const visibilityBadge =
+        (session as any).visibility === 'committee_only'
+            ? `<span class="text-[8px] font-black uppercase tracking-widest opacity-90 bg-amber-500/25 text-amber-200 px-1 rounded border border-amber-500/30">Committee</span>`
             : '';
-    const visibilityBadge = (session as any).visibility === 'committee_only'
-        ? `<span class="text-[8px] font-black uppercase tracking-widest opacity-90 bg-amber-500/25 text-amber-200 px-1 rounded border border-amber-500/30">Committee</span>`
-        : '';
-    const registrationBadge = (session as any).registrationVisibility === 'committee_only'
-        ? `<span class="text-[8px] font-black uppercase tracking-widest opacity-90 bg-cyan-500/25 text-cyan-200 px-1 rounded border border-cyan-500/30">Committee Reg</span>`
-        : '';
+    const registrationBadge =
+        (session as any).registrationVisibility === 'committee_only'
+            ? `<span class="text-[8px] font-black uppercase tracking-widest opacity-90 bg-cyan-500/25 text-cyan-200 px-1 rounded border border-cyan-500/30">Committee Reg</span>`
+            : '';
     const badges = [visibilityBadge, registrationBadge, membBadge].filter(Boolean).join('');
 
     return `
         <div class="session-chip mt-1 border rounded p-2 text-xs font-medium leading-tight w-full overflow-hidden ${clickable ? 'cursor-pointer hover:opacity-80 transition-opacity' : 'cursor-default'} flex flex-col gap-1 ${bg}" data-id="${session.id}">
             <div class="w-full flex items-center justify-between gap-2 min-w-0">
                 <span class="font-bold block min-w-0 truncate" title="${safeTime}">${safeTime}</span>
-                ${isBooked ? '<span class="text-current font-black text-sm" title="Booked">✓</span>' : (isPast ? '<span class="text-[9px] uppercase tracking-tighter opacity-70">Expired</span>' : '')}
+                ${isBooked ? '<span class="text-current font-black text-sm" title="Booked">✓</span>' : isPast ? '<span class="text-[9px] uppercase tracking-tighter opacity-70">Expired</span>' : ''}
             </div>
             <div class="text-[11px] font-semibold leading-snug wrap-break-word">${safeTitle}</div>
             ${safeLocation ? `<div class="text-[10px] opacity-80 leading-snug" title="${safeLocation}">📍 ${safeLocation}</div>` : ''}

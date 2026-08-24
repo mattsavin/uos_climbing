@@ -45,9 +45,14 @@ describe('Sessions Router Branches', () => {
     it('create session returns 500 when no membership types are configured', async () => {
         const { app, db } = await loadSessionsApp();
         db.get.mockImplementationOnce((_sql: string, _params: any[], cb: Function) => cb(null, null));
-        const res = await request(app).post('/api/sessions').send({
-            title: 'T', type: 'X', date: new Date(Date.now() + 100000).toISOString(), capacity: 10
-        });
+        const res = await request(app)
+            .post('/api/sessions')
+            .send({
+                title: 'T',
+                type: 'X',
+                date: new Date(Date.now() + 100000).toISOString(),
+                capacity: 10
+            });
         expect(res.status).toBe(500);
         expect(res.body.error).toBe('No membership types configured');
     });
@@ -57,16 +62,24 @@ describe('Sessions Router Branches', () => {
         db.get
             .mockImplementationOnce((_sql: string, _params: any[], cb: Function) => cb(null, { id: 'basic' }))
             .mockImplementationOnce((_sql: string, _params: any[], cb: Function) => cb(null, null));
-        const res = await request(app).post('/api/sessions').send({
-            title: 'T', type: 'X', date: new Date(Date.now() + 100000).toISOString(), capacity: 10, requiredMembership: 'invalid'
-        });
+        const res = await request(app)
+            .post('/api/sessions')
+            .send({
+                title: 'T',
+                type: 'X',
+                date: new Date(Date.now() + 100000).toISOString(),
+                capacity: 10,
+                requiredMembership: 'invalid'
+            });
         expect(res.status).toBe(400);
         expect(res.body.error).toBe('Invalid required membership type');
     });
 
     it('booking route covers already-booked, missing-session, past-session and full-session branches', async () => {
         const { app, db } = await loadSessionsApp();
-        db.get.mockImplementationOnce((_sql: string, _params: any[], cb: Function) => cb(null, { userId: 'u1', sessionId: 's1' }));
+        db.get.mockImplementationOnce((_sql: string, _params: any[], cb: Function) =>
+            cb(null, { userId: 'u1', sessionId: 's1' })
+        );
         const alreadyBooked = await request(app).post('/api/sessions/s1/book');
         expect(alreadyBooked.status).toBe(400);
 
@@ -78,36 +91,65 @@ describe('Sessions Router Branches', () => {
 
         db.get
             .mockImplementationOnce((_sql: string, _params: any[], cb: Function) => cb(null, null))
-            .mockImplementationOnce((_sql: string, _params: any[], cb: Function) => cb(null, {
-                capacity: 10, bookedSlots: 0, requiredMembership: 'basic', registrationVisibility: 'all', date: new Date(Date.now() - 60_000).toISOString()
-            }));
+            .mockImplementationOnce((_sql: string, _params: any[], cb: Function) =>
+                cb(null, {
+                    capacity: 10,
+                    bookedSlots: 0,
+                    requiredMembership: 'basic',
+                    registrationVisibility: 'all',
+                    date: new Date(Date.now() - 60_000).toISOString()
+                })
+            );
         const past = await request(app).post('/api/sessions/s3/book');
         expect(past.status).toBe(400);
 
         db.get
             .mockImplementationOnce((_sql: string, _params: any[], cb: Function) => cb(null, null))
-            .mockImplementationOnce((_sql: string, _params: any[], cb: Function) => cb(null, {
-                capacity: 1, bookedSlots: 1, requiredMembership: 'basic', registrationVisibility: 'all', date: new Date(Date.now() + 60_000).toISOString()
-            }));
+            .mockImplementationOnce((_sql: string, _params: any[], cb: Function) =>
+                cb(null, {
+                    capacity: 1,
+                    bookedSlots: 1,
+                    requiredMembership: 'basic',
+                    registrationVisibility: 'all',
+                    date: new Date(Date.now() + 60_000).toISOString()
+                })
+            );
         const full = await request(app).post('/api/sessions/s4/book');
         expect(full.status).toBe(400);
     });
 
     it('booking route rejects committee-only registration and membership DB errors', async () => {
-        const { app, db } = await loadSessionsApp({ id: 'u1', role: 'member', email: 'member@example.com', committeeRoles: [] });
+        const { app, db } = await loadSessionsApp({
+            id: 'u1',
+            role: 'member',
+            email: 'member@example.com',
+            committeeRoles: []
+        });
         db.get
             .mockImplementationOnce((_sql: string, _params: any[], cb: Function) => cb(null, null))
-            .mockImplementationOnce((_sql: string, _params: any[], cb: Function) => cb(null, {
-                capacity: 10, bookedSlots: 0, requiredMembership: 'basic', registrationVisibility: 'committee_only', date: new Date(Date.now() + 60_000).toISOString()
-            }));
+            .mockImplementationOnce((_sql: string, _params: any[], cb: Function) =>
+                cb(null, {
+                    capacity: 10,
+                    bookedSlots: 0,
+                    requiredMembership: 'basic',
+                    registrationVisibility: 'committee_only',
+                    date: new Date(Date.now() + 60_000).toISOString()
+                })
+            );
         const committeeOnly = await request(app).post('/api/sessions/s5/book');
         expect(committeeOnly.status).toBe(403);
 
         db.get
             .mockImplementationOnce((_sql: string, _params: any[], cb: Function) => cb(null, null))
-            .mockImplementationOnce((_sql: string, _params: any[], cb: Function) => cb(null, {
-                capacity: 10, bookedSlots: 0, requiredMembership: 'basic', registrationVisibility: 'all', date: new Date(Date.now() + 60_000).toISOString()
-            }))
+            .mockImplementationOnce((_sql: string, _params: any[], cb: Function) =>
+                cb(null, {
+                    capacity: 10,
+                    bookedSlots: 0,
+                    requiredMembership: 'basic',
+                    registrationVisibility: 'all',
+                    date: new Date(Date.now() + 60_000).toISOString()
+                })
+            )
             .mockImplementationOnce((_sql: string, _params: any[], cb: Function) => cb(new Error('DB Error'), null));
         const membErr = await request(app).post('/api/sessions/s6/book');
         expect(membErr.status).toBe(500);
@@ -145,9 +187,7 @@ describe('Sessions Router Branches', () => {
     it('list and iCal routes cover token and lookup error branches', async () => {
         const { app, db } = await loadSessionsApp();
         db.all.mockImplementationOnce((_sql: string, _params: any[], cb: Function) => cb(null, []));
-        const listRes = await request(app)
-            .get('/api/sessions')
-            .set('Authorization', 'Bearer not-a-valid-jwt');
+        const listRes = await request(app).get('/api/sessions').set('Authorization', 'Bearer not-a-valid-jwt');
         expect(listRes.status).toBe(200);
 
         db.get.mockImplementationOnce((_sql: string, _params: any[], cb: Function) => cb(null, null));
@@ -155,7 +195,8 @@ describe('Sessions Router Branches', () => {
         expect(notFoundIcal.status).toBe(404);
 
         db.get.mockImplementationOnce((_sql: string, _params: any[], cb: Function) =>
-            cb(null, { id: 'u1', role: 'member', committeeRole: null }));
+            cb(null, { id: 'u1', role: 'member', committeeRole: null })
+        );
         db.all.mockImplementationOnce((_sql: string, _params: any[], cb: Function) => cb(new Error('DB Error'), null));
         const allIcalErr = await request(app).get('/api/sessions/ical/token/all');
         expect(allIcalErr.status).toBe(500);
@@ -164,7 +205,8 @@ describe('Sessions Router Branches', () => {
     it('all-iCal route handles committee visibility path', async () => {
         const { app, db } = await loadSessionsApp();
         db.get.mockImplementationOnce((_sql: string, _params: any[], cb: Function) =>
-            cb(null, { id: 'u1', role: 'member', committeeRole: null }));
+            cb(null, { id: 'u1', role: 'member', committeeRole: null })
+        );
         db.all
             .mockImplementationOnce((_sql: string, _params: any[], cb: Function) => cb(null, [{ role: 'Chair' }]))
             .mockImplementationOnce((_sql: string, _params: any[], cb: Function) => cb(null, []));

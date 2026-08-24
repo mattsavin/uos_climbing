@@ -17,7 +17,10 @@ test.describe('Gear Hire Workflow', () => {
 
         if (await requestButton.isVisible()) {
             await requestButton.click();
-            const pendingText = page.locator('body').filter({ hasText: /Pending|Requested|Success/i }).first();
+            const pendingText = page
+                .locator('body')
+                .filter({ hasText: /Pending|Requested|Success/i })
+                .first();
             await expect(pendingText).toBeVisible({ timeout: 5000 });
         } else {
             console.log('No gear available to request.');

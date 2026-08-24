@@ -1,13 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-async function loadEmailService(config: {
-    EMAIL_USER?: string;
-    EMAIL_CLIENT_ID?: string;
-    EMAIL_CLIENT_SECRET?: string;
-    EMAIL_REFRESH_TOKEN?: string;
-    RESEND_API_KEY?: string;
-    EMAIL_FROM?: string;
-}, sendMailImpl: (...args: any[]) => Promise<any>) {
+async function loadEmailService(
+    config: {
+        EMAIL_USER?: string;
+        EMAIL_CLIENT_ID?: string;
+        EMAIL_CLIENT_SECRET?: string;
+        EMAIL_REFRESH_TOKEN?: string;
+        RESEND_API_KEY?: string;
+        EMAIL_FROM?: string;
+    },
+    sendMailImpl: (...args: any[]) => Promise<any>
+) {
     vi.resetModules();
 
     const createTransport = vi.fn().mockImplementation(() => ({
@@ -29,7 +32,7 @@ async function loadEmailService(config: {
         google: {
             auth: {
                 OAuth2: class {
-                    setCredentials() { }
+                    setCredentials() {}
                     getAccessToken(cb: any) {
                         cb(null, 'mock-access-token');
                     }

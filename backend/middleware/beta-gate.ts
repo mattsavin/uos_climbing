@@ -11,7 +11,7 @@ export const betaGate = (req: Request, res: Response, next: NextFunction) => {
 
     // Allow access to auth API and the gate page itself
     const publicPaths = ['/api/auth', '/api/beta-auth', '/api/csp-report', '/beta-gate', '/favicon.ico'];
-    if (publicPaths.some(path => req.path.startsWith(path))) {
+    if (publicPaths.some((path) => req.path.startsWith(path))) {
         return next();
     }
 

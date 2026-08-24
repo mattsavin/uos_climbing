@@ -4,10 +4,12 @@ import { db } from '../db';
 export const ROOT_ADMIN_EMAIL = (process.env.ROOT_ADMIN_EMAIL || 'committee@sheffieldclimbing.org').toLowerCase();
 
 export function isRootAdmin(user: any): boolean {
-    return !!user
-        && user.role === 'committee'
-        && typeof user.email === 'string'
-        && user.email.toLowerCase() === ROOT_ADMIN_EMAIL;
+    return (
+        !!user &&
+        user.role === 'committee' &&
+        typeof user.email === 'string' &&
+        user.email.toLowerCase() === ROOT_ADMIN_EMAIL
+    );
 }
 
 export function getCurrentAcademicYear(): string {
@@ -79,8 +81,17 @@ export function parseSuRoster(raw: string) {
     let yearFallbackUsed = 0;
 
     for (const line of lines) {
-        const tabCols = line.split('\t').map((c) => c.trim()).filter(Boolean);
-        const cols = tabCols.length >= 5 ? tabCols : line.split(/\s{2,}/).map((c) => c.trim()).filter(Boolean);
+        const tabCols = line
+            .split('\t')
+            .map((c) => c.trim())
+            .filter(Boolean);
+        const cols =
+            tabCols.length >= 5
+                ? tabCols
+                : line
+                      .split(/\s{2,}/)
+                      .map((c) => c.trim())
+                      .filter(Boolean);
         if (cols.length < 5) {
             skipped.push({ line, reason: 'Expected 5 columns' });
             continue;

@@ -90,12 +90,14 @@ describe('Auth Router Branches', () => {
     it('login blocks unverified user outside test env', async () => {
         const { app, db } = await loadAuthApp('production');
         const passwordHash = await bcrypt.hash('Password123!', 4);
-        db.get.mockImplementationOnce((_sql: string, _params: any[], cb: Function) => cb(null, {
-            id: 'u1',
-            email: 'person@sheffield.ac.uk',
-            passwordHash,
-            emailVerified: 0
-        }));
+        db.get.mockImplementationOnce((_sql: string, _params: any[], cb: Function) =>
+            cb(null, {
+                id: 'u1',
+                email: 'person@sheffield.ac.uk',
+                passwordHash,
+                emailVerified: 0
+            })
+        );
 
         const res = await request(app).post('/api/auth/login').send({
             email: 'person@sheffield.ac.uk',
@@ -108,11 +110,13 @@ describe('Auth Router Branches', () => {
 
     it('request-verification rejects already verified users', async () => {
         const { app, db } = await loadAuthApp('production');
-        db.get.mockImplementationOnce((_sql: string, _params: any[], cb: Function) => cb(null, {
-            id: 'u1',
-            email: 'person@sheffield.ac.uk',
-            emailVerified: 1
-        }));
+        db.get.mockImplementationOnce((_sql: string, _params: any[], cb: Function) =>
+            cb(null, {
+                id: 'u1',
+                email: 'person@sheffield.ac.uk',
+                emailVerified: 1
+            })
+        );
 
         const res = await request(app).post('/api/auth/request-verification').send({ userId: 'u1' });
         expect(res.status).toBe(400);
@@ -121,12 +125,14 @@ describe('Auth Router Branches', () => {
 
     it('forgot-password still returns 200 when APP_URL is missing in production', async () => {
         const { app, db, sendEmail } = await loadAuthApp('production');
-        db.get.mockImplementationOnce((_sql: string, _params: any[], cb: Function) => cb(null, {
-            id: 'u1',
-            firstName: 'Reset',
-            lastName: 'User',
-            email: 'person@sheffield.ac.uk'
-        }));
+        db.get.mockImplementationOnce((_sql: string, _params: any[], cb: Function) =>
+            cb(null, {
+                id: 'u1',
+                firstName: 'Reset',
+                lastName: 'User',
+                email: 'person@sheffield.ac.uk'
+            })
+        );
 
         const res = await request(app).post('/api/auth/forgot-password').send({
             email: 'person@sheffield.ac.uk'
@@ -188,11 +194,13 @@ describe('Auth Router Branches', () => {
 
     it('reset-password rejects expired tokens and deletes them', async () => {
         const { app, db } = await loadAuthApp('production');
-        db.get.mockImplementationOnce((_sql: string, _params: any[], cb: Function) => cb(null, {
-            token: 'tok',
-            userId: 'u1',
-            expiresAt: Date.now() - 1000
-        }));
+        db.get.mockImplementationOnce((_sql: string, _params: any[], cb: Function) =>
+            cb(null, {
+                token: 'tok',
+                userId: 'u1',
+                expiresAt: Date.now() - 1000
+            })
+        );
         const runSpy = vi.spyOn(db, 'run');
 
         const res = await request(app).post('/api/auth/reset-password').send({
@@ -202,19 +210,18 @@ describe('Auth Router Branches', () => {
 
         expect(res.status).toBe(400);
         expect(res.body.error).toBe('Invalid or expired reset token');
-        expect(runSpy).toHaveBeenCalledWith(
-            'DELETE FROM password_resets WHERE token = ?',
-            ['tok']
-        );
+        expect(runSpy).toHaveBeenCalledWith('DELETE FROM password_resets WHERE token = ?', ['tok']);
     });
 
     it('reset-password returns 500 when password hashing throws', async () => {
         const { app, db } = await loadAuthApp('production');
-        db.get.mockImplementationOnce((_sql: string, _params: any[], cb: Function) => cb(null, {
-            token: 'tok2',
-            userId: 'u1',
-            expiresAt: Date.now() + 60_000
-        }));
+        db.get.mockImplementationOnce((_sql: string, _params: any[], cb: Function) =>
+            cb(null, {
+                token: 'tok2',
+                userId: 'u1',
+                expiresAt: Date.now() + 60_000
+            })
+        );
         const hashSpy = vi.spyOn(bcrypt, 'hash').mockRejectedValueOnce(new Error('hash fail') as never);
 
         const res = await request(app).post('/api/auth/reset-password').send({

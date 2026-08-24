@@ -24,22 +24,26 @@ export async function updateUI() {
         const galleryCard = document.getElementById('gallery-portal-card');
         const socialPostCard = document.getElementById('social-post-portal-card');
 
-        let membershipTypes: MembershipType[] = [];
+        let membershipTypes: MembershipType[];
         try {
             membershipTypes = await adminApi.getMembershipTypes();
         } catch {
             membershipTypes = [];
         }
 
-        const defaultMembershipType = membershipTypes.find(t => t.id === 'basic')?.id || membershipTypes[0]?.id || 'basic';
-        const membershipTypeLabelMap = Object.fromEntries(membershipTypes.map(t => [t.id, t.label]));
+        const defaultMembershipType =
+            membershipTypes.find((t) => t.id === 'basic')?.id || membershipTypes[0]?.id || 'basic';
+        const membershipTypeLabelMap = Object.fromEntries(membershipTypes.map((t) => [t.id, t.label]));
 
         const renewalMembershipTypesContainer = document.getElementById('renewal-membership-types');
         if (renewalMembershipTypesContainer) {
             if (membershipTypes.length === 0) {
-                renewalMembershipTypesContainer.innerHTML = '<p class="text-xs text-red-400">No membership types configured.</p>';
+                renewalMembershipTypesContainer.innerHTML =
+                    '<p class="text-xs text-red-400">No membership types configured.</p>';
             } else {
-                renewalMembershipTypesContainer.innerHTML = membershipTypes.map(t => `
+                renewalMembershipTypesContainer.innerHTML = membershipTypes
+                    .map(
+                        (t) => `
                     <label class="flex items-start gap-3 cursor-pointer group">
                         <input type="checkbox" name="renewalMembershipType" value="${escapeHTML(t.id)}" ${t.id === defaultMembershipType ? 'checked' : ''}
                             class="mt-0.5 accent-brand-gold w-4 h-4 shrink-0" />
@@ -47,7 +51,9 @@ export async function updateUI() {
                             <span class="text-white text-xs font-bold">${escapeHTML(t.label)}</span>
                         </div>
                     </label>
-                `).join('');
+                `
+                    )
+                    .join('');
             }
         }
 
@@ -62,27 +68,33 @@ export async function updateUI() {
                 renewalYearText.textContent = currentYearStr;
                 renewalOverlay.classList.remove('hidden');
 
-                confirmRenewalBtn.addEventListener('click', async () => {
-                    const selectedTypes: string[] = [];
-                    document.querySelectorAll<HTMLInputElement>('input[name="renewalMembershipType"]:checked').forEach(cb => {
-                        selectedTypes.push(cb.value);
-                    });
-                    if (selectedTypes.length === 0) selectedTypes.push(defaultMembershipType);
+                confirmRenewalBtn.addEventListener(
+                    'click',
+                    async () => {
+                        const selectedTypes: string[] = [];
+                        document
+                            .querySelectorAll<HTMLInputElement>('input[name="renewalMembershipType"]:checked')
+                            .forEach((cb) => {
+                                selectedTypes.push(cb.value);
+                            });
+                        if (selectedTypes.length === 0) selectedTypes.push(defaultMembershipType);
 
-                    try {
-                        confirmRenewalBtn.textContent = 'Renewing...';
-                        (confirmRenewalBtn as HTMLButtonElement).disabled = true;
+                        try {
+                            confirmRenewalBtn.textContent = 'Renewing...';
+                            (confirmRenewalBtn as HTMLButtonElement).disabled = true;
 
-                        await authState.confirmMembershipRenewal(currentYearStr, selectedTypes);
+                            await authState.confirmMembershipRenewal(currentYearStr, selectedTypes);
 
-                        renewalOverlay.classList.add('hidden');
-                        updateUI();
-                    } catch (err: any) {
-                        showToast(err.message || 'Renewal failed', 'error');
-                        confirmRenewalBtn.textContent = 'Confirm Registration Renewal';
-                        (confirmRenewalBtn as HTMLButtonElement).disabled = false;
-                    }
-                }, { once: true });
+                            renewalOverlay.classList.add('hidden');
+                            updateUI();
+                        } catch (err: any) {
+                            showToast(err.message || 'Renewal failed', 'error');
+                            confirmRenewalBtn.textContent = 'Confirm Registration Renewal';
+                            (confirmRenewalBtn as HTMLButtonElement).disabled = false;
+                        }
+                    },
+                    { once: true }
+                );
             }
         }
 
@@ -106,23 +118,38 @@ export async function updateUI() {
         }));
 
         if (membershipsContainer) {
-            membershipsContainer.innerHTML = '<div class="flex justify-center"><div class="animate-spin rounded-full h-5 w-5 border-b-2 border-brand-gold"></div></div>';
+            membershipsContainer.innerHTML =
+                '<div class="flex justify-center"><div class="animate-spin rounded-full h-5 w-5 border-b-2 border-brand-gold"></div></div>';
             try {
                 const memberships = await authState.getMyMemberships();
                 const heldTypes = new Set(
                     memberships
-                        .filter(m => (m.status === 'active' || m.status === 'pending') && m.membershipYear === currentYearStr)
-                        .map(m => m.membershipType as string)
+                        .filter(
+                            (m) =>
+                                (m.status === 'active' || m.status === 'pending') && m.membershipYear === currentYearStr
+                        )
+                        .map((m) => m.membershipType as string)
                 );
 
-                const hasActiveRow = memberships.some(m => m.status === 'active' && m.membershipYear === currentYearStr);
-                const isCommittee = user.role === 'committee' || !!user.committeeRole || (Array.isArray(user.committeeRoles) && user.committeeRoles.length > 0);
-                const derivedStatus = (hasActiveRow || isCommittee) ? 'active' : user.membershipStatus;
+                const hasActiveRow = memberships.some(
+                    (m) => m.status === 'active' && m.membershipYear === currentYearStr
+                );
+                const isCommittee =
+                    user.role === 'committee' ||
+                    !!user.committeeRole ||
+                    (Array.isArray(user.committeeRoles) && user.committeeRoles.length > 0);
+                const derivedStatus = hasActiveRow || isCommittee ? 'active' : user.membershipStatus;
 
                 if (statusBadge) {
-                    statusBadge.className = 'px-4 py-3 rounded-lg text-center font-bold tracking-widest uppercase mb-4 shadow-[0_0_15px_rgba(0,0,0,0.2)]';
+                    statusBadge.className =
+                        'px-4 py-3 rounded-lg text-center font-bold tracking-widest uppercase mb-4 shadow-[0_0_15px_rgba(0,0,0,0.2)]';
                     if (derivedStatus === 'active') {
-                        statusBadge.classList.add('bg-brand-gold-muted/20', 'border', 'border-brand-gold-muted', 'text-brand-gold-muted');
+                        statusBadge.classList.add(
+                            'bg-brand-gold-muted/20',
+                            'border',
+                            'border-brand-gold-muted',
+                            'text-brand-gold-muted'
+                        );
                         statusBadge.textContent = `Active ${user.membershipYear || currentYearStr}`;
                     } else if (derivedStatus === 'pending') {
                         statusBadge.classList.add('bg-amber-500/20', 'border', 'border-amber-500', 'text-amber-500');
@@ -134,15 +161,20 @@ export async function updateUI() {
                 }
 
                 if (memberships.length === 0) {
-                    membershipsContainer.innerHTML = '<p class="text-xs text-slate-500 text-center uppercase tracking-wider">No memberships</p>';
+                    membershipsContainer.innerHTML =
+                        '<p class="text-xs text-slate-500 text-center uppercase tracking-wider">No memberships</p>';
                 } else {
-                    membershipsContainer.innerHTML = memberships.map(m => {
-                        let colorClass = 'bg-slate-800 text-slate-400 border-slate-700';
-                        if (m.status === 'active') colorClass = 'bg-brand-gold/10 text-brand-gold border-brand-gold/20';
-                        else if (m.status === 'pending') colorClass = 'bg-amber-500/10 text-amber-500 border-amber-500/20';
-                        else if (m.status === 'rejected') colorClass = 'bg-red-500/10 text-red-400 border-red-500/20';
-                        const typeLabel = membershipTypeLabelMap[m.membershipType] || m.membershipType;
-                        return `
+                    membershipsContainer.innerHTML = memberships
+                        .map((m) => {
+                            let colorClass = 'bg-slate-800 text-slate-400 border-slate-700';
+                            if (m.status === 'active')
+                                colorClass = 'bg-brand-gold/10 text-brand-gold border-brand-gold/20';
+                            else if (m.status === 'pending')
+                                colorClass = 'bg-amber-500/10 text-amber-500 border-amber-500/20';
+                            else if (m.status === 'rejected')
+                                colorClass = 'bg-red-500/10 text-red-400 border-red-500/20';
+                            const typeLabel = membershipTypeLabelMap[m.membershipType] || m.membershipType;
+                            return `
                         <div class="flex items-center justify-between p-2 rounded border ${colorClass} mb-2 text-xs font-bold uppercase tracking-wide">
                             <div class="flex flex-col">
                                 <span>${escapeHTML(typeLabel)}</span>
@@ -151,19 +183,22 @@ export async function updateUI() {
                             <span>${escapeHTML(m.status)}</span>
                         </div>
                         `;
-                    }).join('');
+                        })
+                        .join('');
                 }
 
                 if (addMbTypeSelect) {
-                    addMbTypeSelect.innerHTML = ALL_MEMBERSHIP_TYPES.map(t => {
+                    addMbTypeSelect.innerHTML = ALL_MEMBERSHIP_TYPES.map((t) => {
                         const held = heldTypes.has(t.value);
                         return `<option value="${escapeHTML(t.value)}" ${held ? 'disabled' : ''}>${escapeHTML(t.label)}${held ? ' (already held)' : ''}</option>`;
                     }).join('');
-                    const firstAvailable = addMbTypeSelect.querySelector('option:not([disabled])') as HTMLOptionElement | null;
+                    const firstAvailable = addMbTypeSelect.querySelector(
+                        'option:not([disabled])'
+                    ) as HTMLOptionElement | null;
                     if (firstAvailable) addMbTypeSelect.value = firstAvailable.value;
                 }
 
-                document.querySelectorAll<HTMLInputElement>('input[name="renewalMembershipType"]').forEach(cb => {
+                document.querySelectorAll<HTMLInputElement>('input[name="renewalMembershipType"]').forEach((cb) => {
                     if (heldTypes.has(cb.value as string)) {
                         cb.checked = true;
                         cb.disabled = true;
@@ -171,9 +206,9 @@ export async function updateUI() {
                         (cb.closest('label') as HTMLElement | null)?.style.setProperty('opacity', '0.6');
                     }
                 });
-
             } catch (e) {
-                membershipsContainer.innerHTML = '<p class="text-xs text-red-400 text-center uppercase tracking-wider">Failed to load</p>';
+                membershipsContainer.innerHTML =
+                    '<p class="text-xs text-red-400 text-center uppercase tracking-wider">Failed to load</p>';
             }
         }
 
@@ -238,7 +273,10 @@ export async function updateUI() {
         }
 
         // Committee Portal Toggle
-        const isCommittee = user.role === 'committee' || !!user.committeeRole || (Array.isArray(user.committeeRoles) && user.committeeRoles.length > 0);
+        const isCommittee =
+            user.role === 'committee' ||
+            !!user.committeeRole ||
+            (Array.isArray(user.committeeRoles) && user.committeeRoles.length > 0);
 
         if (isCommittee) {
             if (adminPortalCard) adminPortalCard.classList.remove('hidden');
@@ -277,7 +315,6 @@ export async function updateUI() {
 
         // --- NEW: Skills Tracker Initialisation ---
         initSkillsTracker(user.id || user.email);
-
     } else {
         window.location.href = '/login';
     }

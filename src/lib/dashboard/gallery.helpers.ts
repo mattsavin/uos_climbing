@@ -11,13 +11,16 @@ export type CropEditorState = {
     boxCenterY: number;
 };
 
-export const CROP_CONTEXT_CONFIG: Record<CropContextKey, {
-    title: string;
-    aspect: number;
-    xKey: string;
-    yKey: string;
-    zoomKey: string;
-}> = {
+export const CROP_CONTEXT_CONFIG: Record<
+    CropContextKey,
+    {
+        title: string;
+        aspect: number;
+        xKey: string;
+        yKey: string;
+        zoomKey: string;
+    }
+> = {
     heroDesktop: {
         title: 'Homepage Desktop',
         aspect: 16 / 9,
@@ -61,16 +64,14 @@ export function isFeaturedImage(image: any): boolean {
 }
 
 export function getFeaturedReel(images: any[]): any[] {
-    return images
-        .filter(isFeaturedImage)
-        .sort((a, b) => {
-            const aOrder = Number.isFinite(Number(a.featuredOrder)) ? Number(a.featuredOrder) : Number.MAX_SAFE_INTEGER;
-            const bOrder = Number.isFinite(Number(b.featuredOrder)) ? Number(b.featuredOrder) : Number.MAX_SAFE_INTEGER;
-            if (aOrder !== bOrder) return aOrder - bOrder;
-            const aTime = new Date(a.uploadedAt || 0).getTime();
-            const bTime = new Date(b.uploadedAt || 0).getTime();
-            return bTime - aTime;
-        });
+    return images.filter(isFeaturedImage).sort((a, b) => {
+        const aOrder = Number.isFinite(Number(a.featuredOrder)) ? Number(a.featuredOrder) : Number.MAX_SAFE_INTEGER;
+        const bOrder = Number.isFinite(Number(b.featuredOrder)) ? Number(b.featuredOrder) : Number.MAX_SAFE_INTEGER;
+        if (aOrder !== bOrder) return aOrder - bOrder;
+        const aTime = new Date(a.uploadedAt || 0).getTime();
+        const bTime = new Date(b.uploadedAt || 0).getTime();
+        return bTime - aTime;
+    });
 }
 
 export { normalizeCrop, normalizeZoom } from '../utils/imageMath';

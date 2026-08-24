@@ -11,13 +11,12 @@ describe('sharp image pipelines used by upload routes', () => {
     it('gallery path: resize fit.inside + webp encode works', async () => {
         const source = await sharp({
             create: { width: 1600, height: 900, channels: 3, background: '#1e293b' }
-        }).png().toBuffer();
+        })
+            .png()
+            .toBuffer();
 
         // Mirrors backend/routes/gallery.ts processing
-        const out = await sharp(source)
-            .resize(1080, null, { fit: sharp.fit.inside })
-            .webp()
-            .toBuffer();
+        const out = await sharp(source).resize(1080, null, { fit: sharp.fit.inside }).webp().toBuffer();
 
         const meta = await sharp(out).metadata();
         expect(meta.format).toBe('webp');
@@ -27,13 +26,12 @@ describe('sharp image pipelines used by upload routes', () => {
     it('profile photo path: square cover-crop + webp works', async () => {
         const source = await sharp({
             create: { width: 1200, height: 1200, channels: 3, background: '#fdb913' }
-        }).png().toBuffer();
+        })
+            .png()
+            .toBuffer();
 
         // Mirrors backend/routes/users.ts profile-photo transcoding
-        const out = await sharp(source)
-            .resize(500, 500, { fit: sharp.fit.cover })
-            .webp()
-            .toBuffer();
+        const out = await sharp(source).resize(500, 500, { fit: sharp.fit.cover }).webp().toBuffer();
 
         const meta = await sharp(out).metadata();
         expect(meta.format).toBe('webp');

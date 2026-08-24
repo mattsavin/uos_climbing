@@ -3,7 +3,10 @@ import { db } from '../db';
 export function getMembershipTypeIds(callback: (err: Error | null, ids: string[]) => void) {
     db.all('SELECT id FROM membership_types', [], (err, rows: any[]) => {
         if (err) return callback(err as any, []);
-        callback(null, (rows || []).map((r: any) => r.id));
+        callback(
+            null,
+            (rows || []).map((r: any) => r.id)
+        );
     });
 }
 

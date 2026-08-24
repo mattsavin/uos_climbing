@@ -2,46 +2,48 @@ import './style.css';
 import { authState } from './auth';
 
 type NavLink = {
-  href: string;
-  label: string;
-  mobileLabel?: string;
+    href: string;
+    label: string;
+    mobileLabel?: string;
 };
 
 const primaryNavLinks = [
-  { href: '/', label: 'Home' },
-  { href: '/about', label: 'About' },
-  { href: '/competitions', label: 'Indoor & Competitions', mobileLabel: 'Indoor & Comps' },
-  { href: '/gallery', label: 'Gallery' },
-  { href: '/schedule', label: 'Schedule' }
+    { href: '/', label: 'Home' },
+    { href: '/about', label: 'About' },
+    { href: '/competitions', label: 'Indoor & Competitions', mobileLabel: 'Indoor & Comps' },
+    { href: '/gallery', label: 'Gallery' },
+    { href: '/schedule', label: 'Schedule' }
 ] as const satisfies readonly NavLink[];
 
 const resourceNavLinks = [
-  { href: '/beginners', label: "Beginner's Guide", mobileLabel: 'Beginner Guide' },
-  { href: '/walls', label: 'Local Walls' },
-  { href: '/faq', label: 'FAQ', mobileLabel: 'Club FAQ' },
+    { href: '/beginners', label: "Beginner's Guide", mobileLabel: 'Beginner Guide' },
+    { href: '/walls', label: 'Local Walls' },
+    { href: '/faq', label: 'FAQ', mobileLabel: 'Club FAQ' }
 ] as const satisfies readonly NavLink[];
 
-const renderLinks = (
-  links: readonly NavLink[],
-  template: (link: NavLink) => string
-) => links.map((link) => template(link)).join('');
+const renderLinks = (links: readonly NavLink[], template: (link: NavLink) => string) =>
+    links.map((link) => template(link)).join('');
 
-const desktopPrimaryLinksHtml = renderLinks(primaryNavLinks
-  .filter((link) => link.label !== 'Schedule')
-  , (link) => `<a href="${link.href}" class="nav-link">${link.label}</a>`);
-
-const desktopResourceLinksHtml = renderLinks(resourceNavLinks,
-  (link) => `<a href="${link.href}" class="px-4 py-2 text-sm text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors">${link.label}</a>`
+const desktopPrimaryLinksHtml = renderLinks(
+    primaryNavLinks.filter((link) => link.label !== 'Schedule'),
+    (link) => `<a href="${link.href}" class="nav-link">${link.label}</a>`
 );
 
-const mobilePrimaryLinksHtml = renderLinks(primaryNavLinks,
-  (link) =>
-    `<li><a href="${link.href}" class="text-4xl font-black text-white hover:text-brand-gold transition-colors block ${link.label === 'Schedule' ? 'text-gradient' : ''}">${link.label}</a></li>`
+const desktopResourceLinksHtml = renderLinks(
+    resourceNavLinks,
+    (link) =>
+        `<a href="${link.href}" class="px-4 py-2 text-sm text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors">${link.label}</a>`
+);
+
+const mobilePrimaryLinksHtml = renderLinks(
+    primaryNavLinks,
+    (link) =>
+        `<li><a href="${link.href}" class="text-4xl font-black text-white hover:text-brand-gold transition-colors block ${link.label === 'Schedule' ? 'text-gradient' : ''}">${link.label}</a></li>`
 );
 
 const mobileResourceLinksHtml = renderLinks(
-  resourceNavLinks,
-  (link) => `<a href="${link.href}" class="mobile-resource-link">${link.mobileLabel ?? link.label}</a>`
+    resourceNavLinks,
+    (link) => `<a href="${link.href}" class="mobile-resource-link">${link.mobileLabel ?? link.label}</a>`
 );
 
 // Reusable components
@@ -194,91 +196,91 @@ const createFooter = () => `
 
 // Initialize UI
 export function initApp() {
-  const app = document.querySelector<HTMLDivElement>('#app');
-  if (!app) return;
+    const app = document.querySelector<HTMLDivElement>('#app');
+    if (!app) return;
 
-  // Insert the navbar before the app container, and footer after it
-  // This avoids wiping out the innerHTML and destroying React/Vanilla event listeners
-  if (!document.getElementById('main-nav')) {
-    app.insertAdjacentHTML('beforebegin', createNavbar());
-  }
+    // Insert the navbar before the app container, and footer after it
+    // This avoids wiping out the innerHTML and destroying React/Vanilla event listeners
+    if (!document.getElementById('main-nav')) {
+        app.insertAdjacentHTML('beforebegin', createNavbar());
+    }
 
-  if (!document.getElementById('mobile-menu')) {
-    document.body.insertAdjacentHTML('beforeend', createMobileMenu());
-  }
+    if (!document.getElementById('mobile-menu')) {
+        document.body.insertAdjacentHTML('beforeend', createMobileMenu());
+    }
 
-  if (!document.querySelector('footer')) {
-    app.insertAdjacentHTML('afterend', createFooter());
-  }
+    if (!document.querySelector('footer')) {
+        app.insertAdjacentHTML('afterend', createFooter());
+    }
 
-  app.classList.add('pt-20');
+    app.classList.add('pt-20');
 
-  // Mobile menu toggle
-  const mobileMenuBtn = document.getElementById('mobile-menu-btn-fallback');
-  const mobileMenu = document.getElementById('mobile-menu');
-  const openIcon = document.getElementById('menu-icon-open');
-  const closeIcon = document.getElementById('menu-icon-close');
+    // Mobile menu toggle
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn-fallback');
+    const mobileMenu = document.getElementById('mobile-menu');
+    const openIcon = document.getElementById('menu-icon-open');
+    const closeIcon = document.getElementById('menu-icon-close');
 
-  if (mobileMenuBtn && mobileMenu) {
-    const setMenuIcons = (isOpen: boolean) => {
-      if (!openIcon || !closeIcon) return;
-      openIcon.classList.toggle('hidden', isOpen);
-      closeIcon.classList.toggle('hidden', !isOpen);
-    };
+    if (mobileMenuBtn && mobileMenu) {
+        const setMenuIcons = (isOpen: boolean) => {
+            if (!openIcon || !closeIcon) return;
+            openIcon.classList.toggle('hidden', isOpen);
+            closeIcon.classList.toggle('hidden', !isOpen);
+        };
 
-    const setMobileMenuOpen = (isOpen: boolean) => {
-      mobileMenu.classList.toggle('invisible', !isOpen);
-      mobileMenu.classList.toggle('opacity-0', !isOpen);
-      mobileMenu.classList.toggle('visible', isOpen);
-      mobileMenu.classList.toggle('opacity-100', isOpen);
-      mobileMenu.classList.toggle('active', isOpen);
-      document.body.style.overflow = isOpen ? 'hidden' : '';
-      setMenuIcons(isOpen);
-    };
+        const setMobileMenuOpen = (isOpen: boolean) => {
+            mobileMenu.classList.toggle('invisible', !isOpen);
+            mobileMenu.classList.toggle('opacity-0', !isOpen);
+            mobileMenu.classList.toggle('visible', isOpen);
+            mobileMenu.classList.toggle('opacity-100', isOpen);
+            mobileMenu.classList.toggle('active', isOpen);
+            document.body.style.overflow = isOpen ? 'hidden' : '';
+            setMenuIcons(isOpen);
+        };
 
-    const closeMobileMenu = () => setMobileMenuOpen(false);
+        const closeMobileMenu = () => setMobileMenuOpen(false);
 
-    mobileMenuBtn.addEventListener('click', () => {
-      const isCurrentlyOpen = !mobileMenu.classList.contains('invisible');
-      setMobileMenuOpen(!isCurrentlyOpen);
+        mobileMenuBtn.addEventListener('click', () => {
+            const isCurrentlyOpen = !mobileMenu.classList.contains('invisible');
+            setMobileMenuOpen(!isCurrentlyOpen);
+        });
+
+        // Close menu when a link is clicked
+        mobileMenu.querySelectorAll('a').forEach((link) => {
+            link.addEventListener('click', closeMobileMenu);
+        });
+    }
+
+    // Scroll effect on navbar
+    const nav = document.getElementById('main-nav');
+    if (nav) {
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 20) {
+                nav.classList.add('shadow-lg', 'bg-brand-darker/95');
+                nav.classList.remove('bg-brand-darker/80');
+            } else {
+                nav.classList.remove('shadow-lg', 'bg-brand-darker/95');
+                nav.classList.add('bg-brand-darker/80');
+            }
+        });
+    }
+
+    // Update navbar based on auth state
+    authState.init().then(() => {
+        const user = authState.getUser();
+        const updateBtn = (btnId: string) => {
+            const btn = document.getElementById(btnId) as HTMLAnchorElement;
+            if (btn) {
+                if (user) {
+                    btn.innerHTML = user.role === 'committee' ? 'Dashboard' : 'Profile';
+                    btn.href = '/dashboard';
+                } else {
+                    btn.innerHTML = 'Sign In';
+                    btn.href = '/login';
+                }
+            }
+        };
+        updateBtn('nav-auth-btn');
+        updateBtn('nav-auth-btn-mobile-new');
     });
-
-    // Close menu when a link is clicked
-    mobileMenu.querySelectorAll('a').forEach(link => {
-      link.addEventListener('click', closeMobileMenu);
-    });
-  }
-
-  // Scroll effect on navbar
-  const nav = document.getElementById('main-nav');
-  if (nav) {
-    window.addEventListener('scroll', () => {
-      if (window.scrollY > 20) {
-        nav.classList.add('shadow-lg', 'bg-brand-darker/95');
-        nav.classList.remove('bg-brand-darker/80');
-      } else {
-        nav.classList.remove('shadow-lg', 'bg-brand-darker/95');
-        nav.classList.add('bg-brand-darker/80');
-      }
-    });
-  }
-
-  // Update navbar based on auth state
-  authState.init().then(() => {
-    const user = authState.getUser();
-    const updateBtn = (btnId: string) => {
-      const btn = document.getElementById(btnId) as HTMLAnchorElement;
-      if (btn) {
-        if (user) {
-          btn.innerHTML = user.role === 'committee' ? 'Dashboard' : 'Profile';
-          btn.href = '/dashboard';
-        } else {
-          btn.innerHTML = 'Sign In';
-          btn.href = '/login';
-        }
-      }
-    };
-    updateBtn('nav-auth-btn');
-    updateBtn('nav-auth-btn-mobile-new');
-  });
 }

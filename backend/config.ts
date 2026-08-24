@@ -28,8 +28,9 @@ export const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 export const EMAIL_FROM = process.env.EMAIL_FROM || '';
 
 // Uploads Directory Configuration
-export const UPLOAD_BASE_DIR = process.env.NODE_ENV === 'production'
-    ? '/data/uploads'
-    : process.env.NODE_ENV === 'test'
-        ? path.join(os.tmpdir(), 'uos_test_uploads')
-        : path.join(process.cwd(), 'uploads');
+export const UPLOAD_BASE_DIR =
+    process.env.NODE_ENV === 'production'
+        ? '/data/uploads'
+        : process.env.NODE_ENV === 'test'
+          ? path.join(os.tmpdir(), 'uos_test_uploads')
+          : path.join(process.cwd(), 'uploads');

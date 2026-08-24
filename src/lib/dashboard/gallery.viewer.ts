@@ -1,13 +1,7 @@
 import { showToast } from '../../utils';
 import { requestAdminConfirmation } from './admin';
 import { initCropEditor } from './gallery.cropEditor';
-import {
-    formatCropSummary,
-    getFeaturedReel,
-    isFeaturedImage,
-    normalizeCrop,
-    normalizeZoom
-} from './gallery.helpers';
+import { formatCropSummary, getFeaturedReel, isFeaturedImage, normalizeCrop, normalizeZoom } from './gallery.helpers';
 import type { CropEditorState, CropContextKey } from './gallery.helpers';
 import { apiFetch } from '../api/http';
 
@@ -80,9 +74,11 @@ export function createGalleryViewerController(options: GalleryViewerOptions) {
             toggleBtn.dataset.id = data.id;
             toggleBtn.dataset.featured = isFeatured ? '1' : '0';
             if (isFeatured) {
-                toggleBtn.className = 'flex-1 min-w-30 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold bg-brand-gold/10 text-brand-gold hover:bg-brand-gold/20 transition-colors';
+                toggleBtn.className =
+                    'flex-1 min-w-30 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold bg-brand-gold/10 text-brand-gold hover:bg-brand-gold/20 transition-colors';
             } else {
-                toggleBtn.className = 'flex-1 min-w-30 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors';
+                toggleBtn.className =
+                    'flex-1 min-w-30 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors';
             }
         }
         if (featuredLabel) featuredLabel.textContent = isFeatured ? 'Remove from carousel' : 'Add to carousel';
@@ -92,13 +88,14 @@ export function createGalleryViewerController(options: GalleryViewerOptions) {
         if (featuredUpBtn) {
             featuredUpBtn.classList.toggle('hidden', !isFeatured);
             featuredUpBtn.disabled = !isFeatured || featuredIdx <= 0;
-            featuredUpBtn.style.opacity = (!isFeatured || featuredIdx <= 0) ? '0.4' : '1';
+            featuredUpBtn.style.opacity = !isFeatured || featuredIdx <= 0 ? '0.4' : '1';
             featuredUpBtn.dataset.id = String(data.id);
         }
         if (featuredDownBtn) {
             featuredDownBtn.classList.toggle('hidden', !isFeatured);
             featuredDownBtn.disabled = !isFeatured || featuredIdx === -1 || featuredIdx >= featuredReel.length - 1;
-            featuredDownBtn.style.opacity = (!isFeatured || featuredIdx === -1 || featuredIdx >= featuredReel.length - 1) ? '0.4' : '1';
+            featuredDownBtn.style.opacity =
+                !isFeatured || featuredIdx === -1 || featuredIdx >= featuredReel.length - 1 ? '0.4' : '1';
             featuredDownBtn.dataset.id = String(data.id);
         }
         if (featuredOrderLabel) {
@@ -192,9 +189,11 @@ export function createGalleryViewerController(options: GalleryViewerOptions) {
             setSummaryText
         });
 
-        if (openDesktopBtn) openDesktopBtn.addEventListener('click', () => cropController.openCropEditor('heroDesktop'));
+        if (openDesktopBtn)
+            openDesktopBtn.addEventListener('click', () => cropController.openCropEditor('heroDesktop'));
         if (openMobileBtn) openMobileBtn.addEventListener('click', () => cropController.openCropEditor('heroMobile'));
-        if (openGalleryBtn) openGalleryBtn.addEventListener('click', () => cropController.openCropEditor('galleryLandscape'));
+        if (openGalleryBtn)
+            openGalleryBtn.addEventListener('click', () => cropController.openCropEditor('galleryLandscape'));
 
         if (backdrop) backdrop.addEventListener('click', closeGalleryViewer);
         if (closeBtn) closeBtn.addEventListener('click', closeGalleryViewer);
@@ -239,7 +238,7 @@ export function createGalleryViewerController(options: GalleryViewerOptions) {
                 try {
                     await apiFetch(`/api/gallery/${id}`, {
                         method: 'PUT',
-                        body: JSON.stringify({ featured: !isFeatured }),
+                        body: JSON.stringify({ featured: !isFeatured })
                     });
                     showToast(isFeatured ? 'Removed from homepage carousel' : 'Added to homepage carousel', 'success');
                     closeGalleryViewer();
@@ -358,7 +357,10 @@ export function createGalleryViewerController(options: GalleryViewerOptions) {
                 if (!id) return;
 
                 const saveBtn = document.getElementById('edit-caption-save-btn') as HTMLButtonElement | null;
-                if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving...'; }
+                if (saveBtn) {
+                    saveBtn.disabled = true;
+                    saveBtn.textContent = 'Saving...';
+                }
 
                 try {
                     await apiFetch(`/api/gallery/${id}`, {
@@ -371,7 +373,10 @@ export function createGalleryViewerController(options: GalleryViewerOptions) {
                 } catch (err: any) {
                     showToast(err.message, 'error');
                 } finally {
-                    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
+                    if (saveBtn) {
+                        saveBtn.disabled = false;
+                        saveBtn.textContent = 'Save';
+                    }
                 }
             });
         }

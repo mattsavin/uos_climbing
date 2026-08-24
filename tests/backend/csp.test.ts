@@ -6,7 +6,7 @@ import { db } from '../../backend/db';
 describe('Content Security Policy rollout', () => {
     beforeAll(async () => {
         // Wait for DB initialization
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
     });
 
     afterAll(() => {
@@ -25,13 +25,15 @@ describe('Content Security Policy rollout', () => {
         const res = await request(app)
             .post('/api/csp-report')
             .set('Content-Type', 'application/csp-report')
-            .send(JSON.stringify({
-                'csp-report': {
-                    'document-uri': 'https://x.test/',
-                    'violated-directive': 'img-src',
-                    'blocked-uri': 'https://evil.example/x.png'
-                }
-            }));
+            .send(
+                JSON.stringify({
+                    'csp-report': {
+                        'document-uri': 'https://x.test/',
+                        'violated-directive': 'img-src',
+                        'blocked-uri': 'https://evil.example/x.png'
+                    }
+                })
+            );
         expect(res.status).toBe(204);
     });
 
@@ -44,10 +46,7 @@ describe('Content Security Policy rollout', () => {
     });
 
     it('returns 204 for a non-JSON body (no parser claims text/plain, handler still succeeds)', async () => {
-        const res = await request(app)
-            .post('/api/csp-report')
-            .set('Content-Type', 'text/plain')
-            .send('not json');
+        const res = await request(app).post('/api/csp-report').set('Content-Type', 'text/plain').send('not json');
         expect(res.status).toBe(204);
     });
 });

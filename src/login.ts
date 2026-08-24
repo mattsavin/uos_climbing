@@ -33,9 +33,15 @@ export async function initLoginApp() {
     const domainEmailPopupClose = document.getElementById('domain-email-popup-close');
     const domainEmailPopupConfirm = document.getElementById('domain-email-popup-confirm') as HTMLButtonElement | null;
     const domainEmailPopupMessage = document.getElementById('domain-email-popup-message') as HTMLElement | null;
-    const domainEmailPopupConfirmWrap = document.getElementById('domain-email-popup-confirm-wrap') as HTMLElement | null;
-    const domainEmailPopupConfirmInput = document.getElementById('domain-email-popup-confirm-input') as HTMLInputElement | null;
-    const domainEmailPopupConfirmError = document.getElementById('domain-email-popup-confirm-error') as HTMLElement | null;
+    const domainEmailPopupConfirmWrap = document.getElementById(
+        'domain-email-popup-confirm-wrap'
+    ) as HTMLElement | null;
+    const domainEmailPopupConfirmInput = document.getElementById(
+        'domain-email-popup-confirm-input'
+    ) as HTMLInputElement | null;
+    const domainEmailPopupConfirmError = document.getElementById(
+        'domain-email-popup-confirm-error'
+    ) as HTMLElement | null;
 
     const verifyBtn = document.getElementById('verify-btn') as HTMLButtonElement;
     const verifyError = document.getElementById('verify-error') as HTMLElement;
@@ -195,7 +201,7 @@ export async function initLoginApp() {
 
         // Collect checked membership types
         const membershipTypes: string[] = [];
-        document.querySelectorAll<HTMLInputElement>('input[name="membershipType"]:checked').forEach(cb => {
+        document.querySelectorAll<HTMLInputElement>('input[name="membershipType"]:checked').forEach((cb) => {
             membershipTypes.push(cb.value);
         });
         if (membershipTypes.length === 0) membershipTypes.push(defaultMembershipType);

@@ -13,7 +13,9 @@ function renderFAQs() {
     const container = document.getElementById('faq-container');
     if (!container) return;
 
-    container.innerHTML = config.faqs.map(faq => `
+    container.innerHTML = config.faqs
+        .map(
+            (faq) => `
         <div class="glass-card group hover:border-brand-gold/30 transition-all duration-300">
             <h3 class="text-xl font-bold text-white mb-4 flex items-start gap-3">
                 <span class="text-brand-gold mt-1">
@@ -27,5 +29,7 @@ function renderFAQs() {
                 ${faq.answer}
             </p>
         </div>
-    `).join('');
+    `
+        )
+        .join('');
 }

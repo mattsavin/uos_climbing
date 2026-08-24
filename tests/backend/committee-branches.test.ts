@@ -21,18 +21,18 @@ describe('Committee Route Branches', () => {
         rootToken = adminCookie ? adminCookie.split(';')[0].split('=')[1] : '';
 
         const email = `committee_branches_${Date.now()}@example.com`;
-        const regRes = await request(app).post('/api/auth/register').send({
-            firstName: 'Committee',
-            lastName: 'Branches',
-            email,
-            password: 'Password123!',
-            passwordConfirm: 'Password123!',
-            registrationNumber: `${Date.now()}22`
-        });
+        const regRes = await request(app)
+            .post('/api/auth/register')
+            .send({
+                firstName: 'Committee',
+                lastName: 'Branches',
+                email,
+                password: 'Password123!',
+                passwordConfirm: 'Password123!',
+                registrationNumber: `${Date.now()}22`
+            });
         const committeeId = regRes.body.user.id;
-        await request(app)
-            .post(`/api/admin/users/${committeeId}/promote`)
-            .set('Authorization', `Bearer ${rootToken}`);
+        await request(app).post(`/api/admin/users/${committeeId}/promote`).set('Authorization', `Bearer ${rootToken}`);
 
         const loginRes = await request(app).post('/api/auth/login').send({
             email,
@@ -69,6 +69,4 @@ describe('Committee Route Branches', () => {
         expect(res.body.error).toBe('Database error');
         spy.mockRestore();
     });
-
-
 });

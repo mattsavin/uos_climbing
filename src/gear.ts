@@ -82,20 +82,23 @@ async function handleRequestAction(reqId: string, action: 'approve' | 'reject' |
 }
 
 function handleEditGear(id: string) {
-    const gearItem = currentGear.find(g => g.id === id);
+    const gearItem = currentGear.find((g) => g.id === id);
     if (gearItem) {
         (document.getElementById('gear-id') as HTMLInputElement).value = gearItem.id;
         (document.getElementById('gear-name') as HTMLInputElement).value = gearItem.name;
         (document.getElementById('gear-description') as HTMLInputElement).value = gearItem.description || '';
         (document.getElementById('gear-total-qty') as HTMLInputElement).value = gearItem.totalQuantity.toString();
-        (document.getElementById('gear-available-qty') as HTMLInputElement).value = gearItem.availableQuantity.toString();
+        (document.getElementById('gear-available-qty') as HTMLInputElement).value =
+            gearItem.availableQuantity.toString();
         document.getElementById('gear-form-container')?.classList.remove('hidden');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 }
 
 async function handleDeleteGear(id: string) {
-    const confirmed = await showConfirmModal('Are you sure you want to delete this gear? All related requests might be orphaned.');
+    const confirmed = await showConfirmModal(
+        'Are you sure you want to delete this gear? All related requests might be orphaned.'
+    );
     if (!confirmed) return;
     try {
         await gearApi.deleteGear(id);
@@ -155,7 +158,7 @@ function setupEventListeners() {
         gearRequestTargetId = null;
     };
 
-    [cancelRequestBtn, requestBackdrop].forEach(el => {
+    [cancelRequestBtn, requestBackdrop].forEach((el) => {
         if (el) el.addEventListener('click', closeModal);
     });
 

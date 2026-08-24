@@ -23,7 +23,10 @@ export const authenticateToken = (req: any, res: any, next: any) => {
 };
 
 export const requireCommittee = (req: any, res: any, next: any) => {
-    const isCommitteeJWT = req.user.role === 'committee' || !!req.user.committeeRole || (Array.isArray(req.user.committeeRoles) && req.user.committeeRoles.length > 0);
+    const isCommitteeJWT =
+        req.user.role === 'committee' ||
+        !!req.user.committeeRole ||
+        (Array.isArray(req.user.committeeRoles) && req.user.committeeRoles.length > 0);
 
     if (isCommitteeJWT) {
         return next();
@@ -45,7 +48,8 @@ export const requireCommittee = (req: any, res: any, next: any) => {
                 }
                 res.status(403).json({ error: 'Requires committee privileges' });
             });
-        });
+        }
+    );
 };
 
 export const requireKitSec = (req: any, res: any, next: any) => {

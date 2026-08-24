@@ -5,7 +5,6 @@ import { authenticateToken, requireCommittee } from '../middleware/auth';
 
 const router = express.Router();
 
-
 /** GET /api/committee - Get all committee members */
 router.get('/', (req, res) => {
     const query = `
@@ -39,7 +38,6 @@ router.put('/me', authenticateToken, (req: any, res) => {
         standardDbResponse(res)
     );
 });
-
 
 /** GET /api/committee/export/members - Export members with verified membership type as CSV */
 router.get('/export/members', authenticateToken, requireCommittee, (req: any, res) => {
@@ -77,7 +75,20 @@ router.get('/export/members', authenticateToken, requireCommittee, (req: any, re
         }
 
         // Convert to CSV
-        const headers = ['id', 'firstName', 'lastName', 'email', 'registrationNumber', 'emergencyContactName', 'emergencyContactMobile', 'pronouns', 'dietaryRequirements', 'membershipType', 'membershipStatus', 'membershipYear'];
+        const headers = [
+            'id',
+            'firstName',
+            'lastName',
+            'email',
+            'registrationNumber',
+            'emergencyContactName',
+            'emergencyContactMobile',
+            'pronouns',
+            'dietaryRequirements',
+            'membershipType',
+            'membershipStatus',
+            'membershipYear'
+        ];
         const csvContent = convertToCSV(rows || [], headers);
 
         // Set appropriate headers for CSV download
@@ -104,9 +115,7 @@ function escapeCSV(value: any): string {
 // Helper function to convert data to CSV string
 function convertToCSV(data: any[], headers: string[]): string {
     const headerRow = headers.join(',');
-    const rows = data.map(row =>
-        headers.map(header => escapeCSV(row[header])).join(',')
-    );
+    const rows = data.map((row) => headers.map((header) => escapeCSV(row[header])).join(','));
     return [headerRow, ...rows].join('\n');
 }
 

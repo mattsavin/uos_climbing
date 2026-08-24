@@ -25,9 +25,7 @@ export async function renderRegistrationMembershipTypes(
             optionsContainer.innerHTML = '<p class="text-xs text-red-400">No membership types configured.</p>';
             return 'basic';
         }
-        const defaultMembershipType = membershipTypes.some((t) => t.id === 'basic')
-            ? 'basic'
-            : membershipTypes[0].id;
+        const defaultMembershipType = membershipTypes.some((t) => t.id === 'basic') ? 'basic' : membershipTypes[0].id;
         optionsContainer.innerHTML = membershipTypes
             .map((t) => toMembershipOptionMarkup(t.id, t.label, t.id === defaultMembershipType))
             .join('');

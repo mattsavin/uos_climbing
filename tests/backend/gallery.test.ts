@@ -11,7 +11,7 @@ vi.mock('sharp', () => {
     const sharpMock = vi.fn(() => ({
         resize: vi.fn().mockReturnThis(),
         webp: vi.fn().mockReturnThis(),
-        toFile: vi.fn().mockResolvedValue({}),
+        toFile: vi.fn().mockResolvedValue({})
     }));
     // We need to support sharp.fit.inside
     (sharpMock as any).fit = { inside: 'inside' };
@@ -24,12 +24,16 @@ describe('Gallery API', () => {
 
     beforeAll(async () => {
         // Wait for DB initialization
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
 
         // Register and login as regular user
         const userRes = await request(app).post('/api/auth/register').send({
-            firstName: 'Gallery', lastName: 'User', email: 'gallery_user@example.com',
-            password: 'Password123!', passwordConfirm: 'Password123!', registrationNumber: 'G123'
+            firstName: 'Gallery',
+            lastName: 'User',
+            email: 'gallery_user@example.com',
+            password: 'Password123!',
+            passwordConfirm: 'Password123!',
+            registrationNumber: 'G123'
         });
         const userCookie = (userRes.headers['set-cookie'] as any)?.find((c: string) => c.startsWith('uscc_token='));
         userToken = userCookie ? userCookie.split(';')[0].split('=')[1] : '';
@@ -44,13 +48,13 @@ describe('Gallery API', () => {
 
         // Clear gallery table
         await new Promise<void>((resolve, reject) => {
-            db.run('DELETE FROM gallery', (err) => err ? reject(err) : resolve());
+            db.run('DELETE FROM gallery', (err) => (err ? reject(err) : resolve()));
         });
     });
 
     afterAll(async () => {
         await new Promise<void>((resolve, reject) => {
-            db.run('DELETE FROM gallery', (err) => err ? reject(err) : resolve());
+            db.run('DELETE FROM gallery', (err) => (err ? reject(err) : resolve()));
         });
         db.close();
         vi.restoreAllMocks();
@@ -66,7 +70,9 @@ describe('Gallery API', () => {
         });
 
         it('should handle database errors on GET', async () => {
-            const spy = vi.spyOn(db, 'all').mockImplementationOnce((query, params, cb) => cb(new Error('DB error'), null));
+            const spy = vi
+                .spyOn(db, 'all')
+                .mockImplementationOnce((query, params, cb) => cb(new Error('DB error'), null));
             const res = await request(app).get('/api/gallery');
             expect(res.status).toBe(500);
             expect(res.body.error).toBe('Database error');
@@ -148,7 +154,7 @@ describe('Gallery API', () => {
             sharpImport.mockReturnValueOnce({
                 resize: vi.fn().mockReturnThis(),
                 webp: vi.fn().mockReturnThis(),
-                toFile: vi.fn().mockRejectedValue(new Error('Fail')),
+                toFile: vi.fn().mockRejectedValue(new Error('Fail'))
             });
 
             const res = await request(app)
@@ -165,13 +171,16 @@ describe('Gallery API', () => {
             sharpImport.mockReturnValueOnce({
                 resize: vi.fn().mockReturnThis(),
                 webp: vi.fn().mockReturnThis(),
-                toFile: vi.fn().mockRejectedValue(new Error('Sharp fail')),
+                toFile: vi.fn().mockRejectedValue(new Error('Sharp fail'))
             });
 
             // Simulate a never-resolving unlink to prove the response is not blocked by cleanup
             let resolveUnlink: (() => void) | undefined;
             const unlinkSpy = vi.spyOn(fs.promises, 'unlink').mockImplementation(
-                () => new Promise<void>(resolve => { resolveUnlink = resolve; })
+                () =>
+                    new Promise<void>((resolve) => {
+                        resolveUnlink = resolve;
+                    })
             );
             const unlinkSyncSpy = vi.spyOn(fs, 'unlinkSync');
 
@@ -194,7 +203,9 @@ describe('Gallery API', () => {
         });
 
         it('should handle db insert error', async () => {
-            const spy = vi.spyOn(db, 'run').mockImplementationOnce((query, params, cb) => cb.call({}, new Error('DB Error')));
+            const spy = vi
+                .spyOn(db, 'run')
+                .mockImplementationOnce((query, params, cb) => cb.call({}, new Error('DB Error')));
 
             const res = await request(app)
                 .post('/api/gallery')
@@ -244,7 +255,9 @@ describe('Gallery API', () => {
         });
 
         it('should handle db update error', async () => {
-            const spy = vi.spyOn(db, 'run').mockImplementationOnce((query, params, cb) => cb.call({}, new Error('DB error')));
+            const spy = vi
+                .spyOn(db, 'run')
+                .mockImplementationOnce((query, params, cb) => cb.call({}, new Error('DB error')));
             const res = await request(app)
                 .put(`/api/gallery/${imageId}`)
                 .set('Authorization', `Bearer ${committeeToken}`)
@@ -377,7 +390,9 @@ describe('Gallery API', () => {
         });
 
         it('should return 500 when featured auto-order lookup fails', async () => {
-            const spy = vi.spyOn(db, 'get').mockImplementationOnce((query, params, cb) => cb(new Error('DB error'), null));
+            const spy = vi
+                .spyOn(db, 'get')
+                .mockImplementationOnce((query, params, cb) => cb(new Error('DB error'), null));
 
             const res = await request(app)
                 .put(`/api/gallery/${imageId}`)
@@ -412,7 +427,9 @@ describe('Gallery API', () => {
         });
 
         it('should return 404 on DB error getting image', async () => {
-            const spy = vi.spyOn(db, 'get').mockImplementationOnce((query, params, cb) => cb(new Error('DB error'), null));
+            const spy = vi
+                .spyOn(db, 'get')
+                .mockImplementationOnce((query, params, cb) => cb(new Error('DB error'), null));
             const res = await request(app)
                 .delete(`/api/gallery/${imageId}`)
                 .set('Authorization', `Bearer ${committeeToken}`);
@@ -448,7 +465,7 @@ describe('Gallery API', () => {
 
             // Mock FS to prevent actual deletion errors if file doesn't exist
             const spyExists = vi.spyOn(fs, 'existsSync').mockReturnValue(true);
-            const spyUnlink = vi.spyOn(fs, 'unlinkSync').mockImplementationOnce(() => { });
+            const spyUnlink = vi.spyOn(fs, 'unlinkSync').mockImplementationOnce(() => {});
 
             const res = await request(app)
                 .delete(`/api/gallery/${newId}`)
@@ -469,7 +486,9 @@ describe('Gallery API', () => {
             const newId = upRes.body.uploaded[0].id;
 
             const spyExists = vi.spyOn(fs, 'existsSync').mockReturnValue(false); // skip fs delete
-            const spyRun = vi.spyOn(db, 'run').mockImplementationOnce((query, params, cb) => cb.call({}, new Error('DB err')));
+            const spyRun = vi
+                .spyOn(db, 'run')
+                .mockImplementationOnce((query, params, cb) => cb.call({}, new Error('DB err')));
 
             const res = await request(app)
                 .delete(`/api/gallery/${newId}`)

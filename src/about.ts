@@ -43,7 +43,12 @@ async function renderCommittee() {
         const memberMatchesRole = (member: any, role: any) => {
             const rawRoles: string[] = [];
             if (typeof member.roles === 'string' && member.roles.trim()) {
-                rawRoles.push(...member.roles.split(',').map((r: string) => r.trim()).filter(Boolean));
+                rawRoles.push(
+                    ...member.roles
+                        .split(',')
+                        .map((r: string) => r.trim())
+                        .filter(Boolean)
+                );
             }
             if (typeof member.committeeRole === 'string' && member.committeeRole.trim()) {
                 rawRoles.push(member.committeeRole.trim());
@@ -60,33 +65,38 @@ async function renderCommittee() {
             return roleKeys.some((k) => normalizedMemberRoles.has(k));
         };
 
-        committeeGrid.innerHTML = roles.map(role => {
-            const member = members.find((m: any) => memberMatchesRole(m, role));
-            const name = member ? (member.name || '') : 'To Be Announced';
-            const instagram = sanitizeInstagramHandle(member?.instagram);
-            const faveCrag = member?.faveCrag || null;
-            const bio = member?.bio || null;
-            const photo = sanitizePhotoPath(member?.profilePhoto);
+        committeeGrid.innerHTML = roles
+            .map((role) => {
+                const member = members.find((m: any) => memberMatchesRole(m, role));
+                const name = member ? member.name || '' : 'To Be Announced';
+                const instagram = sanitizeInstagramHandle(member?.instagram);
+                const faveCrag = member?.faveCrag || null;
+                const bio = member?.bio || null;
+                const photo = sanitizePhotoPath(member?.profilePhoto);
 
-            const safeName = escapeHTML(name);
-            const safeRoleTitle = escapeHTML(role.title);
-            const safeRoleDescription = escapeHTML(role.description);
-            const safeBio = bio ? escapeHTML(bio) : '';
-            const safeCrag = escapeHTML(faveCrag || 'Unknown');
-            const safeInstagram = instagram ? escapeHTML(instagram) : '';
+                const safeName = escapeHTML(name);
+                const safeRoleTitle = escapeHTML(role.title);
+                const safeRoleDescription = escapeHTML(role.description);
+                const safeBio = bio ? escapeHTML(bio) : '';
+                const safeCrag = escapeHTML(faveCrag || 'Unknown');
+                const safeInstagram = instagram ? escapeHTML(instagram) : '';
 
-            return `
+                return `
             <div class="glass-card group hover:border-brand-gold-muted/50 transition-all duration-500 overflow-hidden relative">
                 <div class="absolute -right-10 -top-10 w-32 h-32 bg-brand-gold/5 rounded-full blur-3xl group-hover:bg-brand-gold/10 transition-colors"></div>
                 
                 <div class="w-32 h-32 mx-auto bg-slate-800 rounded-full mb-6 border border-white/10 flex items-center justify-center overflow-hidden relative z-10 shadow-xl group-hover:scale-105 transition-transform duration-500">
-                    ${photo ? `
+                    ${
+                        photo
+                            ? `
                         <img src="${photo}" alt="${safeName}" class="w-full h-full object-cover">
-                    ` : `
+                    `
+                            : `
                         <svg class="w-12 h-12 text-slate-600 group-hover:text-brand-gold-muted transition-colors" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
                         </svg>
-                    `}
+                    `
+                    }
                 </div>
                 
                 <h3 class="text-xl font-bold text-white mb-1 relative z-10">${safeName}</h3>
@@ -97,23 +107,34 @@ async function renderCommittee() {
                     ${bio ? `<p class="text-slate-300 text-xs italic font-light">"${safeBio}"</p>` : ''}
                 </div>
                 
-                ${member ? `
+                ${
+                    member
+                        ? `
                 <div class="pt-4 border-t border-white/5 flex flex-col gap-2 relative z-10">
                     <div class="flex items-center justify-center gap-2 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
                         <span>Fave Crag:</span>
                         <span class="text-slate-300">${safeCrag}</span>
                     </div>
-                    ${instagram ? `
+                    ${
+                        instagram
+                            ? `
                         <a href="https://instagram.com/${encodeURIComponent(instagram)}" target="_blank" rel="noopener noreferrer" class="text-xs text-brand-gold hover:text-white transition-colors font-bold inline-flex items-center justify-center gap-1">
                             @${safeInstagram}
                         </a>
-                    ` : ''}
+                    `
+                            : ''
+                    }
                 </div>
-                ` : ''}
+                `
+                        : ''
+                }
             </div>
-        `}).join('');
+        `;
+            })
+            .join('');
     } catch (error) {
         console.error('Error rendering committee:', error);
-        committeeGrid.innerHTML = '<p class="text-slate-400 text-center col-span-full">Failed to load committee data.</p>';
+        committeeGrid.innerHTML =
+            '<p class="text-slate-400 text-center col-span-full">Failed to load committee data.</p>';
     }
 }

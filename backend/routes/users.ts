@@ -13,29 +13,35 @@ import { memoryUpload as upload } from '../utils/upload';
 import { getMembershipTypeIds } from '../services/membership';
 const router = express.Router();
 
-
 // Configure multer for profile photo uploads
 const uploadDir = path.join(UPLOAD_BASE_DIR, 'profile-photos');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-
 /** Get current user's membership rows */
 router.get('/me/memberships', authenticateToken, (req: any, res) => {
-    db.all('SELECT * FROM user_memberships WHERE userId = ? ORDER BY membershipYear DESC, membershipType ASC', [req.user.id], (err, rows) => {
-        if (err) return res.status(500).json({ error: 'Database error' });
-        res.json(rows || []);
-    });
+    db.all(
+        'SELECT * FROM user_memberships WHERE userId = ? ORDER BY membershipYear DESC, membershipType ASC',
+        [req.user.id],
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: 'Database error' });
+            res.json(rows || []);
+        }
+    );
 });
 
 /** Get current user's full profile details */
 router.get('/me/profile', authenticateToken, (req: any, res) => {
-    db.get('SELECT firstName, lastName, emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements, profilePhoto, registrationNumber, membershipStatus, membershipYear FROM users WHERE id = ?', [req.user.id], (err, user) => {
-        if (err) return res.status(500).json({ error: 'Database error' });
-        if (!user) return res.status(404).json({ error: 'User not found' });
-        res.json(user);
-    });
+    db.get(
+        'SELECT firstName, lastName, emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements, profilePhoto, registrationNumber, membershipStatus, membershipYear FROM users WHERE id = ?',
+        [req.user.id],
+        (err, user) => {
+            if (err) return res.status(500).json({ error: 'Database error' });
+            if (!user) return res.status(404).json({ error: 'User not found' });
+            res.json(user);
+        }
+    );
 });
 
 /** POST /api/users/me/photo - Upload profile photo */
@@ -52,7 +58,7 @@ router.post('/me/photo', authenticateToken, (req: any, res) => {
             return res.status(400).json({ error: 'No file uploaded' });
         }
 
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
         const filename = 'profile-' + uniqueSuffix + '.webp';
         const photoPath = `/uploads/profile-photos/${filename}`;
         const fullPath = path.join(UPLOAD_BASE_DIR, 'profile-photos', filename);
@@ -102,9 +108,9 @@ router.post('/me/memberships', authenticateToken, (req: any, res) => {
 
         const currentYear = new Date().getFullYear();
         const currentMonth = new Date().getMonth();
-        const year = membershipYear || (currentMonth < 8
-            ? `${currentYear - 1}/${currentYear}`
-            : `${currentYear}/${currentYear + 1}`);
+        const year =
+            membershipYear ||
+            (currentMonth < 8 ? `${currentYear - 1}/${currentYear}` : `${currentYear}/${currentYear + 1}`);
 
         const id = 'umem_' + crypto.randomUUID();
         // Committee members get auto-approved memberships
@@ -148,23 +154,29 @@ router.post('/me/membership-renewal', authenticateToken, (req: any, res) => {
     getMembershipTypeIds((typeErr, membershipTypeIds) => {
         if (typeErr) return res.status(500).json({ error: 'Database error' });
 
-        db.run('UPDATE users SET membershipYear = ?, membershipStatus = ? WHERE id = ?', [membershipYear, newStatus, req.user.id], function (err) {
-            if (err) return res.status(500).json({ error: 'Database error' });
+        db.run(
+            'UPDATE users SET membershipYear = ?, membershipStatus = ? WHERE id = ?',
+            [membershipYear, newStatus, req.user.id],
+            function (err) {
+                if (err) return res.status(500).json({ error: 'Database error' });
 
-            // Optionally insert new membership type rows for the new year
-            if (Array.isArray(membershipTypes) && membershipTypes.length > 0) {
-                const validTypes = membershipTypes.filter((t: string) => membershipTypeIds.includes(t));
-                if (validTypes.length > 0) {
-                    const stmt = db.prepare('INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)');
-                    validTypes.forEach((t: string) => {
-                        stmt.run(['umem_' + crypto.randomUUID(), req.user.id, t, newStatus, membershipYear]);
-                    });
-                    stmt.finalize();
+                // Optionally insert new membership type rows for the new year
+                if (Array.isArray(membershipTypes) && membershipTypes.length > 0) {
+                    const validTypes = membershipTypes.filter((t: string) => membershipTypeIds.includes(t));
+                    if (validTypes.length > 0) {
+                        const stmt = db.prepare(
+                            'INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)'
+                        );
+                        validTypes.forEach((t: string) => {
+                            stmt.run(['umem_' + crypto.randomUUID(), req.user.id, t, newStatus, membershipYear]);
+                        });
+                        stmt.finalize();
+                    }
                 }
-            }
 
-            res.json({ success: true, membershipYear, membershipStatus: newStatus });
-        });
+                res.json({ success: true, membershipYear, membershipStatus: newStatus });
+            }
+        );
     });
 });
 
@@ -172,9 +184,7 @@ router.post('/me/membership-renewal', authenticateToken, (req: any, res) => {
 router.post('/me/request-membership', authenticateToken, (req: any, res) => {
     const currentYear = new Date().getFullYear();
     const currentMonth = new Date().getMonth();
-    const membershipYear = currentMonth < 8
-        ? `${currentYear - 1}/${currentYear}`
-        : `${currentYear}/${currentYear + 1}`;
+    const membershipYear = currentMonth < 8 ? `${currentYear - 1}/${currentYear}` : `${currentYear}/${currentYear + 1}`;
 
     getMembershipTypeIds((typeErr, membershipTypeIds) => {
         if (typeErr) return res.status(500).json({ error: 'Database error' });
@@ -190,7 +200,8 @@ router.post('/me/request-membership', authenticateToken, (req: any, res) => {
                 if (err) return res.status(500).json({ error: 'Database error' });
 
                 // Upsert a default membership row so it appears in the admin pending list
-                db.get('SELECT id FROM user_memberships WHERE userId = ? AND membershipType = ? AND membershipYear = ?',
+                db.get(
+                    'SELECT id FROM user_memberships WHERE userId = ? AND membershipType = ? AND membershipYear = ?',
                     [req.user.id, defaultMembershipType, membershipYear],
                     (err2, row: any) => {
                         if (row) {
@@ -198,8 +209,16 @@ router.post('/me/request-membership', authenticateToken, (req: any, res) => {
                             db.run('UPDATE user_memberships SET status = ? WHERE id = ?', ['pending', row.id]);
                         } else {
                             // No row for this year yet — insert a fresh pending one
-                            db.run('INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)',
-                                ['umem_' + crypto.randomUUID(), req.user.id, defaultMembershipType, 'pending', membershipYear]);
+                            db.run(
+                                'INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)',
+                                [
+                                    'umem_' + crypto.randomUUID(),
+                                    req.user.id,
+                                    defaultMembershipType,
+                                    'pending',
+                                    membershipYear
+                                ]
+                            );
                         }
                     }
                 );
@@ -215,10 +234,20 @@ router.put('/:id', authenticateToken, (req: any, res) => {
         return res.status(403).json({ error: 'Unauthorized to update this user' });
     }
 
-    const { firstName, lastName, emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements } = req.body;
+    const { firstName, lastName, emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements } =
+        req.body;
     db.run(
         'UPDATE users SET firstName = ?, lastName = ?, name = ?, emergencyContactName = ?, emergencyContactMobile = ?, pronouns = ?, dietaryRequirements = ? WHERE id = ?',
-        [firstName, lastName, `${firstName} ${lastName}`.trim(), emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements, req.params.id],
+        [
+            firstName,
+            lastName,
+            `${firstName} ${lastName}`.trim(),
+            emergencyContactName,
+            emergencyContactMobile,
+            pronouns,
+            dietaryRequirements,
+            req.params.id
+        ],
         standardDbResponse(res)
     );
 });

@@ -9,14 +9,15 @@ describe('Verification API', () => {
 
     beforeAll(async () => {
         // Wait for DB initialization
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
 
         // Create a test user with a specific calendar token
         await request(app).post('/api/auth/register').send({
             firstName: 'Verify',
             lastName: 'Me',
             email: 'verify@example.com',
-            password: 'Password123!', passwordConfirm: 'Password123!',
+            password: 'Password123!',
+            passwordConfirm: 'Password123!',
             registrationNumber: 'VER1'
         });
 
@@ -87,7 +88,9 @@ describe('Verification API', () => {
 
     it('should handle malformed membershipYear', async () => {
         await new Promise<void>((resolve) => {
-            db.run('UPDATE users SET membershipYear = ? WHERE email = ?', ['invalid', 'verify@example.com'], () => resolve());
+            db.run('UPDATE users SET membershipYear = ? WHERE email = ?', ['invalid', 'verify@example.com'], () =>
+                resolve()
+            );
         });
 
         const res = await request(app).get(`/api/verify/${CALENDAR_TOKEN}`);
@@ -96,13 +99,17 @@ describe('Verification API', () => {
 
         // Reset for other tests if any
         await new Promise<void>((resolve) => {
-            db.run('UPDATE users SET membershipYear = ? WHERE email = ?', ['2025/26', 'verify@example.com'], () => resolve());
+            db.run('UPDATE users SET membershipYear = ? WHERE email = ?', ['2025/26', 'verify@example.com'], () =>
+                resolve()
+            );
         });
     });
 
     it('should format full second year in membershipYear correctly', async () => {
         await new Promise<void>((resolve) => {
-            db.run('UPDATE users SET membershipYear = ? WHERE email = ?', ['2025/2026', 'verify@example.com'], () => resolve());
+            db.run('UPDATE users SET membershipYear = ? WHERE email = ?', ['2025/2026', 'verify@example.com'], () =>
+                resolve()
+            );
         });
 
         const res = await request(app).get(`/api/verify/${CALENDAR_TOKEN}`);
@@ -110,7 +117,9 @@ describe('Verification API', () => {
         expect(res.body.expiryDate).toBe('31 Aug 2026');
 
         await new Promise<void>((resolve) => {
-            db.run('UPDATE users SET membershipYear = ? WHERE email = ?', ['2025/26', 'verify@example.com'], () => resolve());
+            db.run('UPDATE users SET membershipYear = ? WHERE email = ?', ['2025/26', 'verify@example.com'], () =>
+                resolve()
+            );
         });
     });
 });

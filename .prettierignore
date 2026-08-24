@@ -1,0 +1,16 @@
+# Build/test artifacts
+dist/
+coverage/
+node_modules/
+playwright-report/
+test-results/
+
+# Never reformat lockfiles or generated content
+package-lock.json
+
+# HTML/CSS not yet prettier-formatted (large-churn backlog)
+*.html
+src/style.css
+
+# User's in-progress edits - do not reformat underneath them
+src/social-post.ts

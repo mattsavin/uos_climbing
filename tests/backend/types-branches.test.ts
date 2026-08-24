@@ -32,10 +32,7 @@ describe('Membership/Session Types Branch Coverage', () => {
     });
 
     it('session-types: rejects missing label on create', async () => {
-        const res = await request(app)
-            .post('/api/session-types')
-            .set('Authorization', `Bearer ${rootToken}`)
-            .send({});
+        const res = await request(app).post('/api/session-types').set('Authorization', `Bearer ${rootToken}`).send({});
         expect(res.status).toBe(400);
         expect(res.body.error).toBe('Label is required');
     });
@@ -64,12 +61,10 @@ describe('Membership/Session Types Branch Coverage', () => {
     });
 
     it('session-types: returns 500 for non-constraint insert DB errors', async () => {
-        const spy = vi
-            .spyOn(db, 'run')
-            .mockImplementationOnce((_sql: string, _params: any[], cb: any) => {
-                cb.call({}, new Error('DB Error'));
-                return db as any;
-            });
+        const spy = vi.spyOn(db, 'run').mockImplementationOnce((_sql: string, _params: any[], cb: any) => {
+            cb.call({}, new Error('DB Error'));
+            return db as any;
+        });
         const res = await request(app)
             .post('/api/session-types')
             .set('Authorization', `Bearer ${rootToken}`)
@@ -142,12 +137,10 @@ describe('Membership/Session Types Branch Coverage', () => {
     });
 
     it('membership-types: returns 500 on generic create and count-query DB errors', async () => {
-        const createSpy = vi
-            .spyOn(db, 'run')
-            .mockImplementationOnce((_sql: string, _params: any[], cb: any) => {
-                cb.call({}, new Error('DB Error'));
-                return db as any;
-            });
+        const createSpy = vi.spyOn(db, 'run').mockImplementationOnce((_sql: string, _params: any[], cb: any) => {
+            cb.call({}, new Error('DB Error'));
+            return db as any;
+        });
         const createRes = await request(app)
             .post('/api/membership-types')
             .set('Authorization', `Bearer ${rootToken}`)
@@ -181,12 +174,10 @@ describe('Membership/Session Types Branch Coverage', () => {
             }
             return originalGet(sql, params, cb);
         });
-        const runSpy = vi
-            .spyOn(db, 'run')
-            .mockImplementationOnce((_sql: string, _params: any[], cb: any) => {
-                cb.call({ changes: 0 }, null);
-                return db as any;
-            });
+        const runSpy = vi.spyOn(db, 'run').mockImplementationOnce((_sql: string, _params: any[], cb: any) => {
+            cb.call({ changes: 0 }, null);
+            return db as any;
+        });
 
         const res = await request(app)
             .delete('/api/membership-types/nonexistent_for_404')

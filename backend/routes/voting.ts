@@ -7,15 +7,19 @@ import crypto from 'crypto';
 const router = express.Router();
 
 router.get('/candidates', authenticateToken, (req, res) => {
-    db.all(`
+    db.all(
+        `
         SELECT u.id, u.name, c.manifesto, c.role, c.presentationLink,
         (SELECT COUNT(*) FROM votes v WHERE v.candidateId = u.id) as voteCount
         FROM candidates c
         JOIN users u ON c.userId = u.id
-    `, [], (err, rows) => {
-        if (err) return res.status(500).json({ error: 'Database error' });
-        res.json(rows);
-    });
+    `,
+        [],
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: 'Database error' });
+            res.json(rows);
+        }
+    );
 });
 
 router.post('/apply', authenticateToken, (req: any, res) => {
@@ -27,15 +31,19 @@ router.post('/apply', authenticateToken, (req: any, res) => {
             return res.status(403).json({ error: 'Elections are not currently open' });
         }
 
-        db.run('INSERT INTO candidates (userId, manifesto, role, presentationLink) VALUES (?, ?, ?, ?)', [req.user.id, manifesto, role, presentationLink || null], function (err) {
-            if (err) {
-                if (err.message.includes('UNIQUE constraint failed')) {
-                    return res.status(400).json({ error: 'You are already a candidate' });
+        db.run(
+            'INSERT INTO candidates (userId, manifesto, role, presentationLink) VALUES (?, ?, ?, ?)',
+            [req.user.id, manifesto, role, presentationLink || null],
+            function (err) {
+                if (err) {
+                    if (err.message.includes('UNIQUE constraint failed')) {
+                        return res.status(400).json({ error: 'You are already a candidate' });
+                    }
+                    return res.status(500).json({ error: 'Database error' });
                 }
-                return res.status(500).json({ error: 'Database error' });
+                res.json({ success: true });
             }
-            res.json({ success: true });
-        });
+        );
     });
 });
 router.post('/withdraw', authenticateToken, (req: any, res) => {
@@ -107,7 +115,8 @@ router.post('/reset', authenticateToken, requireCommittee, (req, res) => {
 });
 
 router.get('/referendums', authenticateToken, (req: any, res) => {
-    db.all(`
+    db.all(
+        `
         SELECT r.id, r.title, r.description, r.createdAt,
         (SELECT COUNT(*) FROM referendum_votes rv WHERE rv.referendumId = r.id AND rv.choice = 'yes') as yesCount,
         (SELECT COUNT(*) FROM referendum_votes rv WHERE rv.referendumId = r.id AND rv.choice = 'no') as noCount,
@@ -115,10 +124,13 @@ router.get('/referendums', authenticateToken, (req: any, res) => {
         (SELECT choice FROM referendum_votes rv WHERE rv.referendumId = r.id AND rv.userId = ?) as myVote
         FROM referendums r
         ORDER BY r.createdAt DESC
-    `, [req.user.id], (err, rows) => {
-        if (err) return res.status(500).json({ error: 'Database error' });
-        res.json(rows);
-    });
+    `,
+        [req.user.id],
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: 'Database error' });
+            res.json(rows);
+        }
+    );
 });
 
 router.post('/referendums', authenticateToken, requireCommittee, (req, res) => {
@@ -128,10 +140,14 @@ router.post('/referendums', authenticateToken, requireCommittee, (req, res) => {
     const id = crypto.randomUUID();
     const createdAt = Date.now();
 
-    db.run('INSERT INTO referendums (id, title, description, createdAt) VALUES (?, ?, ?, ?)', [id, title, description, createdAt], function (err) {
-        if (err) return res.status(500).json({ error: 'Database error' });
-        res.json({ id, title, description, createdAt });
-    });
+    db.run(
+        'INSERT INTO referendums (id, title, description, createdAt) VALUES (?, ?, ?, ?)',
+        [id, title, description, createdAt],
+        function (err) {
+            if (err) return res.status(500).json({ error: 'Database error' });
+            res.json({ id, title, description, createdAt });
+        }
+    );
 });
 
 router.delete('/referendums/:id', authenticateToken, requireCommittee, (req, res) => {
@@ -163,15 +179,19 @@ router.post('/referendums/:id/vote', authenticateToken, (req: any, res) => {
             return res.status(403).json({ error: 'Elections are not currently open' });
         }
 
-        db.run('INSERT INTO referendum_votes (userId, referendumId, choice) VALUES (?, ?, ?)', [req.user.id, id, choice], function (err) {
-            if (err) {
-                if (err.message.includes('UNIQUE constraint failed')) {
-                    return res.status(400).json({ error: 'You have already voted on this referendum' });
+        db.run(
+            'INSERT INTO referendum_votes (userId, referendumId, choice) VALUES (?, ?, ?)',
+            [req.user.id, id, choice],
+            function (err) {
+                if (err) {
+                    if (err.message.includes('UNIQUE constraint failed')) {
+                        return res.status(400).json({ error: 'You have already voted on this referendum' });
+                    }
+                    return res.status(500).json({ error: 'Database error' });
                 }
-                return res.status(500).json({ error: 'Database error' });
+                res.json({ success: true });
             }
-            res.json({ success: true });
-        });
+        );
     });
 });
 

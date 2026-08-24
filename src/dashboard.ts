@@ -6,7 +6,13 @@ import { initAdminConfirm } from './lib/dashboard/admin';
 import { initProfileHandlers, initAccountModalHandlers } from './lib/dashboard/profile';
 import { initProfilePhotoCropEditor } from './lib/dashboard/profile.photoEditor';
 import { initCommitteeProfileHandlers } from './lib/dashboard/committee';
-import { membershipRenewalModalHtml, accountManagerModalHtml, adminConfirmModalHtml, membershipCardModalHtml, profilePhotoCropModalHtml } from './components';
+import {
+    membershipRenewalModalHtml,
+    accountManagerModalHtml,
+    adminConfirmModalHtml,
+    membershipCardModalHtml,
+    profilePhotoCropModalHtml
+} from './components';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Inject components

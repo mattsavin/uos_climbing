@@ -16,7 +16,9 @@ export function openSessionModal(options: SessionModalOptions) {
 
     let modal = document.getElementById('unified-session-modal');
     if (!modal) {
-        document.body.insertAdjacentHTML('beforeend', `
+        document.body.insertAdjacentHTML(
+            'beforeend',
+            `
             <div id="unified-session-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4">
                 <div id="unified-session-backdrop" class="absolute inset-0 bg-black/60 backdrop-blur-sm cursor-pointer transition-opacity"></div>
                 <div class="relative w-full max-w-md bg-brand-dark border border-white/10 rounded-2xl shadow-2xl p-6 transform transition-all flex flex-col max-h-[90vh] overflow-y-auto">
@@ -129,7 +131,8 @@ export function openSessionModal(options: SessionModalOptions) {
 
                 </div>
             </div>
-        `);
+        `
+        );
         modal = document.getElementById('unified-session-modal');
 
         document.getElementById('unified-session-backdrop')?.addEventListener('click', close);
@@ -144,24 +147,40 @@ export function openSessionModal(options: SessionModalOptions) {
             const location = (document.getElementById('usm-edit-location') as HTMLInputElement).value;
             const type = (document.getElementById('usm-edit-type') as HTMLSelectElement).value as any;
             const capacity = parseInt((document.getElementById('usm-edit-capacity') as HTMLInputElement).value, 10);
-            const bookedSlots = parseInt((document.getElementById('usm-edit-booked') as HTMLInputElement).value, 10) || 0;
+            const bookedSlots =
+                parseInt((document.getElementById('usm-edit-booked') as HTMLInputElement).value, 10) || 0;
             const registrationRule = (document.getElementById('usm-edit-registration-rule') as HTMLSelectElement).value;
-            const visibility = (document.getElementById('usm-edit-visibility') as HTMLSelectElement).value as 'all' | 'committee_only';
+            const visibility = (document.getElementById('usm-edit-visibility') as HTMLSelectElement).value as
+                'all' | 'committee_only';
             const registrationVisibility = registrationRule === 'committee_only' ? 'committee_only' : 'all';
             const requiredMembership = registrationRule === 'committee_only' ? undefined : registrationRule;
 
             if (id && title && date && type && !isNaN(capacity)) {
                 try {
-                    const submitBtn = document.querySelector('#usm-edit-form button[type="submit"]') as HTMLButtonElement;
+                    const submitBtn = document.querySelector(
+                        '#usm-edit-form button[type="submit"]'
+                    ) as HTMLButtonElement;
                     submitBtn.disabled = true;
                     submitBtn.textContent = 'Saving...';
-                    await adminApi.updateSession(id, { title, date, location, type, capacity, bookedSlots, requiredMembership, visibility, registrationVisibility });
+                    await adminApi.updateSession(id, {
+                        title,
+                        date,
+                        location,
+                        type,
+                        capacity,
+                        bookedSlots,
+                        requiredMembership,
+                        visibility,
+                        registrationVisibility
+                    });
                     close();
                     if ((window as any)._usmCurrentOnEditSuccess) (window as any)._usmCurrentOnEditSuccess();
                 } catch (err: any) {
-                    showError(err.message || "Failed to edit session");
+                    showError(err.message || 'Failed to edit session');
                 } finally {
-                    const submitBtn = document.querySelector('#usm-edit-form button[type="submit"]') as HTMLButtonElement;
+                    const submitBtn = document.querySelector(
+                        '#usm-edit-form button[type="submit"]'
+                    ) as HTMLButtonElement;
                     if (submitBtn) {
                         submitBtn.disabled = false;
                         submitBtn.textContent = 'Save Adjustments';
@@ -180,12 +199,11 @@ export function openSessionModal(options: SessionModalOptions) {
                         close();
                         if ((window as any)._usmCurrentOnDeleteSuccess) (window as any)._usmCurrentOnDeleteSuccess();
                     } catch (err: any) {
-                        showError(err.message || "Failed to delete session");
+                        showError(err.message || 'Failed to delete session');
                     }
                 }
             }
         });
-
     }
 
     // Attach callbacks globally so the form event listeners can use them
@@ -247,25 +265,30 @@ export function openSessionModal(options: SessionModalOptions) {
 
     // Styling the icon depending on Type
     if (session.type === 'Competition') {
-        iconEl.className = 'inline-flex items-center justify-center w-12 h-12 rounded-full mb-3 bg-red-500/20 text-red-500';
+        iconEl.className =
+            'inline-flex items-center justify-center w-12 h-12 rounded-full mb-3 bg-red-500/20 text-red-500';
         typeEl.className = 'text-[10px] font-bold text-red-500 uppercase tracking-widest';
-        typeEl.textContent = "COMPETITION";
+        typeEl.textContent = 'COMPETITION';
     } else if (session.type === 'Social') {
-        iconEl.className = 'inline-flex items-center justify-center w-12 h-12 rounded-full mb-3 bg-brand-gold-muted/20 text-brand-gold-muted';
+        iconEl.className =
+            'inline-flex items-center justify-center w-12 h-12 rounded-full mb-3 bg-brand-gold-muted/20 text-brand-gold-muted';
         typeEl.className = 'text-[10px] font-bold text-brand-gold-muted uppercase tracking-widest';
-        typeEl.textContent = "CLUB SOCIAL";
+        typeEl.textContent = 'CLUB SOCIAL';
     } else if (session.type === 'Training Session (Bouldering)') {
-        iconEl.className = 'inline-flex items-center justify-center w-12 h-12 rounded-full mb-3 bg-blue-500/20 text-blue-400';
+        iconEl.className =
+            'inline-flex items-center justify-center w-12 h-12 rounded-full mb-3 bg-blue-500/20 text-blue-400';
         typeEl.className = 'text-[10px] font-bold text-blue-400 uppercase tracking-widest';
-        typeEl.textContent = "TRAINING (BOULDERING)";
+        typeEl.textContent = 'TRAINING (BOULDERING)';
     } else if (session.type === 'Training Session (Roped)') {
-        iconEl.className = 'inline-flex items-center justify-center w-12 h-12 rounded-full mb-3 bg-purple-500/20 text-purple-400';
+        iconEl.className =
+            'inline-flex items-center justify-center w-12 h-12 rounded-full mb-3 bg-purple-500/20 text-purple-400';
         typeEl.className = 'text-[10px] font-bold text-purple-400 uppercase tracking-widest';
-        typeEl.textContent = "TRAINING (ROPED)";
+        typeEl.textContent = 'TRAINING (ROPED)';
     } else if (session.type === 'Meeting') {
-        iconEl.className = 'inline-flex items-center justify-center w-12 h-12 rounded-full mb-3 bg-emerald-500/20 text-emerald-400';
+        iconEl.className =
+            'inline-flex items-center justify-center w-12 h-12 rounded-full mb-3 bg-emerald-500/20 text-emerald-400';
         typeEl.className = 'text-[10px] font-bold text-emerald-400 uppercase tracking-widest';
-        typeEl.textContent = "CLUB MEETING";
+        typeEl.textContent = 'CLUB MEETING';
     }
     iconEl.innerHTML = `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>`;
 
@@ -278,14 +301,16 @@ export function openSessionModal(options: SessionModalOptions) {
         // Not logged in
         const btn = document.createElement('a');
         btn.href = '/login';
-        btn.className = 'w-full px-4 py-3 bg-brand-gold text-brand-darker hover:bg-white rounded-lg transition-colors text-sm font-bold uppercase shadow-lg shadow-brand-gold/20 text-center flex items-center justify-center gap-2 block';
+        btn.className =
+            'w-full px-4 py-3 bg-brand-gold text-brand-darker hover:bg-white rounded-lg transition-colors text-sm font-bold uppercase shadow-lg shadow-brand-gold/20 text-center flex items-center justify-center gap-2 block';
         btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg> Sign In to Book`;
         actionsEl.appendChild(btn);
     } else {
         // Logged in
         if (isBooked) {
             const btn = document.createElement('button');
-            btn.className = 'w-full px-4 py-3 bg-red-400 hover:bg-red-500 text-brand-darker rounded-lg transition-colors text-sm font-black uppercase tracking-wider shadow-[0_0_15px_rgba(248,113,113,0.3)] block';
+            btn.className =
+                'w-full px-4 py-3 bg-red-400 hover:bg-red-500 text-brand-darker rounded-lg transition-colors text-sm font-black uppercase tracking-wider shadow-[0_0_15px_rgba(248,113,113,0.3)] block';
             btn.innerHTML = `<span class="flex items-center justify-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg> Cancel Booking</span>`;
             btn.onclick = async () => {
                 if (onCancel) {
@@ -304,13 +329,15 @@ export function openSessionModal(options: SessionModalOptions) {
             actionsEl.appendChild(btn);
         } else if (session.bookedSlots >= session.capacity) {
             const btn = document.createElement('button');
-            btn.className = 'w-full px-4 py-3 bg-slate-800 text-slate-500 rounded-lg cursor-not-allowed text-sm font-bold uppercase tracking-wider block';
+            btn.className =
+                'w-full px-4 py-3 bg-slate-800 text-slate-500 rounded-lg cursor-not-allowed text-sm font-bold uppercase tracking-wider block';
             btn.innerHTML = 'Fully Booked';
             btn.disabled = true;
             actionsEl.appendChild(btn);
         } else {
             const btn = document.createElement('button');
-            btn.className = 'w-full px-4 py-3 bg-brand-gold hover:bg-white text-brand-darker rounded-lg transition-colors text-sm font-black uppercase shadow-[0_0_20px_rgba(253,185,19,0.4)] tracking-wider block';
+            btn.className =
+                'w-full px-4 py-3 bg-brand-gold hover:bg-white text-brand-darker rounded-lg transition-colors text-sm font-black uppercase shadow-[0_0_20px_rgba(253,185,19,0.4)] tracking-wider block';
             btn.textContent = 'Confirm Booking';
             btn.onclick = async () => {
                 if (onBook) {
@@ -330,14 +357,19 @@ export function openSessionModal(options: SessionModalOptions) {
         }
 
         // Committee Edit Toggle
-        const isCommittee = user.role === 'committee' || !!user.committeeRole || (Array.isArray(user.committeeRoles) && user.committeeRoles.length > 0);
+        const isCommittee =
+            user.role === 'committee' ||
+            !!user.committeeRole ||
+            (Array.isArray(user.committeeRoles) && user.committeeRoles.length > 0);
         if (isCommittee) {
             const toggleWrapper = document.createElement('div');
             toggleWrapper.className = 'text-center mt-3';
 
             const toggleBtn = document.createElement('button');
-            toggleBtn.className = 'text-[10px] text-slate-400 hover:text-white underline decoration-dashed underline-offset-4 transition-colors font-bold tracking-wider uppercase inline-block';
-            toggleBtn.innerHTML = '<span class="flex items-center justify-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg> Expand Admin Options</span>';
+            toggleBtn.className =
+                'text-[10px] text-slate-400 hover:text-white underline decoration-dashed underline-offset-4 transition-colors font-bold tracking-wider uppercase inline-block';
+            toggleBtn.innerHTML =
+                '<span class="flex items-center justify-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg> Expand Admin Options</span>';
             toggleBtn.onclick = () => {
                 editPaneEl.classList.toggle('hidden');
                 toggleBtn.classList.toggle('text-white');
@@ -354,34 +386,45 @@ export function openSessionModal(options: SessionModalOptions) {
             (document.getElementById('usm-edit-location') as HTMLInputElement).value = (session as any).location || '';
 
             const typeSelect = document.getElementById('usm-edit-type') as HTMLSelectElement;
-            adminApi.getSessionTypes().then(types => {
-                typeSelect.innerHTML = types.map(t => `<option value="${t.id}">${t.label}</option>`).join('');
+            adminApi.getSessionTypes().then((types) => {
+                typeSelect.innerHTML = types.map((t) => `<option value="${t.id}">${t.label}</option>`).join('');
                 typeSelect.value = session.type;
             });
 
             (document.getElementById('usm-edit-capacity') as HTMLInputElement).value = session.capacity.toString();
             (document.getElementById('usm-edit-booked') as HTMLInputElement).value = session.bookedSlots.toString();
             const registrationRuleSelect = document.getElementById('usm-edit-registration-rule') as HTMLSelectElement;
-            adminApi.getMembershipTypes().then(types => {
-                const activeTypes = types.filter(t => !t.deprecated || t.id === 'basic');
-                const membershipOptions = activeTypes.length
-                    ? activeTypes.map(t => `<option value="${t.id}">${t.label} Members</option>`).join('')
-                    : '<option value="basic">Basic Members</option>';
-                registrationRuleSelect.innerHTML = `
+            adminApi
+                .getMembershipTypes()
+                .then((types) => {
+                    const activeTypes = types.filter((t) => !t.deprecated || t.id === 'basic');
+                    const membershipOptions = activeTypes.length
+                        ? activeTypes.map((t) => `<option value="${t.id}">${t.label} Members</option>`).join('')
+                        : '<option value="basic">Basic Members</option>';
+                    registrationRuleSelect.innerHTML = `
                     ${membershipOptions}
                     <option value="committee_only">Committee Only</option>
                 `;
-                registrationRuleSelect.value = (session as any).registrationVisibility === 'committee_only'
-                    ? 'committee_only'
-                    : ((session as any).requiredMembership || (activeTypes.find(t => t.id === 'basic')?.id || activeTypes[0]?.id || 'basic'));
-            }).catch(() => {
-                registrationRuleSelect.innerHTML = `
+                    registrationRuleSelect.value =
+                        (session as any).registrationVisibility === 'committee_only'
+                            ? 'committee_only'
+                            : (session as any).requiredMembership ||
+                              activeTypes.find((t) => t.id === 'basic')?.id ||
+                              activeTypes[0]?.id ||
+                              'basic';
+                })
+                .catch(() => {
+                    registrationRuleSelect.innerHTML = `
                     <option value="basic">Basic Members</option>
                     <option value="committee_only">Committee Only</option>
                 `;
-                registrationRuleSelect.value = (session as any).registrationVisibility === 'committee_only' ? 'committee_only' : ((session as any).requiredMembership || 'basic');
-            });
-            (document.getElementById('usm-edit-visibility') as HTMLSelectElement).value = (session as any).visibility || 'all';
+                    registrationRuleSelect.value =
+                        (session as any).registrationVisibility === 'committee_only'
+                            ? 'committee_only'
+                            : (session as any).requiredMembership || 'basic';
+                });
+            (document.getElementById('usm-edit-visibility') as HTMLSelectElement).value =
+                (session as any).visibility || 'all';
 
             // Load Attendees
             attendeePaneEl.classList.remove('hidden');
@@ -402,7 +445,9 @@ async function renderAttendees(sessionId: string, container: HTMLElement, countE
             return;
         }
 
-        container.innerHTML = attendees.map(u => `
+        container.innerHTML = attendees
+            .map(
+                (u) => `
             <div class="flex items-center justify-between p-2 rounded bg-white/5 border border-white/5">
                 <div class="min-w-0">
                     <p class="text-xs font-bold text-white truncate">${escapeHTML(`${u.firstName || ''} ${u.lastName || ''}`.trim())}</p>
@@ -412,9 +457,11 @@ async function renderAttendees(sessionId: string, container: HTMLElement, countE
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
-        `).join('');
+        `
+            )
+            .join('');
 
-        container.querySelectorAll('.remove-attendee-btn').forEach(btn => {
+        container.querySelectorAll('.remove-attendee-btn').forEach((btn) => {
             btn.addEventListener('click', async (e) => {
                 const userId = (e.currentTarget as HTMLElement).dataset.userId!;
                 const confirmed = await showConfirmModal('Remove this attendee from the session?');
@@ -429,7 +476,6 @@ async function renderAttendees(sessionId: string, container: HTMLElement, countE
                 }
             });
         });
-
     } catch (err: any) {
         container.innerHTML = `<div class="text-center py-4 text-red-400 text-xs">Error: ${escapeHTML(err.message || 'Failed to load attendees')}</div>`;
     }

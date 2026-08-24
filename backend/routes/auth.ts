@@ -20,7 +20,7 @@ const _rateLimiter = rateLimit({
     max: 20,
     message: { error: 'Too many requests from this IP, please try again after 15 minutes' },
     standardHeaders: true,
-    legacyHeaders: false,
+    legacyHeaders: false
 });
 
 const authLimiter = (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -33,7 +33,9 @@ const router = express.Router();
 
 const cookieOptions = {
     httpOnly: true,
-    secure: process.env.COOKIE_SECURE === 'true' || (process.env.NODE_ENV === 'production' && process.env.COOKIE_SECURE !== 'false'),
+    secure:
+        process.env.COOKIE_SECURE === 'true' ||
+        (process.env.NODE_ENV === 'production' && process.env.COOKIE_SECURE !== 'false'),
     sameSite: 'strict' as const,
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
 };
@@ -42,7 +44,6 @@ const cookieOptions = {
 function generateOTP(): string {
     return crypto.randomInt(100000, 999999).toString();
 }
-
 
 router.post('/register', authLimiter, async (req, res) => {
     const { firstName, lastName, email, registrationNumber, password, passwordConfirm, membershipTypes } = req.body;
@@ -64,17 +65,16 @@ router.post('/register', authLimiter, async (req, res) => {
     getMembershipTypeIds(async (typeErr, membershipTypeIds) => {
         if (typeErr) return res.status(500).json({ error: 'Database error' });
 
-        const defaultMembership = membershipTypeIds.includes('basic')
-            ? 'basic'
-            : membershipTypeIds[0];
+        const defaultMembership = membershipTypeIds.includes('basic') ? 'basic' : membershipTypeIds[0];
         if (!defaultMembership) {
             return res.status(500).json({ error: 'No membership types configured' });
         }
 
         // Validate & default membership types
-        let types: string[] = Array.isArray(membershipTypes) && membershipTypes.length > 0
-            ? membershipTypes.filter((t: string) => membershipTypeIds.includes(t))
-            : [defaultMembership];
+        let types: string[] =
+            Array.isArray(membershipTypes) && membershipTypes.length > 0
+                ? membershipTypes.filter((t: string) => membershipTypeIds.includes(t))
+                : [defaultMembership];
         if (types.length === 0) types = [defaultMembership];
 
         try {
@@ -111,11 +111,24 @@ router.post('/register', authLimiter, async (req, res) => {
 
             const calendarToken = crypto.randomUUID();
             // In test env, mark as verified immediately
-            const emailVerified = (IS_TEST || isRootAdminTestBypass) ? 1 : 0;
+            const emailVerified = IS_TEST || isRootAdminTestBypass ? 1 : 0;
 
             db.run(
                 'INSERT INTO users (id, firstName, lastName, name, email, passwordHash, registrationNumber, role, membershipStatus, membershipYear, calendarToken, emailVerified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [id, firstName, lastName, `${firstName} ${lastName}`, normalizedEmail, passwordHash, normalizedRegistrationNumber, role, membershipStatus, membershipYear, calendarToken, emailVerified],
+                [
+                    id,
+                    firstName,
+                    lastName,
+                    `${firstName} ${lastName}`,
+                    normalizedEmail,
+                    passwordHash,
+                    normalizedRegistrationNumber,
+                    role,
+                    membershipStatus,
+                    membershipYear,
+                    calendarToken,
+                    emailVerified
+                ],
                 function (err) {
                     if (err) {
                         if (err.message.includes('UNIQUE constraint failed')) {
@@ -125,18 +138,33 @@ router.post('/register', authLimiter, async (req, res) => {
                     }
 
                     // Insert user_memberships rows
-                    const membershipRowStatus = (IS_TEST || preApproved || isRootAdminTestBypass) ? 'active' : 'pending';
-                    const stmt = db.prepare('INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)');
+                    const membershipRowStatus = IS_TEST || preApproved || isRootAdminTestBypass ? 'active' : 'pending';
+                    const stmt = db.prepare(
+                        'INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)'
+                    );
                     types.forEach((t: string) => {
                         stmt.run(['umem_' + crypto.randomUUID(), id, t, membershipRowStatus, membershipYear]);
                     });
                     stmt.finalize();
 
                     if (preApproved) {
-                        db.run('DELETE FROM preapproved_members WHERE registrationNumber = ?', [normalizedRegistrationNumber]);
+                        db.run('DELETE FROM preapproved_members WHERE registrationNumber = ?', [
+                            normalizedRegistrationNumber
+                        ]);
                     }
 
-                    const user = { id, firstName, lastName, email: normalizedEmail, registrationNumber: normalizedRegistrationNumber, role, committeeRole: null, membershipStatus, membershipYear, calendarToken };
+                    const user = {
+                        id,
+                        firstName,
+                        lastName,
+                        email: normalizedEmail,
+                        registrationNumber: normalizedRegistrationNumber,
+                        role,
+                        committeeRole: null,
+                        membershipStatus,
+                        membershipYear,
+                        calendarToken
+                    };
 
                     if (IS_TEST || isRootAdminTestBypass) {
                         // In test environment: skip email verification, return token immediately
@@ -163,7 +191,7 @@ router.post('/register', authLimiter, async (req, res) => {
                                 'Verify your USMC email address',
                                 `Hi ${firstName},\n\nYour verification code is: ${otp}\n\nThis code expires in 15 minutes.\n\nIf you did not register for University of Sheffield Mountaineering & Climbing Club (USMC), please ignore this email.`,
                                 `<p>Hi ${firstName},</p><p>Your verification code is:</p><h2 style="letter-spacing:8px;font-size:32px;">${otp}</h2><p>This code expires in 15 minutes.</p><p style="color:#999;font-size:12px;">If you did not register for University of Sheffield Mountaineering &amp; Climbing Club (USMC), please ignore this email.</p>`
-                            ).catch(e => console.error('Failed to send verification email:', e));
+                            ).catch((e) => console.error('Failed to send verification email:', e));
 
                             res.json({ pendingVerification: true, userId: id });
                         }
@@ -257,7 +285,7 @@ router.post('/verify-email', authLimiter, (req, res) => {
                         'Welcome to USMC!',
                         `Hi ${user.firstName},\n\nWelcome to University of Sheffield Mountaineering & Climbing Club (USMC)! Your email has been verified and your registration is complete.`,
                         `<p>Hi ${user.firstName},</p><p>Welcome to University of Sheffield Mountaineering &amp; Climbing Club (USMC)! Your email has been verified and your registration is complete.</p>`
-                    ).catch(e => console.error('Failed to send welcome email:', e));
+                    ).catch((e) => console.error('Failed to send welcome email:', e));
 
                     const token = jwt.sign(user, SECRET_KEY, { expiresIn: '24h' });
                     res.cookie('uscc_token', token, cookieOptions);
@@ -298,7 +326,7 @@ router.post('/request-verification', authLimiter, (req, res) => {
                     'Your new USMC verification code',
                     `Hi ${user.firstName},\n\nYour new verification code is: ${otp}\n\nThis code expires in 15 minutes.`,
                     `<p>Hi ${user.firstName},</p><p>Your new verification code is:</p><h2 style="letter-spacing:8px;font-size:32px;">${otp}</h2><p>This code expires in 15 minutes.</p>`
-                ).catch(e => console.error('Failed to send verification email:', e));
+                ).catch((e) => console.error('Failed to send verification email:', e));
 
                 res.json({ success: true });
             }
@@ -342,7 +370,7 @@ router.post('/forgot-password', authLimiter, (req, res) => {
                     'Reset your USMC password',
                     `Hi ${user.firstName},\n\nClick the link below to reset your password (expires in 15 minutes):\n\n${resetLink}\n\nIf you did not request a password reset, please ignore this email.`,
                     `<p>Hi ${user.firstName},</p><p>Click the button below to reset your password. This link expires in <strong>15 minutes</strong>.</p><p style="text-align:center;margin:32px 0;"><a href="${resetLink}" style="background:#fdb913;color:#1a1a2e;padding:14px 28px;border-radius:8px;font-weight:900;text-decoration:none;letter-spacing:1px;font-size:14px;">Reset Password</a></p><p style="color:#999;font-size:12px;">If you did not request a password reset, please ignore this email.</p>`
-                ).catch(e => console.error('Failed to send reset email:', e));
+                ).catch((e) => console.error('Failed to send reset email:', e));
             }
         );
     });
@@ -399,13 +427,14 @@ router.get('/me', authenticateToken, (req: any, res) => {
 
             db.all('SELECT role FROM committee_roles WHERE userId = ?', [req.user.id], (errRoles, rows: any[]) => {
                 if (!errRoles && rows) {
-                    user.committeeRoles = rows.map(r => r.role);
+                    user.committeeRoles = rows.map((r) => r.role);
                 } else {
                     user.committeeRoles = [];
                 }
                 res.json({ user });
             });
-        });
+        }
+    );
 });
 
 export default router;
