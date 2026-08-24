@@ -3,16 +3,16 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { db } from '../db';
+import { dbAll, dbGet, dbRun } from '../utils/db';
 import { authenticateToken, requireCommittee } from '../middleware/auth';
 import { SECRET_KEY } from '../config';
-import { getDefaultMembershipType, getMembershipLabel } from '../services/membership';
+import { getDefaultMembershipTypeAsync, getMembershipLabel } from '../services/membership';
+
 const router = express.Router();
 
-function membershipTypeExists(membershipType: string, callback: (err: Error | null, exists: boolean) => void) {
-    db.get('SELECT id FROM membership_types WHERE id = ?', [membershipType], (err, row: any) => {
-        if (err) return callback(err as any, false);
-        callback(null, !!row);
-    });
+async function membershipTypeExists(membershipType: string): Promise<boolean> {
+    const row = await dbGet('SELECT id FROM membership_types WHERE id = ?', [membershipType]);
+    return !!row;
 }
 
 function buildIcalContent(userId: string, sessions: any[]) {
@@ -38,7 +38,7 @@ function buildIcalContent(userId: string, sessions: any[]) {
     return icalContent;
 }
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
     // Optional auth: public users can list sessions, but committee-only sessions
     // are only visible to committee users.
     let token: string | undefined = (req as any).cookies?.uscc_token;
@@ -66,305 +66,296 @@ router.get('/', (req, res) => {
         ? 'SELECT * FROM sessions ORDER BY date ASC'
         : 'SELECT * FROM sessions WHERE COALESCE(visibility, "all") != "committee_only" ORDER BY date ASC';
 
-    db.all(sql, [], (err, rows) => {
-        if (err) return res.status(500).json({ error: 'Database error' });
-        res.json(rows);
-    });
+    try {
+        res.json(await dbAll(sql));
+    } catch {
+        res.status(500).json({ error: 'Database error' });
+    }
 });
 
-router.get('/ical/:calendarToken', (req, res) => {
+router.get('/ical/:calendarToken', async (req, res) => {
     const calendarToken = req.params.calendarToken;
-    db.get('SELECT id FROM users WHERE calendarToken = ?', [calendarToken], (err, user: any) => {
-        if (err || !user) return res.status(404).send('User not found');
-        const userId = user.id;
+    const user = await dbGet<{ id: string }>('SELECT id FROM users WHERE calendarToken = ?', [calendarToken]).catch(
+        () => undefined
+    );
+    if (!user) return res.status(404).send('User not found');
+    const userId = user.id;
 
-        db.all(
+    try {
+        const sessions = await dbAll(
             `
             SELECT s.* FROM sessions s
             JOIN bookings b ON s.id = b.sessionId
             WHERE b.userId = ?
             ORDER BY s.date ASC
         `,
-            [userId],
-            (err2, sessions) => {
-                if (err2) return res.status(500).send('Database error');
-
-                const icalContent = buildIcalContent(userId, sessions);
-                res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
-                res.setHeader('Content-Disposition', `attachment; filename="uscc_schedule_booked.ics"`);
-                res.send(icalContent);
-            }
+            [userId]
         );
-    });
+        res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+        res.setHeader('Content-Disposition', 'attachment; filename="uscc_schedule_booked.ics"');
+        res.send(buildIcalContent(userId, sessions));
+    } catch {
+        res.status(500).send('Database error');
+    }
 });
 
-router.get('/ical/:calendarToken/all', (req, res) => {
+router.get('/ical/:calendarToken/all', async (req, res) => {
     const calendarToken = req.params.calendarToken;
-    db.get('SELECT id, role, committeeRole FROM users WHERE calendarToken = ?', [calendarToken], (err, user: any) => {
-        if (err || !user) return res.status(404).send('User not found');
-        const userId = user.id;
+    const user = await dbGet<{ id: string; role: string; committeeRole: string | null }>(
+        'SELECT id, role, committeeRole FROM users WHERE calendarToken = ?',
+        [calendarToken]
+    ).catch(() => undefined);
+    if (!user) return res.status(404).send('User not found');
+    const userId = user.id;
 
-        db.all('SELECT role FROM committee_roles WHERE userId = ?', [userId], (rolesErr, roles: any[]) => {
-            if (rolesErr) return res.status(500).send('Database error');
+    let roles: { role: string }[] = [];
+    try {
+        roles = await dbAll<{ role: string }>('SELECT role FROM committee_roles WHERE userId = ?', [userId]);
+    } catch {
+        return res.status(500).send('Database error');
+    }
 
-            const isCommittee =
-                user.role === 'committee' || !!user.committeeRole || (Array.isArray(roles) && roles.length > 0);
+    const isCommittee =
+        user.role === 'committee' || !!user.committeeRole || (Array.isArray(roles) && roles.length > 0);
 
-            const sql = isCommittee
-                ? 'SELECT * FROM sessions ORDER BY date ASC'
-                : 'SELECT * FROM sessions WHERE COALESCE(visibility, "all") != "committee_only" ORDER BY date ASC';
+    const sql = isCommittee
+        ? 'SELECT * FROM sessions ORDER BY date ASC'
+        : 'SELECT * FROM sessions WHERE COALESCE(visibility, "all") != "committee_only" ORDER BY date ASC';
 
-            db.all(sql, [], (err2, sessions) => {
-                if (err2) return res.status(500).send('Database error');
-                const icalContent = buildIcalContent(userId, sessions);
-                res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
-                res.setHeader('Content-Disposition', `attachment; filename="uscc_schedule_all.ics"`);
-                res.send(icalContent);
-            });
-        });
-    });
+    try {
+        const sessions = await dbAll(sql);
+        res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+        res.setHeader('Content-Disposition', 'attachment; filename="uscc_schedule_all.ics"');
+        res.send(buildIcalContent(userId, sessions));
+    } catch {
+        res.status(500).send('Database error');
+    }
 });
 
-router.post('/', authenticateToken, requireCommittee, (req, res) => {
+router.post('/', authenticateToken, requireCommittee, async (req, res) => {
     const { title, type, date, capacity, location, requiredMembership, visibility, registrationVisibility } = req.body;
     const id = 'sess_' + crypto.randomUUID();
     const eventVisibility = visibility === 'committee_only' ? 'committee_only' : 'all';
     const eventRegistrationVisibility = registrationVisibility === 'committee_only' ? 'committee_only' : 'all';
-    getDefaultMembershipType((typeErr, defaultMembershipType) => {
-        if (typeErr) return res.status(500).json({ error: 'Database error' });
+
+    try {
+        const defaultMembershipType = await getDefaultMembershipTypeAsync();
         if (!defaultMembershipType) return res.status(500).json({ error: 'No membership types configured' });
 
         const reqMemb = requiredMembership || defaultMembershipType;
-        membershipTypeExists(reqMemb, (existsErr, exists) => {
-            if (existsErr) return res.status(500).json({ error: 'Database error' });
-            if (!exists) return res.status(400).json({ error: 'Invalid required membership type' });
 
-            db.run(
-                'INSERT INTO sessions (id, type, title, date, capacity, bookedSlots, location, requiredMembership, visibility, registrationVisibility) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [
-                    id,
-                    type,
-                    title,
-                    date,
-                    capacity,
-                    0,
-                    location || null,
-                    reqMemb,
-                    eventVisibility,
-                    eventRegistrationVisibility
-                ],
-                function (err) {
-                    if (err) return res.status(500).json({ error: 'Database error' });
-                    res.json({
-                        id,
-                        type,
-                        title,
-                        date,
-                        capacity,
-                        bookedSlots: 0,
-                        location: location || undefined,
-                        requiredMembership: reqMemb,
-                        visibility: eventVisibility,
-                        registrationVisibility: eventRegistrationVisibility
-                    });
-                }
-            );
+        // Validate the requested membership type exists
+        if (!(await membershipTypeExists(reqMemb))) {
+            return res.status(400).json({ error: 'Invalid required membership type' });
+        }
+
+        await dbRun(
+            'INSERT INTO sessions (id, type, title, date, capacity, bookedSlots, location, requiredMembership, visibility, registrationVisibility) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [id, type, title, date, capacity, 0, location || null, reqMemb, eventVisibility, eventRegistrationVisibility]
+        );
+
+        res.json({
+            id,
+            type,
+            title,
+            date,
+            capacity,
+            bookedSlots: 0,
+            location: location || undefined,
+            requiredMembership: reqMemb,
+            visibility: eventVisibility,
+            registrationVisibility: eventRegistrationVisibility
         });
-    });
+    } catch {
+        res.status(500).json({ error: 'Database error' });
+    }
 });
 
-router.put('/:id', authenticateToken, requireCommittee, (req, res) => {
-    const {
-        title,
-        type,
-        date,
-        capacity,
-        bookedSlots,
-        location,
-        requiredMembership,
-        visibility,
-        registrationVisibility
-    } = req.body;
+router.put('/:id', authenticateToken, requireCommittee, async (req, res) => {
+    const { title, type, date, capacity, bookedSlots, location, requiredMembership, visibility, registrationVisibility } =
+        req.body;
     const eventVisibility = visibility === 'committee_only' ? 'committee_only' : 'all';
     const eventRegistrationVisibility = registrationVisibility === 'committee_only' ? 'committee_only' : 'all';
-    getDefaultMembershipType((typeErr, defaultMembershipType) => {
-        if (typeErr) return res.status(500).json({ error: 'Database error' });
+
+    try {
+        const defaultMembershipType = await getDefaultMembershipTypeAsync();
         if (!defaultMembershipType) return res.status(500).json({ error: 'No membership types configured' });
 
         const reqMemb = requiredMembership || defaultMembershipType;
-        membershipTypeExists(reqMemb, (existsErr, exists) => {
-            if (existsErr) return res.status(500).json({ error: 'Database error' });
-            if (!exists) return res.status(400).json({ error: 'Invalid required membership type' });
 
+        if (!(await membershipTypeExists(reqMemb))) {
+            return res.status(400).json({ error: 'Invalid required membership type' });
+        }
+
+        await dbRun(
+            'UPDATE sessions SET title = ?, type = ?, date = ?, capacity = ?, bookedSlots = ?, location = ?, requiredMembership = ?, visibility = ?, registrationVisibility = ? WHERE id = ?',
+            [
+                title,
+                type,
+                date,
+                capacity,
+                bookedSlots,
+                location || null,
+                reqMemb,
+                eventVisibility,
+                eventRegistrationVisibility,
+                req.params.id
+            ]
+        );
+        res.json({ success: true });
+    } catch {
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+router.get('/me/bookings', authenticateToken, async (req: any, res) => {
+    try {
+        const rows = await dbAll('SELECT sessionId FROM bookings WHERE userId = ?', [req.user.id]);
+        res.json(rows.map((r: any) => r.sessionId));
+    } catch {
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+router.post('/:id/book', authenticateToken, async (req: any, res) => {
+    const userId = req.user.id;
+    const sessionId = req.params.id;
+
+    const existingBooking = await dbGet('SELECT * FROM bookings WHERE userId = ? AND sessionId = ?', [
+        userId,
+        sessionId
+    ]);
+    if (existingBooking) return res.status(400).json({ error: 'Already booked this session' });
+
+    const session = await dbGet<any>(
+        'SELECT capacity, bookedSlots, requiredMembership, visibility, registrationVisibility, date FROM sessions WHERE id = ?',
+        [sessionId]
+    ).catch(() => undefined);
+    // Original treated query failure and missing row identically
+    if (!session) return res.status(404).json({ error: 'Session not found' });
+
+    const sessionDate = new Date(session.date);
+    if (sessionDate < new Date()) {
+        return res.status(400).json({ error: 'Cannot book a past session.' });
+    }
+
+    if (session.bookedSlots >= session.capacity) return res.status(400).json({ error: 'Session is full' });
+
+    const isCommittee =
+        req.user.role === 'committee' ||
+        !!req.user.committeeRole ||
+        (Array.isArray(req.user.committeeRoles) && req.user.committeeRoles.length > 0);
+    const registrationIsCommitteeOnly = (session.registrationVisibility || 'all') === 'committee_only';
+    if (registrationIsCommitteeOnly && !isCommittee) {
+        return res.status(403).json({ error: 'Registration for this session is for committee members only.' });
+    }
+
+    const reqMemb = session.requiredMembership || 'basic';
+
+    const userMemb = await dbGet<any>(
+        'SELECT * FROM user_memberships WHERE userId = ? AND membershipType = ? AND status = "active"',
+        [userId, reqMemb]
+    ).catch(() => null);
+
+    if (userMemb === null) return res.status(500).json({ error: 'Database error checking membership' });
+
+    // Enforce requirement unless they are root admin testing it
+    if (!registrationIsCommitteeOnly && !userMemb && req.user.email !== 'committee@sheffieldclimbing.org') {
+        return getMembershipLabel(reqMemb, (typeLabel: string) => {
+            return res.status(403).json({ error: `This session requires an active ${typeLabel} membership.` });
+        });
+    }
+
+    // Transactional booking: serialize + BEGIN/COMMIT with a capacity-guarded
+    // conditional UPDATE prevents oversell under concurrent requests.
+    db.serialize(() => {
+        db.run('BEGIN TRANSACTION');
+        db.run('INSERT INTO bookings (userId, sessionId) VALUES (?, ?)', [userId, sessionId], function (err) {
+            if (err) {
+                db.run('ROLLBACK');
+                return res.status(500).json({ error: 'Database error on booking' });
+            }
             db.run(
-                'UPDATE sessions SET title = ?, type = ?, date = ?, capacity = ?, bookedSlots = ?, location = ?, requiredMembership = ?, visibility = ?, registrationVisibility = ? WHERE id = ?',
-                [
-                    title,
-                    type,
-                    date,
-                    capacity,
-                    bookedSlots,
-                    location || null,
-                    reqMemb,
-                    eventVisibility,
-                    eventRegistrationVisibility,
-                    req.params.id
-                ],
-                standardDbResponse(res)
+                'UPDATE sessions SET bookedSlots = bookedSlots + 1 WHERE id = ? AND bookedSlots < capacity',
+                [sessionId],
+                function (err) {
+                    if (err) {
+                        db.run('ROLLBACK');
+                        return res.status(500).json({ error: 'Database error on update' });
+                    }
+                    if (this.changes === 0) {
+                        db.run('ROLLBACK');
+                        return res.status(400).json({ error: 'Session is full' });
+                    }
+                    db.run('COMMIT');
+                    res.json({ success: true, bookedSlots: session.bookedSlots + 1 });
+                }
             );
         });
     });
 });
 
-router.get('/me/bookings', authenticateToken, (req: any, res) => {
-    db.all('SELECT sessionId FROM bookings WHERE userId = ?', [req.user.id], (err, rows) => {
-        if (err) return res.status(500).json({ error: 'Database error' });
-        res.json(rows.map((r: any) => r.sessionId));
-    });
-});
-
-router.post('/:id/book', authenticateToken, (req: any, res) => {
+router.post('/:id/cancel', authenticateToken, async (req: any, res) => {
     const userId = req.user.id;
     const sessionId = req.params.id;
 
-    db.get('SELECT * FROM bookings WHERE userId = ? AND sessionId = ?', [userId, sessionId], (err, booking) => {
-        if (booking) return res.status(400).json({ error: 'Already booked this session' });
+    const booking = await dbGet('SELECT * FROM bookings WHERE userId = ? AND sessionId = ?', [userId, sessionId]).catch(
+        () => undefined
+    );
+    // Original treated lookup failure the same as "not booked"
+    if (!booking) return res.status(400).json({ error: 'You have not booked this session' });
 
-        db.get(
-            'SELECT capacity, bookedSlots, requiredMembership, visibility, registrationVisibility, date FROM sessions WHERE id = ?',
-            [sessionId],
-            (err, session: any) => {
-                if (err || !session) return res.status(404).json({ error: 'Session not found' });
-
-                const sessionDate = new Date(session.date);
-                if (sessionDate < new Date()) {
-                    return res.status(400).json({ error: 'Cannot book a past session.' });
-                }
-
-                if (session.bookedSlots >= session.capacity) return res.status(400).json({ error: 'Session is full' });
-
-                const isCommittee =
-                    req.user.role === 'committee' ||
-                    !!req.user.committeeRole ||
-                    (Array.isArray(req.user.committeeRoles) && req.user.committeeRoles.length > 0);
-                const registrationIsCommitteeOnly = (session.registrationVisibility || 'all') === 'committee_only';
-                if (registrationIsCommitteeOnly && !isCommittee) {
-                    return res
-                        .status(403)
-                        .json({ error: 'Registration for this session is for committee members only.' });
-                }
-
-                const reqMemb = session.requiredMembership || 'basic';
-
-                db.get(
-                    'SELECT * FROM user_memberships WHERE userId = ? AND membershipType = ? AND status = "active"',
-                    [userId, reqMemb],
-                    (err2, userMemb) => {
-                        if (err2) return res.status(500).json({ error: 'Database error checking membership' });
-                        // Enforce requirement unless they are root admin testing it
-                        if (
-                            !registrationIsCommitteeOnly &&
-                            !userMemb &&
-                            req.user.email !== 'committee@sheffieldclimbing.org'
-                        ) {
-                            return getMembershipLabel(reqMemb, (typeLabel) => {
-                                return res
-                                    .status(403)
-                                    .json({ error: `This session requires an active ${typeLabel} membership.` });
-                            });
-                        }
-
-                        db.serialize(() => {
-                            db.run('BEGIN TRANSACTION');
-                            db.run(
-                                'INSERT INTO bookings (userId, sessionId) VALUES (?, ?)',
-                                [userId, sessionId],
-                                function (err) {
-                                    if (err) {
-                                        db.run('ROLLBACK');
-                                        return res.status(500).json({ error: 'Database error on booking' });
-                                    }
-                                    db.run(
-                                        'UPDATE sessions SET bookedSlots = bookedSlots + 1 WHERE id = ? AND bookedSlots < capacity',
-                                        [sessionId],
-                                        function (err) {
-                                            if (err) {
-                                                db.run('ROLLBACK');
-                                                return res.status(500).json({ error: 'Database error on update' });
-                                            }
-                                            if (this.changes === 0) {
-                                                db.run('ROLLBACK');
-                                                return res.status(400).json({ error: 'Session is full' });
-                                            }
-                                            db.run('COMMIT');
-                                            res.json({ success: true, bookedSlots: session.bookedSlots + 1 });
-                                        }
-                                    );
-                                }
-                            );
-                        });
-                    }
-                );
+    // Transactional cancel — see book() for rationale
+    db.serialize(() => {
+        db.run('BEGIN TRANSACTION');
+        db.run('DELETE FROM bookings WHERE userId = ? AND sessionId = ?', [userId, sessionId], function (err) {
+            if (err) {
+                db.run('ROLLBACK');
+                return res.status(500).json({ error: 'Database error on cancel' });
             }
-        );
-    });
-});
-
-router.post('/:id/cancel', authenticateToken, (req: any, res) => {
-    const userId = req.user.id;
-    const sessionId = req.params.id;
-
-    db.get('SELECT * FROM bookings WHERE userId = ? AND sessionId = ?', [userId, sessionId], (err, booking) => {
-        if (!booking) return res.status(400).json({ error: 'You have not booked this session' });
-
-        db.serialize(() => {
-            db.run('BEGIN TRANSACTION');
-            db.run('DELETE FROM bookings WHERE userId = ? AND sessionId = ?', [userId, sessionId], function (err) {
-                if (err) {
-                    db.run('ROLLBACK');
-                    return res.status(500).json({ error: 'Database error on cancel' });
-                }
-                if (this.changes === 0) {
-                    db.run('ROLLBACK');
-                    return res.status(400).json({ error: 'You have not booked this session' });
-                }
-                db.run(
-                    'UPDATE sessions SET bookedSlots = bookedSlots - 1 WHERE id = ? AND bookedSlots > 0',
-                    [sessionId],
-                    function (err) {
-                        if (err) {
-                            db.run('ROLLBACK');
-                            return res.status(500).json({ error: 'Database error on update' });
-                        }
-                        db.run('COMMIT');
-                        res.json({ success: true });
+            if (this.changes === 0) {
+                db.run('ROLLBACK');
+                return res.status(400).json({ error: 'You have not booked this session' });
+            }
+            db.run(
+                'UPDATE sessions SET bookedSlots = bookedSlots - 1 WHERE id = ? AND bookedSlots > 0',
+                [sessionId],
+                function (err) {
+                    if (err) {
+                        db.run('ROLLBACK');
+                        return res.status(500).json({ error: 'Database error on update' });
                     }
-                );
-            });
+                    db.run('COMMIT');
+                    res.json({ success: true });
+                }
+            );
         });
     });
 });
 
-router.get('/:id/attendees', authenticateToken, requireCommittee, (req, res) => {
-    db.all(
-        `
+router.get('/:id/attendees', authenticateToken, requireCommittee, async (req, res) => {
+    try {
+        res.json(
+            await dbAll(
+                `
         SELECT u.id, u.firstName, u.lastName, u.name, u.email, u.registrationNumber 
         FROM users u
         JOIN bookings b ON u.id = b.userId
         WHERE b.sessionId = ?
     `,
-        [req.params.id],
-        (err, rows) => {
-            if (err) return res.status(500).json({ error: 'Database error' });
-            res.json(rows);
-        }
-    );
+                [req.params.id]
+            )
+        );
+    } catch {
+        res.status(500).json({ error: 'Database error' });
+    }
 });
 
-router.delete('/:id/attendees/:userId', authenticateToken, requireCommittee, (req, res) => {
+router.delete('/:id/attendees/:userId', authenticateToken, requireCommittee, async (req, res) => {
     const sessionId = req.params.id;
     const userId = req.params.userId;
 
+    // Transactional removal — see book() for rationale
     db.serialize(() => {
         db.run('BEGIN TRANSACTION');
         db.run('DELETE FROM bookings WHERE userId = ? AND sessionId = ?', [userId, sessionId], function (err) {
@@ -392,12 +383,11 @@ router.delete('/:id/attendees/:userId', authenticateToken, requireCommittee, (re
     });
 });
 
-router.delete('/:id', authenticateToken, requireCommittee, (req, res) => {
-    db.run('DELETE FROM sessions WHERE id = ?', [req.params.id], function (err) {
-        if (err) return res.status(500).json({ error: 'Database error' });
-        if (this.changes === 0) return res.status(404).json({ error: 'Session not found' });
-        res.json({ success: true });
-    });
+router.delete('/:id', authenticateToken, requireCommittee, async (req, res) => {
+    const { changes } = await dbRun('DELETE FROM sessions WHERE id = ?', [req.params.id]).catch(() => ({ changes: -1 }));
+    if (changes < 0) return res.status(500).json({ error: 'Database error' });
+    if (changes === 0) return res.status(404).json({ error: 'Session not found' });
+    res.json({ success: true });
 });
 
 export default router;
