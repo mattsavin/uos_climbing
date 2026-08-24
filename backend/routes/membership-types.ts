@@ -59,7 +59,10 @@ router.delete('/:id', authenticateToken, requireCommittee, async (req, res) => {
         return res.status(400).json({ error: 'The basic membership type cannot be deleted' });
     }
 
-    const countRow = await dbGet<{ count: number }>('SELECT COUNT(*) AS count FROM membership_types');
+    const countRow = await dbGet<{ count: number }>('SELECT COUNT(*) AS count FROM membership_types').catch(
+        () => undefined
+    );
+    if (countRow === undefined) return res.status(500).json({ error: 'Database error' });
     if (countRow === undefined) return res.status(500).json({ error: 'Database error' });
     if ((countRow?.count || 0) <= 1) {
         return res.status(400).json({ error: 'At least one membership type must remain' });
