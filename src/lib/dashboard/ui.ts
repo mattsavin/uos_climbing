@@ -1,6 +1,6 @@
 import { adminApi, authState, getCurrentAcademicYear, type MembershipType } from '../../auth';
 import { renderSessions } from './sessions';
-import { showToast } from '../../utils';
+import { escapeHTML, showToast } from '../../utils';
 import { bindGeneralHandlers } from './ui.generalHandlers';
 import { renderMembershipCard } from './ui.membershipCard';
 import { initSkillsTracker } from './ui.skills';
@@ -41,10 +41,10 @@ export async function updateUI() {
             } else {
                 renewalMembershipTypesContainer.innerHTML = membershipTypes.map(t => `
                     <label class="flex items-start gap-3 cursor-pointer group">
-                        <input type="checkbox" name="renewalMembershipType" value="${t.id}" ${t.id === defaultMembershipType ? 'checked' : ''}
+                        <input type="checkbox" name="renewalMembershipType" value="${escapeHTML(t.id)}" ${t.id === defaultMembershipType ? 'checked' : ''}
                             class="mt-0.5 accent-brand-gold w-4 h-4 shrink-0" />
                         <div>
-                            <span class="text-white text-xs font-bold">${t.label}</span>
+                            <span class="text-white text-xs font-bold">${escapeHTML(t.label)}</span>
                         </div>
                     </label>
                 `).join('');
@@ -145,10 +145,10 @@ export async function updateUI() {
                         return `
                         <div class="flex items-center justify-between p-2 rounded border ${colorClass} mb-2 text-xs font-bold uppercase tracking-wide">
                             <div class="flex flex-col">
-                                <span>${typeLabel}</span>
-                                <span class="text-[9px] opacity-70">${m.membershipYear}</span>
+                                <span>${escapeHTML(typeLabel)}</span>
+                                <span class="text-[9px] opacity-70">${escapeHTML(m.membershipYear)}</span>
                             </div>
-                            <span>${m.status}</span>
+                            <span>${escapeHTML(m.status)}</span>
                         </div>
                         `;
                     }).join('');
@@ -157,7 +157,7 @@ export async function updateUI() {
                 if (addMbTypeSelect) {
                     addMbTypeSelect.innerHTML = ALL_MEMBERSHIP_TYPES.map(t => {
                         const held = heldTypes.has(t.value);
-                        return `<option value="${t.value}" ${held ? 'disabled' : ''}>${t.label}${held ? ' (already held)' : ''}</option>`;
+                        return `<option value="${escapeHTML(t.value)}" ${held ? 'disabled' : ''}>${escapeHTML(t.label)}${held ? ' (already held)' : ''}</option>`;
                     }).join('');
                     const firstAvailable = addMbTypeSelect.querySelector('option:not([disabled])') as HTMLOptionElement | null;
                     if (firstAvailable) addMbTypeSelect.value = firstAvailable.value;

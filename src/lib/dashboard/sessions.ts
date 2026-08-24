@@ -1,6 +1,7 @@
 import { adminApi, authState, type Session } from '../../auth';
 import { renderCalendarEvents } from '../../calendar';
 import { openSessionModal } from '../../components/sessionModal';
+import { escapeHTML } from '../../utils';
 
 let currentCalendarDate = new Date();
 let activeFilter: string = 'all';
@@ -31,9 +32,9 @@ export async function renderSessions(isAdmin: boolean) {
             ...sessionTypes.map(t => ({ id: t.id, label: t.label }))
         ];
         filtersContainer.innerHTML = filters.map((f: any) => `
-            <button id="filter-${f.id}" data-filter="${f.id}"
+            <button id="filter-${escapeHTML(f.id)}" data-filter="${escapeHTML(f.id)}"
                 class="session-filter-btn whitespace-nowrap px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all duration-150 ${f.id === activeFilter ? 'border-brand-gold bg-brand-gold/20 text-brand-gold' : 'border-slate-700 text-slate-400'}">
-                ${f.label}
+                ${escapeHTML(f.label)}
             </button>
         `).join('');
 
@@ -93,7 +94,7 @@ export function initSessionHandlers() {
     const sessionTypeSelect = document.getElementById('session-type');
     if (sessionTypeSelect) {
         adminApi.getSessionTypes().then(types => {
-            sessionTypeSelect.innerHTML = types.map((t: any) => `<option value="${t.id}">${t.label}</option>`).join('');
+            sessionTypeSelect.innerHTML = types.map((t: any) => `<option value="${escapeHTML(t.id)}">${escapeHTML(t.label)}</option>`).join('');
         });
     }
 
@@ -102,7 +103,7 @@ export function initSessionHandlers() {
         adminApi.getMembershipTypes().then((types) => {
             const activeTypes = types.filter(t => !t.deprecated || t.id === 'basic');
             const membershipOptions = activeTypes.length
-                ? activeTypes.map((m: any) => `<option value="${m.id}">${m.label} Members</option>`).join('')
+                ? activeTypes.map((m: any) => `<option value="${escapeHTML(m.id)}">${escapeHTML(m.label)} Members</option>`).join('')
                 : '<option value="basic">Basic Members</option>';
             sessionRegistrationRuleSelect.innerHTML = `
                 ${membershipOptions}
