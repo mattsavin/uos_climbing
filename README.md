@@ -46,12 +46,17 @@ Snapshots use SQLite's online backup API via the app's own Docker image, then gz
 Each snapshot is verified with `PRAGMA integrity_check` before being counted as success.
 
 **Automatic:** every deploy takes a pre-deploy snapshot of prod *and* beta.
-**Scheduled (recommended):** daily cron on the VPS:
+**Scheduled:** systemd timers on the VPS (installed), staggered so prod and beta never
+run simultaneously:
 
-```cron
-0 4   * * * ~/uos_climbing/scripts/backup-db.sh uos_climbing      ~/data      ~/backups/prod daily >> ~/backups/cron.log 2>&1
-15 4  * * * ~/uos_climbing_beta/scripts/backup-db.sh uos_climbing_beta ~/data_beta ~/backups/beta daily >> ~/backups/cron.log 2>&1
-```
+- `usmc-backup-prod.timer` — 04:00 UTC daily (`Persistent=true`: catches up after downtime)
+- `usmc-backup-beta.timer` — 04:15 UTC daily
+- Both call `/usr/local/bin/usmc-backup-db.sh`, a stable root-owned copy of this script,
+  so daily backups keep working regardless of any checkout/deploy state.
+  **If you change `scripts/backup-db.sh`, re-copy it there**
+  (`sudo cp scripts/backup-db.sh /usr/local/bin/usmc-backup-db.sh`).
+- Logs: `sudo journalctl -u usmc-backup-prod.service` (or `-beta`). Manual run:
+  `sudo systemctl start usmc-backup-prod.service`.
 
 Photos are **not** in SQLite. Archive them periodically (they're large — weekly is sensible
 on a small disk):
