@@ -25,17 +25,17 @@ const socialSlides: SocialSlide[] = [
   {
     theme: 'summit',
     kicker: 'USMC Announcement',
-    title: 'AGM: New Indoor & Competitions Subcommittee',
+    title: 'AGM: New  Competitions Subcommittee',
     date: 'Wednesday 22 April',
     time: '18:00',
-    venue: 'Venue TBC',
+    venue: 'Diamond LT3',
     points: [
       'All USMC members can vote, comp team or not.',
       'Anyone in USMC can run for a role.',
       'Help shape next year of training, events, and comps.'
     ],
     cta: 'Updates: @sheffieldmountaineering and @uos_climb',
-    badge: 'Indoor & Competitions'
+    badge: 'Competitions Subcommittee'
   },
   {
     theme: 'pulse',
@@ -43,9 +43,9 @@ const socialSlides: SocialSlide[] = [
     title: 'Your Vote Shapes Training, Events, and Comps',
     date: 'Wednesday 22 April',
     time: '18:00',
-    venue: 'Venue TBC',
+    venue: 'Diamond LT3',
     points: [
-      'Vote on who leads Indoor & Competitions.',
+      'Vote on who leads the Competitions Subcommittee.',
       'Back the ideas you want for next year.',
       'No comp-team requirement to vote.'
     ],
@@ -56,9 +56,9 @@ const socialSlides: SocialSlide[] = [
     theme: 'night',
     kicker: 'Run for a Role',
     title: 'Roles Open for the New Subcommittee',
-    date: 'Nominations Open',
-    time: 'Before AGM',
-    venue: 'USMC Members Welcome',
+    date: 'Nominations:',
+    time: 'Open',
+    venue: 'All USMC Members Welcome',
     points: [
       'Chair',
       'Treasurer',
@@ -71,7 +71,7 @@ const socialSlides: SocialSlide[] = [
       'Training Secretary'
     ],
     cta: 'DM to ask about any role',
-    badge: 'Indoor & Competitions'
+    badge: 'Competitions Subcommittee'
   }
 ];
 
@@ -79,7 +79,13 @@ const themeClassNames = ['social-agm-theme-summit', 'social-agm-theme-pulse', 's
 
 function setExportMessage(container: HTMLElement, message: string, kind: 'info' | 'error' = 'info') {
   const colorClass = kind === 'error' ? 'text-red-300' : 'text-slate-300';
-  container.innerHTML = `<p class="text-xs ${colorClass} font-semibold mt-3">${message}</p>`;
+  // Build via DOM + textContent: messages can contain server/network error strings
+  // and must never be interpreted as HTML.
+  container.innerHTML = '';
+  const p = document.createElement('p');
+  p.className = `text-xs ${colorClass} font-semibold mt-3`;
+  p.textContent = message;
+  container.appendChild(p);
 }
 
 function normalizeErrorMessage(error: unknown): string {
@@ -128,14 +134,23 @@ async function getFontEmbedCSS(): Promise<string> {
   return cachedFontCSS;
 }
 
+// Convert a data: URL to a Blob directly (atob -> bytes) rather than fetch(data:...),
+// so CSP connect-src never needs to allow data: URIs.
+function dataUrlToBlob(dataUrl: string): Blob {
+  const [meta, base64] = dataUrl.split(',');
+  const mime = /^data:([^;]+)/.exec(meta)?.[1] ?? 'image/png';
+  const bin = atob(base64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+
 // Capture the rendered artboard element as a PNG, scaled to 1080px wide.
 async function captureArtboard(artboard: HTMLElement, filename: string): Promise<ExportedAsset> {
   const fontEmbedCSS = await getFontEmbedCSS();
   const pixelRatio = 1080 / artboard.offsetWidth;
   const dataUrl = await toPng(artboard, { pixelRatio, cacheBust: true, fontEmbedCSS, style: { margin: '0' } });
-  const res = await fetch(dataUrl);
-  const blob = await res.blob();
-  return { filename, blob };
+  return { filename, blob: dataUrlToBlob(dataUrl) };
 }
 
 function triggerAssetDownload(asset: ExportedAsset): void {

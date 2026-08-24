@@ -43,11 +43,11 @@ describe('Content Security Policy rollout', () => {
         expect(res.status).toBe(204);
     });
 
-    it('returns 204 for an empty or malformed body rather than erroring', async () => {
+    it('returns 204 for a non-JSON body (no parser claims text/plain, handler still succeeds)', async () => {
         const res = await request(app)
             .post('/api/csp-report')
             .set('Content-Type', 'text/plain')
             .send('not json');
-        expect([204, 400]).toContain(res.status);
+        expect(res.status).toBe(204);
     });
 });

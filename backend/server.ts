@@ -59,7 +59,7 @@ app.use(helmet({
             styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
             fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
             imgSrc: ["'self'", 'data:', 'blob:'], // blob: for photo-crop previews
-            connectSrc: ["'self'"],
+            connectSrc: ["'self'", 'https://fonts.googleapis.com', 'https://fonts.gstatic.com'], // fonts.googleapis/gstatic: social-post export embeds Outfit font files
             objectSrc: ["'none'"],
             baseUri: ["'self'"],
             formAction: ["'self'"],
