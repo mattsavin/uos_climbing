@@ -1,6 +1,6 @@
-export function escapeHTML(str: string | undefined | null): string {
-    if (!str) return '';
-    return str
+export function escapeHTML(str: string | number | undefined | null): string {
+    if (!str && str !== 0) return '';
+    return String(str)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')

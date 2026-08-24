@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (candidateRole) {
             candidateRole.innerHTML = '<option value="" disabled selected>Select a role...</option>' +
-                config.committeeRoles.map((r: any) => `<option value="${r.title}">${r.title}</option>`).join('');
+                config.committeeRoles.map((r: any) => `<option value="${escapeHTML(r.title)}">${escapeHTML(r.title)}</option>`).join('');
         }
 
         if (!user) {
@@ -235,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (roleCandidates && roleCandidates.length > 0) {
                         listHtml += `
             <div class="mb-8">
-                <h3 class="text-lg font-black text-brand-gold mb-4 uppercase tracking-wider pl-2 border-l-4 border-brand-gold/50">${role}</h3>
+                <h3 class="text-lg font-black text-brand-gold mb-4 uppercase tracking-wider pl-2 border-l-4 border-brand-gold/50">${escapeHTML(role)}</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         `;
 
@@ -252,7 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             ` : '';
 
                             const mainBtn = !status.hasVoted && !status.isCandidate ? `
-                                <button class="btn-outline w-full !py-2 !text-xs !border-purple-400 !text-purple-400 hover:!bg-purple-400 hover:!text-white vote-btn transition-colors mt-auto" data-id="${c.id}" data-name="${safeName}">
+                                <button class="btn-outline w-full !py-2 !text-xs !border-purple-400 !text-purple-400 hover:!bg-purple-400 hover:!text-white vote-btn transition-colors mt-auto" data-id="${escapeHTML(c.id)}" data-name="${safeName}">
                                     Vote for ${safeName.split(' ')[0]}
                                 </button>
                             ` : '';
@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             return `
                             <div class="glass-card !p-5 border border-white/5 relative group flex flex-col h-full bg-slate-800/20 hover:bg-slate-800/40 transition-colors">
                                 <div class="absolute top-4 right-4 text-xs font-bold px-2 py-1 bg-brand-gold-muted/20 text-brand-gold-muted rounded-full">
-                                    ${c.voteCount} Votes
+                                    ${escapeHTML(c.voteCount)} Votes
                                 </div>
                                 ${slideBadge}
                                 <h5 class="text-white text-lg font-bold mb-3 pr-24">${safeName}</h5>
@@ -323,7 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                             // Delete button for admins
                             const adminControls = isAdmin ? `
-                                <button class="delete-ref-btn absolute top-4 right-4 text-red-400/50 hover:text-red-400 transition-colors" data-id="${ref.id}" title="Delete Referendum">
+                                <button class="delete-ref-btn absolute top-4 right-4 text-red-400/50 hover:text-red-400 transition-colors" data-id="${escapeHTML(ref.id)}" title="Delete Referendum">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                 </button>
                             ` : '';
@@ -335,11 +335,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                 // User has voted, show results and their vote
                                 interactiveSection = `
                                     <div class="mt-4 pt-4 border-t border-white/10">
-                                        <p class="text-xs text-brand-gold font-bold mb-3 uppercase tracking-wider">Results (You voted: ${ref.myVote.toUpperCase()})</p>
+                                        <p class="text-xs text-brand-gold font-bold mb-3 uppercase tracking-wider">Results (You voted: ${escapeHTML(ref.myVote.toUpperCase())})</p>
                                         <div class="flex gap-4 text-sm font-medium">
-                                            <div class="text-emerald-400 flex-1 bg-emerald-400/10 rounded px-3 py-2 text-center border border-emerald-400/20">For: ${ref.yesCount}</div>
-                                            <div class="text-red-400 flex-1 bg-red-400/10 rounded px-3 py-2 text-center border border-red-400/20">Against: ${ref.noCount}</div>
-                                            <div class="text-slate-400 flex-1 bg-slate-400/10 rounded px-3 py-2 text-center border border-slate-400/20">Abstain: ${ref.abstainCount}</div>
+                                            <div class="text-emerald-400 flex-1 bg-emerald-400/10 rounded px-3 py-2 text-center border border-emerald-400/20">For: ${escapeHTML(ref.yesCount)}</div>
+                                            <div class="text-red-400 flex-1 bg-red-400/10 rounded px-3 py-2 text-center border border-red-400/20">Against: ${escapeHTML(ref.noCount)}</div>
+                                            <div class="text-slate-400 flex-1 bg-slate-400/10 rounded px-3 py-2 text-center border border-slate-400/20">Abstain: ${escapeHTML(ref.abstainCount)}</div>
                                         </div>
                                     </div>
                                 `;
@@ -348,13 +348,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                 interactiveSection = `
                                     <div class="mt-4 pt-4 border-t border-white/10 flex flex-col sm:flex-row gap-4">
                                         <div class="flex-1 flex gap-2">
-                                            <button class="vote-ref-btn btn-outline flex-1 !py-2 !text-xs !border-emerald-500/50 !text-emerald-400 hover:!bg-emerald-500 hover:!text-white" data-id="${ref.id}" data-choice="yes">Vote For</button>
-                                            <button class="vote-ref-btn btn-outline flex-1 !py-2 !text-xs !border-red-500/50 !text-red-400 hover:!bg-red-500 hover:!text-white" data-id="${ref.id}" data-choice="no">Vote Against</button>
-                                            <button class="vote-ref-btn btn-outline flex-1 !py-2 !text-xs !border-slate-500/50 !text-slate-400 hover:!bg-slate-500 hover:!text-white" data-id="${ref.id}" data-choice="abstain">Abstain</button>
+                                            <button class="vote-ref-btn btn-outline flex-1 !py-2 !text-xs !border-emerald-500/50 !text-emerald-400 hover:!bg-emerald-500 hover:!text-white" data-id="${escapeHTML(ref.id)}" data-choice="yes">Vote For</button>
+                                            <button class="vote-ref-btn btn-outline flex-1 !py-2 !text-xs !border-red-500/50 !text-red-400 hover:!bg-red-500 hover:!text-white" data-id="${escapeHTML(ref.id)}" data-choice="no">Vote Against</button>
+                                            <button class="vote-ref-btn btn-outline flex-1 !py-2 !text-xs !border-slate-500/50 !text-slate-400 hover:!bg-slate-500 hover:!text-white" data-id="${escapeHTML(ref.id)}" data-choice="abstain">Abstain</button>
                                         </div>
                                         <div class="sm:w-32 text-right">
                                             <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Current Standings</p>
-                                            <div class="text-xs text-slate-300 font-mono">${ref.yesCount} Y / ${ref.noCount} N / ${ref.abstainCount} A</div>
+                                            <div class="text-xs text-slate-300 font-mono">${escapeHTML(ref.yesCount)} Y / ${escapeHTML(ref.noCount)} N / ${escapeHTML(ref.abstainCount)} A</div>
                                         </div>
                                     </div>
                                 `;
@@ -362,9 +362,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                 // Regular user who hasn't voted yet
                                 interactiveSection = `
                                     <div class="mt-4 pt-4 border-t border-white/10 flex gap-2">
-                                        <button class="vote-ref-btn btn-outline flex-1 !py-2 !text-xs !border-emerald-500/50 !text-emerald-400 hover:!bg-emerald-500 hover:!text-white" data-id="${ref.id}" data-choice="yes">Vote For</button>
-                                        <button class="vote-ref-btn btn-outline flex-1 !py-2 !text-xs !border-red-500/50 !text-red-400 hover:!bg-red-500 hover:!text-white" data-id="${ref.id}" data-choice="no">Vote Against</button>
-                                        <button class="vote-ref-btn btn-outline flex-1 !py-2 !text-xs !border-slate-500/50 !text-slate-400 hover:!bg-slate-500 hover:!text-white" data-id="${ref.id}" data-choice="abstain">Abstain</button>
+                                        <button class="vote-ref-btn btn-outline flex-1 !py-2 !text-xs !border-emerald-500/50 !text-emerald-400 hover:!bg-emerald-500 hover:!text-white" data-id="${escapeHTML(ref.id)}" data-choice="yes">Vote For</button>
+                                        <button class="vote-ref-btn btn-outline flex-1 !py-2 !text-xs !border-red-500/50 !text-red-400 hover:!bg-red-500 hover:!text-white" data-id="${escapeHTML(ref.id)}" data-choice="no">Vote Against</button>
+                                        <button class="vote-ref-btn btn-outline flex-1 !py-2 !text-xs !border-slate-500/50 !text-slate-400 hover:!bg-slate-500 hover:!text-white" data-id="${escapeHTML(ref.id)}" data-choice="abstain">Abstain</button>
                                     </div>
                                 `;
                             }
@@ -430,7 +430,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (err: any) {
             console.error("Voting portal error:", err);
-            if (candidatesList) candidatesList.innerHTML = `<p class="text-sm text-red-500 text-center py-4">Failed to load elections data: ${err.message}</p>`;
+            if (candidatesList) candidatesList.innerHTML = `<p class="text-sm text-red-500 text-center py-4">Failed to load elections data: ${escapeHTML(err.message)}</p>`;
         }
     }
 

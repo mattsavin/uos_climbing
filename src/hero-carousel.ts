@@ -4,6 +4,7 @@ const INTERVAL_MS = 5000;
 import { apiFetch } from './lib/api/http';
 
 import { normalizeCrop, normalizeZoom } from './lib/utils/imageMath';
+import { escapeHTML } from './utils';
 
 function getHeroCropStyles(image: any): { objectPosition: string, transformOrigin: string, zoom: number } {
     const isMobile = window.matchMedia('(max-width: 767px)').matches;
@@ -36,15 +37,10 @@ export async function initHeroCarousel() {
     // Build slides
     container.innerHTML = images.map((img, i) => {
         const crop = getHeroCropStyles(img);
-        const altText = (img.caption || FALLBACK_ALT)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
+        const altText = escapeHTML(img.caption || FALLBACK_ALT);
         return `
         <div class="hero-slide absolute inset-0 transition-opacity duration-1000 ${i === 0 ? 'opacity-100' : 'opacity-0'}" aria-hidden="${i !== 0}">
-            <img src="${img.filepath}" alt="${altText}" class="w-full h-full object-cover" style="object-position: ${crop.objectPosition}; transform-origin: ${crop.transformOrigin}; transform: scale(${crop.zoom});">
+            <img src="${escapeHTML(img.filepath)}" alt="${altText}" class="w-full h-full object-cover" style="object-position: ${crop.objectPosition}; transform-origin: ${crop.transformOrigin}; transform: scale(${crop.zoom});">
         </div>
     `;
     }).join('');
