@@ -14,8 +14,7 @@ const ROOT_ADMIN_EMAIL = (process.env.ROOT_ADMIN_EMAIL || 'committee@sheffieldcl
 const dbPath =
     process.env.NODE_ENV === 'test'
         ? ':memory:'
-        : process.env.DB_PATH ||
-          (process.env.NODE_ENV === 'production' ? '/data/uscc.db' : join(__dirname, 'uscc.db'));
+        : process.env.DB_PATH || (process.env.NODE_ENV === 'production' ? '/data/uscc.db' : join(__dirname, 'uscc.db'));
 export const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('Error opening database', err.message);

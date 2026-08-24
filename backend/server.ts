@@ -104,7 +104,7 @@ app.get('/api/health', (_req, res) => {
     }, 2000);
     timeout.unref?.();
 
-    db.get('SELECT 1', [], err => {
+    db.get('SELECT 1', [], (err) => {
         if (settled) return;
         settled = true;
         clearTimeout(timeout);
@@ -254,7 +254,6 @@ if (process.env.NODE_ENV === 'production') {
         }
         next(); // unknown -> terminal 404 below
     });
-
 
     // 4. Terminal handler: everything still unmatched is a genuine 404.
     //    (Previously unknown pages silently served index.html — soft-404s.)
