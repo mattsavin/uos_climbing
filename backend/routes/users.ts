@@ -1,7 +1,6 @@
 import { standardDbResponse } from '../utils/response';
 import express from 'express';
 import bcrypt from 'bcrypt';
-import { db } from '../db';
 import { authenticateToken } from '../middleware/auth';
 import crypto from 'crypto';
 import multer from 'multer';
@@ -10,7 +9,9 @@ import fs from 'fs';
 import sharp from 'sharp';
 import { UPLOAD_BASE_DIR } from '../config';
 import { memoryUpload as upload } from '../utils/upload';
-import { getMembershipTypeIds } from '../services/membership';
+import { getMembershipTypeIdsAsync } from '../services/membership';
+import { dbAll, dbGet, dbRun } from '../utils/db';
+
 const router = express.Router();
 
 // Configure multer for profile photo uploads
@@ -20,28 +21,29 @@ if (!fs.existsSync(uploadDir)) {
 }
 
 /** Get current user's membership rows */
-router.get('/me/memberships', authenticateToken, (req: any, res) => {
-    db.all(
-        'SELECT * FROM user_memberships WHERE userId = ? ORDER BY membershipYear DESC, membershipType ASC',
-        [req.user.id],
-        (err, rows) => {
-            if (err) return res.status(500).json({ error: 'Database error' });
-            res.json(rows || []);
-        }
-    );
+router.get('/me/memberships', authenticateToken, async (req: any, res) => {
+    try {
+        res.json(
+            await dbAll(
+                'SELECT * FROM user_memberships WHERE userId = ? ORDER BY membershipYear DESC, membershipType ASC',
+                [req.user.id]
+            )
+        );
+    } catch {
+        res.status(500).json({ error: 'Database error' });
+    }
 });
 
 /** Get current user's full profile details */
-router.get('/me/profile', authenticateToken, (req: any, res) => {
-    db.get(
+router.get('/me/profile', authenticateToken, async (req: any, res) => {
+    const user = await dbGet(
         'SELECT firstName, lastName, emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements, profilePhoto, registrationNumber, membershipStatus, membershipYear FROM users WHERE id = ?',
-        [req.user.id],
-        (err, user) => {
-            if (err) return res.status(500).json({ error: 'Database error' });
-            if (!user) return res.status(404).json({ error: 'User not found' });
-            res.json(user);
-        }
-    );
+        [req.user.id]
+    ).catch(() => undefined);
+
+    if (user === undefined) return res.status(500).json({ error: 'Database error' });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json(user);
 });
 
 /** POST /api/users/me/photo - Upload profile photo */
@@ -74,169 +76,169 @@ router.post('/me/photo', authenticateToken, (req: any, res) => {
             return res.status(500).json({ error: 'Failed to process image' });
         }
 
-        // Get old photo to delete it
-        db.get('SELECT profilePhoto FROM users WHERE id = ?', [req.user.id], (err, user: any) => {
-            if (!err && user && user.profilePhoto) {
-                const oldPath = path.join(UPLOAD_BASE_DIR, user.profilePhoto.replace(/^\/uploads\//, ''));
-                if (fs.existsSync(oldPath)) {
-                    try {
-                        fs.unlinkSync(oldPath);
-                    } catch (e) {
-                        console.error('Failed to delete old photo:', e);
-                    }
+        // Get old photo to delete it (lookup errors ignored — same as before)
+        const oldUser = await dbGet<{ profilePhoto: string | null }>(
+            'SELECT profilePhoto FROM users WHERE id = ?',
+            [req.user.id]
+        ).catch(() => undefined);
+        if (oldUser?.profilePhoto) {
+            const oldPath = path.join(UPLOAD_BASE_DIR, oldUser.profilePhoto.replace(/^\/uploads\//, ''));
+            if (fs.existsSync(oldPath)) {
+                try {
+                    fs.unlinkSync(oldPath);
+                } catch (e) {
+                    console.error('Failed to delete old photo:', e);
                 }
             }
+        }
 
-            db.run('UPDATE users SET profilePhoto = ? WHERE id = ?', [photoPath, req.user.id], (err) => {
-                if (err) return res.status(500).json({ error: 'Database error' });
-                res.json({ success: true, photoPath });
-            });
-        });
+        const updated = await dbRun('UPDATE users SET profilePhoto = ? WHERE id = ?', [photoPath, req.user.id]).catch(
+            () => null
+        );
+        if (updated === null) return res.status(500).json({ error: 'Database error' });
+        res.json({ success: true, photoPath });
     });
 });
 
 /** Request an additional (or new) membership type */
-router.post('/me/memberships', authenticateToken, (req: any, res) => {
+router.post('/me/memberships', authenticateToken, async (req: any, res) => {
     const { membershipType, membershipYear } = req.body;
 
     if (!membershipType) return res.status(400).json({ error: 'membershipType is required' });
-    getMembershipTypeIds((typeErr, membershipTypeIds) => {
-        if (typeErr) return res.status(500).json({ error: 'Database error' });
-        if (!membershipTypeIds.includes(membershipType)) {
-            return res.status(400).json({ error: 'Invalid membership type' });
-        }
 
-        const currentYear = new Date().getFullYear();
-        const currentMonth = new Date().getMonth();
-        const year =
-            membershipYear ||
-            (currentMonth < 8 ? `${currentYear - 1}/${currentYear}` : `${currentYear}/${currentYear + 1}`);
+    let membershipTypeIds: string[];
+    try {
+        membershipTypeIds = await getMembershipTypeIdsAsync();
+    } catch {
+        return res.status(500).json({ error: 'Database error' });
+    }
 
-        const id = 'umem_' + crypto.randomUUID();
-        // Committee members get auto-approved memberships
-        const status = req.user.role === 'committee' ? 'active' : 'pending';
+    if (!membershipTypeIds.includes(membershipType)) {
+        return res.status(400).json({ error: 'Invalid membership type' });
+    }
 
-        // Try to insert; if a row already exists for (userId, membershipType, membershipYear), upgrade its status
-        db.run(
-            'INSERT OR IGNORE INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)',
-            [id, req.user.id, membershipType, status, year],
-            function (this: any, err) {
-                if (err) return res.status(500).json({ error: 'Database error' });
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth();
+    const year =
+        membershipYear || (currentMonth < 8 ? `${currentYear - 1}/${currentYear}` : `${currentYear}/${currentYear + 1}`);
 
-                if (this.changes === 0) {
-                    // Row already exists — upgrade status if the requested status is higher priority
-                    db.run(
-                        `UPDATE user_memberships SET status = ?
-                         WHERE userId = ? AND membershipType = ? AND membershipYear = ?
-                           AND (status = 'rejected' OR (status = 'pending' AND ? = 'active'))`,
-                        [status, req.user.id, membershipType, year, status],
-                        function (err2) {
-                            if (err2) return res.status(500).json({ error: 'Database error' });
-                            res.json({ success: true, membershipType, status, membershipYear: year });
-                        }
-                    );
-                } else {
-                    res.json({ success: true, id, membershipType, status, membershipYear: year });
-                }
-            }
-        );
-    });
+    const id = 'umem_' + crypto.randomUUID();
+    // Committee members get auto-approved memberships
+    const status = req.user.role === 'committee' ? 'active' : 'pending';
+
+    // Try to insert; if a row already exists for (userId, membershipType, membershipYear), upgrade its status
+    const inserted = await dbRun(
+        'INSERT OR IGNORE INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)',
+        [id, req.user.id, membershipType, status, year]
+    ).catch(() => null);
+
+    if (inserted === null) return res.status(500).json({ error: 'Database error' });
+
+    if (inserted.changes === 0) {
+        // Row already exists — upgrade status if the requested status is higher priority
+        const upgraded = await dbRun(
+            `UPDATE user_memberships SET status = ?
+             WHERE userId = ? AND membershipType = ? AND membershipYear = ?
+               AND (status = 'rejected' OR (status = 'pending' AND ? = 'active'))`,
+            [status, req.user.id, membershipType, year, status]
+        ).catch(() => null);
+
+        if (upgraded === null) return res.status(500).json({ error: 'Database error' });
+        res.json({ success: true, membershipType, status, membershipYear: year });
+    } else {
+        res.json({ success: true, id, membershipType, status, membershipYear: year });
+    }
 });
 
 /** Renew overall membership (resets to pending for current year, or active for committee) */
-router.post('/me/membership-renewal', authenticateToken, (req: any, res) => {
+router.post('/me/membership-renewal', authenticateToken, async (req: any, res) => {
     const { membershipYear, membershipTypes } = req.body;
     if (!membershipYear) return res.status(400).json({ error: 'Missing membership year' });
 
     // Committee members stay active; regular members go to pending
     const newStatus = req.user.role === 'committee' ? 'active' : 'pending';
 
-    getMembershipTypeIds((typeErr, membershipTypeIds) => {
-        if (typeErr) return res.status(500).json({ error: 'Database error' });
+    let membershipTypeIds: string[];
+    try {
+        membershipTypeIds = await getMembershipTypeIdsAsync();
+    } catch {
+        return res.status(500).json({ error: 'Database error' });
+    }
 
-        db.run(
-            'UPDATE users SET membershipYear = ?, membershipStatus = ? WHERE id = ?',
-            [membershipYear, newStatus, req.user.id],
-            function (err) {
-                if (err) return res.status(500).json({ error: 'Database error' });
+    const updated = await dbRun('UPDATE users SET membershipYear = ?, membershipStatus = ? WHERE id = ?', [
+        membershipYear,
+        newStatus,
+        req.user.id
+    ]).catch(() => null);
+    if (updated === null) return res.status(500).json({ error: 'Database error' });
 
-                // Optionally insert new membership type rows for the new year
-                if (Array.isArray(membershipTypes) && membershipTypes.length > 0) {
-                    const validTypes = membershipTypes.filter((t: string) => membershipTypeIds.includes(t));
-                    if (validTypes.length > 0) {
-                        const stmt = db.prepare(
-                            'INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)'
-                        );
-                        validTypes.forEach((t: string) => {
-                            stmt.run(['umem_' + crypto.randomUUID(), req.user.id, t, newStatus, membershipYear]);
-                        });
-                        stmt.finalize();
-                    }
-                }
+    // Optionally insert new membership type rows for the new year
+    if (Array.isArray(membershipTypes) && membershipTypes.length > 0) {
+        const validTypes = membershipTypes.filter((t: string) => membershipTypeIds.includes(t));
+        for (const t of validTypes) {
+            // Original prepared-statement loop ignored per-row failures; preserved
+            await dbRun(
+                'INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)',
+                ['umem_' + crypto.randomUUID(), req.user.id, t, newStatus, membershipYear]
+            ).catch(() => {});
+        }
+    }
 
-                res.json({ success: true, membershipYear, membershipStatus: newStatus });
-            }
-        );
-    });
+    res.json({ success: true, membershipYear, membershipStatus: newStatus });
 });
 
 /** Re-request membership (e.g. after rejection) */
-router.post('/me/request-membership', authenticateToken, (req: any, res) => {
+router.post('/me/request-membership', authenticateToken, async (req: any, res) => {
     const currentYear = new Date().getFullYear();
     const currentMonth = new Date().getMonth();
     const membershipYear = currentMonth < 8 ? `${currentYear - 1}/${currentYear}` : `${currentYear}/${currentYear + 1}`;
 
-    getMembershipTypeIds((typeErr, membershipTypeIds) => {
-        if (typeErr) return res.status(500).json({ error: 'Database error' });
-        const defaultMembershipType = membershipTypeIds.includes('basic') ? 'basic' : membershipTypeIds[0];
-        if (!defaultMembershipType) {
-            return res.status(500).json({ error: 'No membership types configured' });
-        }
+    let membershipTypeIds: string[];
+    try {
+        membershipTypeIds = await getMembershipTypeIdsAsync();
+    } catch {
+        return res.status(500).json({ error: 'Database error' });
+    }
+    const defaultMembershipType = membershipTypeIds.includes('basic') ? 'basic' : membershipTypeIds[0];
+    if (!defaultMembershipType) {
+        return res.status(500).json({ error: 'No membership types configured' });
+    }
 
-        db.run(
-            'UPDATE users SET membershipStatus = ?, membershipYear = ? WHERE id = ?',
-            ['pending', membershipYear, req.user.id],
-            function (err) {
-                if (err) return res.status(500).json({ error: 'Database error' });
+    const updated = await dbRun('UPDATE users SET membershipStatus = ?, membershipYear = ? WHERE id = ?', [
+        'pending',
+        membershipYear,
+        req.user.id
+    ]).catch(() => null);
+    if (updated === null) return res.status(500).json({ error: 'Database error' });
 
-                // Upsert a default membership row so it appears in the admin pending list
-                db.get(
-                    'SELECT id FROM user_memberships WHERE userId = ? AND membershipType = ? AND membershipYear = ?',
-                    [req.user.id, defaultMembershipType, membershipYear],
-                    (err2, row: any) => {
-                        if (row) {
-                            // Row exists — update its status back to pending
-                            db.run('UPDATE user_memberships SET status = ? WHERE id = ?', ['pending', row.id]);
-                        } else {
-                            // No row for this year yet — insert a fresh pending one
-                            db.run(
-                                'INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)',
-                                [
-                                    'umem_' + crypto.randomUUID(),
-                                    req.user.id,
-                                    defaultMembershipType,
-                                    'pending',
-                                    membershipYear
-                                ]
-                            );
-                        }
-                    }
-                );
+    // Upsert a default membership row so it appears in the admin pending list
+    const row = await dbGet<{ id: string }>(
+        'SELECT id FROM user_memberships WHERE userId = ? AND membershipType = ? AND membershipYear = ?',
+        [req.user.id, defaultMembershipType, membershipYear]
+    ).catch(() => undefined);
 
-                res.json({ success: true, membershipStatus: 'pending', membershipYear });
-            }
-        );
-    });
+    if (row?.id) {
+        // Row exists — update its status back to pending
+        await dbRun('UPDATE user_memberships SET status = ? WHERE id = ?', ['pending', row.id]).catch(() => {});
+    } else {
+        // No row for this year yet — insert a fresh pending one
+        await dbRun(
+            'INSERT INTO user_memberships (id, userId, membershipType, status, membershipYear) VALUES (?, ?, ?, ?, ?)',
+            ['umem_' + crypto.randomUUID(), req.user.id, defaultMembershipType, 'pending', membershipYear]
+        ).catch(() => {});
+    }
+
+    res.json({ success: true, membershipStatus: 'pending', membershipYear });
 });
 
-router.put('/:id', authenticateToken, (req: any, res) => {
+router.put('/:id', authenticateToken, async (req: any, res) => {
     if (req.user.id !== req.params.id && req.user.role !== 'committee') {
         return res.status(403).json({ error: 'Unauthorized to update this user' });
     }
 
     const { firstName, lastName, emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements } =
         req.body;
-    db.run(
+    await dbRun(
         'UPDATE users SET firstName = ?, lastName = ?, name = ?, emergencyContactName = ?, emergencyContactMobile = ?, pronouns = ?, dietaryRequirements = ? WHERE id = ?',
         [
             firstName,
@@ -247,29 +249,35 @@ router.put('/:id', authenticateToken, (req: any, res) => {
             pronouns,
             dietaryRequirements,
             req.params.id
-        ],
-        standardDbResponse(res)
+        ]
+    ).then(
+        () => res.json({ success: true }),
+        () => res.status(500).json({ error: 'Database error' })
     );
 });
 
-router.put('/me/password', authenticateToken, (req: any, res) => {
+router.put('/me/password', authenticateToken, async (req: any, res) => {
     const { currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    db.get('SELECT passwordHash FROM users WHERE id = ?', [req.user.id], async (err, user: any) => {
-        if (err || !user) return res.status(500).json({ error: 'Database error' });
+    const user = await dbGet<{ passwordHash: string }>('SELECT passwordHash FROM users WHERE id = ?', [
+        req.user.id
+    ]).catch(() => undefined);
+    if (user === undefined || !user) return res.status(500).json({ error: 'Database error' });
 
-        const validPassword = await bcrypt.compare(currentPassword, user.passwordHash);
-        if (!validPassword) return res.status(401).json({ error: 'Current password is incorrect' });
+    const validPassword = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!validPassword) return res.status(401).json({ error: 'Current password is incorrect' });
 
-        const newHash = await bcrypt.hash(newPassword, 12);
-        db.run('UPDATE users SET passwordHash = ? WHERE id = ?', [newHash, req.user.id], standardDbResponse(res));
-    });
+    const newHash = await bcrypt.hash(newPassword, 12);
+    await dbRun('UPDATE users SET passwordHash = ? WHERE id = ?', [newHash, req.user.id]).then(
+        () => res.json({ success: true }),
+        () => res.status(500).json({ error: 'Database error' })
+    );
 });
 
-router.delete('/:id', authenticateToken, (req: any, res) => {
+router.delete('/:id', authenticateToken, async (req: any, res) => {
     const targetUserId = req.params.id;
     const isSelf = req.user.id.toString() === targetUserId.toString();
     const isCommittee = req.user.role === 'committee';
@@ -279,28 +287,34 @@ router.delete('/:id', authenticateToken, (req: any, res) => {
     }
 
     if (!isSelf && isCommittee) {
-        db.get('SELECT role FROM users WHERE id = ?', [targetUserId], (err, targetUser: any) => {
-            if (err || !targetUser) return res.status(500).json({ error: 'User not found or database error' });
-            if (targetUser.role === 'committee') {
-                return res.status(403).json({ error: 'Cannot delete another committee member' });
-            }
-            performUserDelete(targetUserId, res);
-        });
+        const targetUser = await dbGet<{ role: string }>('SELECT role FROM users WHERE id = ?', [targetUserId]).catch(
+            () => null
+        );
+        if (!targetUser) return res.status(500).json({ error: 'User not found or database error' });
+        if (targetUser.role === 'committee') {
+            return res.status(403).json({ error: 'Cannot delete another committee member' });
+        }
+        await performUserDelete(targetUserId, res);
     } else {
-        performUserDelete(targetUserId, res);
+        await performUserDelete(targetUserId, res);
     }
 });
 
-function performUserDelete(userId: string, res: any) {
-    db.run('DELETE FROM bookings WHERE userId = ?', [userId], () => {
-        db.run('DELETE FROM votes WHERE userId = ?', [userId], () => {
-            db.run('DELETE FROM candidates WHERE userId = ?', [userId], () => {
-                db.run('DELETE FROM user_memberships WHERE userId = ?', [userId], () => {
-                    db.run('DELETE FROM users WHERE id = ?', [userId], standardDbResponse(res));
-                });
-            });
-        });
-    });
+// Cascade deletes ignore individual intermediate failures (same as the original
+// chained callbacks); only the final users-row delete reports errors.
+async function performUserDelete(userId: string, res: any) {
+    for (const sql of [
+        'DELETE FROM bookings WHERE userId = ?',
+        'DELETE FROM votes WHERE userId = ?',
+        'DELETE FROM candidates WHERE userId = ?',
+        'DELETE FROM user_memberships WHERE userId = ?'
+    ]) {
+        await dbRun(sql, [userId]).catch(() => {});
+    }
+    await dbRun('DELETE FROM users WHERE id = ?', [userId]).then(
+        () => res.json({ success: true }),
+        () => res.status(500).json({ error: 'Database error' })
+    );
 }
 
 export default router;

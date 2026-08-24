@@ -8,7 +8,7 @@ import { SECRET_KEY } from '../config';
 import { authenticateToken } from '../middleware/auth';
 import { sendEmail } from '../services/email';
 import { getAcademicYear, isSheffieldEmail } from './auth.helpers';
-import { getMembershipTypeIds } from '../services/membership';
+import { getMembershipTypeIdsAsync } from '../services/membership';
 
 const IS_TEST = process.env.NODE_ENV === 'test';
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
@@ -39,16 +39,9 @@ const cookieOptions = {
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
 };
 
-/** Generate a cryptographically secure 6-digit OTP */
+/** Promisified wrapper for the callback-style membership service */
 function generateOTP(): string {
     return crypto.randomInt(100000, 999999).toString();
-}
-
-/** Promisified wrapper for the callback-style membership service */
-function getMembershipTypeIdsAsync(): Promise<string[]> {
-    return new Promise((resolve, reject) => {
-        getMembershipTypeIds((typeErr, ids) => (typeErr ? reject(typeErr) : resolve(ids)));
-    });
 }
 
 router.post('/register', authLimiter, async (req, res) => {
@@ -272,7 +265,10 @@ router.post('/verify-email', authLimiter, async (req, res) => {
     const user = await dbGet<any>(
         'SELECT id, firstName, lastName, email, registrationNumber, role, committeeRole, membershipStatus, membershipYear, calendarToken FROM users WHERE id = ?',
         [userId]
-    );
+    ).catch(err => {
+        console.error('verify-email user fetch failed:', err);
+        return null;
+    });
     if (!user) return res.status(500).json({ error: 'Database error' });
 
     // Send welcome email now that they've verified
@@ -298,7 +294,14 @@ router.post('/request-verification', authLimiter, async (req, res) => {
 
     const user = await dbGet<any>('SELECT id, firstName, lastName, email, emailVerified FROM users WHERE id = ?', [
         userId
-    ]);
+    ]).then(
+        u => u ?? null,
+        err => {
+            console.error('request-verification database error:', err);
+            return 'DB_ERROR';
+        }
+    );
+    if (user === 'DB_ERROR') return res.status(500).json({ error: 'Database error' });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     if (user.emailVerified) {
@@ -385,7 +388,11 @@ router.post('/reset-password', authLimiter, async (req, res) => {
         return res.status(400).json({ error: 'Password must be at least 12 characters' });
     }
 
-    const row = await dbGet<any>('SELECT * FROM password_resets WHERE token = ?', [token]);
+    const row = await dbGet<any>('SELECT * FROM password_resets WHERE token = ?', [token]).then(
+        r => r ?? null,
+        () => null
+    );
+    // Original treated query failures the same as missing tokens (enumeration-safe)
     if (!row) return res.status(400).json({ error: 'Invalid or expired reset token' });
 
     if (Date.now() > row.expiresAt) {
