@@ -97,12 +97,16 @@ describe('Admin Mocked Branches', () => {
         expect(res.body.error).toBe('Database error');
     });
 
-    it('committee-role assignment returns 500 when finalize fails', async () => {
+    it('committee-role assignment returns 500 when role insert fails', async () => {
         const { app, db } = await loadAdminApp();
         db.all.mockImplementationOnce((_sql: string, _params: any[], cb: Function) => cb(null, [{ id: 'Chair' }]));
-        db.prepare.mockReturnValueOnce({
-            run: vi.fn(),
-            finalize: (cb: Function) => cb(new Error('DB Error'))
+        db.run.mockImplementation((sql: string, params: any, cb?: Function) => {
+            if (sql.includes('INSERT OR IGNORE INTO committee_roles')) {
+                throw new Error('DB Error'); // rejected by the promise wrapper -> route returns 500
+            }
+            const callback = typeof params === 'function' ? params : cb;
+            if (callback) callback.call({ changes: 1 }, null);
+            return db;
         });
         const res = await request(app)
             .post('/api/admin/users/u1/committee-role')

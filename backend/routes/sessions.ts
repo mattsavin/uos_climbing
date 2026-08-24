@@ -108,21 +108,16 @@ router.get('/ical/:calendarToken/all', async (req, res) => {
     if (!user) return res.status(404).send('User not found');
     const userId = user.id;
 
-    let roles: { role: string }[] = [];
     try {
-        roles = await dbAll<{ role: string }>('SELECT role FROM committee_roles WHERE userId = ?', [userId]);
-    } catch {
-        return res.status(500).send('Database error');
-    }
+        const roles = await dbAll<{ role: string }>('SELECT role FROM committee_roles WHERE userId = ?', [userId]);
 
-    const isCommittee =
-        user.role === 'committee' || !!user.committeeRole || (Array.isArray(roles) && roles.length > 0);
+        const isCommittee =
+            user.role === 'committee' || !!user.committeeRole || (Array.isArray(roles) && roles.length > 0);
 
-    const sql = isCommittee
-        ? 'SELECT * FROM sessions ORDER BY date ASC'
-        : 'SELECT * FROM sessions WHERE COALESCE(visibility, "all") != "committee_only" ORDER BY date ASC';
+        const sql = isCommittee
+            ? 'SELECT * FROM sessions ORDER BY date ASC'
+            : 'SELECT * FROM sessions WHERE COALESCE(visibility, "all") != "committee_only" ORDER BY date ASC';
 
-    try {
         const sessions = await dbAll(sql);
         res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
         res.setHeader('Content-Disposition', 'attachment; filename="uscc_schedule_all.ics"');

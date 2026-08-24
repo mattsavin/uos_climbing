@@ -17,6 +17,13 @@ export function getMembershipTypeIdsAsync(): Promise<string[]> {
     });
 }
 
+/** Promisified variant for async/await routes */
+export function getDefaultMembershipTypeAsync(): Promise<string | null> {
+    return new Promise((resolve, reject) => {
+        getDefaultMembershipType((typeErr, id) => (typeErr ? reject(typeErr) : resolve(id)));
+    });
+}
+
 export function getDefaultMembershipType(callback: (err: Error | null, membershipTypeId: string | null) => void) {
     db.get(
         `SELECT id FROM membership_types

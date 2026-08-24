@@ -13,6 +13,21 @@ import noUnsanitized from 'eslint-plugin-no-unsanitized';
  */
 export default tseslint.config(
     { ignores: ['dist/**', 'node_modules/**', 'coverage/**', 'playwright-report/**', 'test-results/**'] },
+    {
+        // Build/maintenance scripts run in plain Node
+        files: ['scripts/**/*.mjs', '*.config.js'],
+        languageOptions: {
+            globals: {
+                console: 'readonly',
+                process: 'readonly',
+                URL: 'readonly',
+                fetch: 'readonly'
+            }
+        },
+        rules: {
+            '@typescript-eslint/no-require-imports': 'off'
+        }
+    },
     js.configs.recommended,
     ...tseslint.configs.recommended,
     {

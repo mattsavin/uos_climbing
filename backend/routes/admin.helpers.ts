@@ -47,27 +47,11 @@ export function academicYearFromSubscriptionText(text: string): string | null {
     return null;
 }
 
-export function runDb(sql: string, params: any[] = []): Promise<{ changes: number }> {
-    return new Promise((resolve, reject) => {
-        db.run(sql, params, function (err) {
-            if (err) return reject(err);
-            resolve({ changes: this.changes || 0 });
-        });
-    });
-}
-
-export function getDb(sql: string, params: any[] = []): Promise<any> {
-    return new Promise((resolve, reject) => {
-        db.get(sql, params, (err, row) => {
-            if (err) return reject(err);
-            resolve(row);
-        });
-    });
-}
-
 export function newMembershipRowId(): string {
     return `umem_${randomUUID()}`;
 }
+// NOTE: promisified DB helpers live in backend/utils/db.ts (dbGet/dbAll/dbRun);
+// the former local runDb/getDb duplicates were removed in favour of those.
 
 export function parseSuRoster(raw: string) {
     const lines = raw
