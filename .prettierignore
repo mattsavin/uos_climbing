@@ -14,9 +14,3 @@ public/robots.txt
 
 # Never let formatters touch deploy infrastructure
 .github/
-
-# Prettier's parser rejects these two hand-authored files (unbalanced wrapper
-# tags — browsers auto-recover, but prettier refuses). Repair markup before
-# re-including; see backlog.
-dashboard.html
-login.html
