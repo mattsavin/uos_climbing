@@ -1,4 +1,4 @@
-const FALLBACK_IMAGE = '/src/assets/NUBS_Finals_015.jpg';
+import FALLBACK_IMAGE from './assets/NUBS_Finals_015.jpg';
 const FALLBACK_ALT = 'Climbing';
 const INTERVAL_MS = 5000;
 import { apiFetch } from './lib/api/http';
