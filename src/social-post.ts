@@ -25,7 +25,7 @@ const socialSlides: SocialSlide[] = [
   {
     theme: 'summit',
     kicker: 'USMC Announcement',
-    title: 'AGM: New  Competitions Subcommittee',
+    title: 'AGM: New Competitions Subcommittee',
     date: 'Wednesday 22 April',
     time: '18:00',
     venue: 'Diamond LT3',
