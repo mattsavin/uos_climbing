@@ -5,5 +5,5 @@ import { initApp } from './main';
 initApp();
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("Beginner's Guide page initialized");
+    // Page is static content rendered by initApp(); no per-page logic needed.
 });

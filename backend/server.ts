@@ -176,14 +176,6 @@ app.use('/api/committee', committeeRoutes);
 app.use('/api/verify', verifyRoutes);
 app.use('/api/gallery', galleryRoutes);
 
-// Shared route for iCal (also registered in sessions.ts but keeping here for backward compatibility if needed,
-// though /api/sessions/ical/:userId is preferred now. The original was /api/ical/:userId)
-app.use('/api/ical', (req, res, next) => {
-    // Forward /api/ical/:userId to sessions router logic if desired,
-    // but we can just use the sessions router directly by prefixing it.
-    next();
-});
-
 if (process.env.NODE_ENV === 'production') {
     // 1. Serve static files from the build directory (Assets MUST come first)
     const distPath = path.join(__dirname, '../dist');
