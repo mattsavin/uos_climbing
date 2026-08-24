@@ -94,9 +94,11 @@ if [ "${INCLUDE_UPLOADS:-false}" = "true" ] && [ -d "$DATA_DIR/uploads" ]; then
     tar czf "$BACKUP_DIR/uploads-${LABEL}-${STAMP}.tar.gz" -C "$DATA_DIR" uploads
 fi
 
-# Prune oldest beyond retention (per-pool: databases and upload archives separately)
-ls -1t "$BACKUP_DIR"/uscc-*.db.gz 2>/dev/null    | tail -n +"$((RETENTION_COUNT + 1))" | xargs -r rm --
-ls -1t "$BACKUP_DIR"/uploads-*.tar.gz 2>/dev/null | tail -n +"$((RETENTION_COUNT + 1))" | xargs -r rm --
+# Prune oldest beyond retention (per-pool: databases and upload archives separately).
+# '|| true' is required: on first run a pool may have zero matches, ls exits non-zero,
+# and pipefail+set -e would otherwise kill the script AFTER the backup succeeded.
+ls -1t "$BACKUP_DIR"/uscc-*.db.gz 2>/dev/null     | tail -n +"$((RETENTION_COUNT + 1))" | xargs -r rm -- || true
+ls -1t "$BACKUP_DIR"/uploads-*.tar.gz 2>/dev/null | tail -n +"$((RETENTION_COUNT + 1))" | xargs -r rm -- || true
 
-LATEST=$(ls -1t "$BACKUP_DIR"/uscc-*.db.gz 2>/dev/null | head -1)
+LATEST=$(ls -1t "$BACKUP_DIR"/uscc-*.db.gz 2>/dev/null | head -1 || true)
 echo "[backup] complete: $LATEST ($(du -h "$LATEST" | cut -f1))"
