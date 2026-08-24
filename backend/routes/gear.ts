@@ -3,6 +3,7 @@ import express from 'express';
 import { db } from '../db';
 import { authenticateToken, requireKitSec } from '../middleware/auth';
 import { sendEmail } from '../services/email';
+import crypto from 'crypto';
 
 const router = express.Router();
 
@@ -15,7 +16,7 @@ router.get('/', authenticateToken, (req, res) => {
 
 router.post('/', authenticateToken, requireKitSec, (req, res) => {
     const { name, description, totalQuantity } = req.body;
-    const id = 'gear_' + Date.now();
+    const id = 'gear_' + crypto.randomUUID();
 
     db.run(
         'INSERT INTO gear (id, name, description, totalQuantity, availableQuantity) VALUES (?, ?, ?, ?, ?)',
