@@ -74,11 +74,11 @@ describe('Committee API', () => {
         expect(res.status).toBe(200);
         expect(Array.isArray(res.body)).toBe(true);
         expect(res.body.length).toBeGreaterThanOrEqual(2); // root + our test comm
-        const root = res.body.find((u: any) => u.email === 'committee@sheffieldclimbing.org');
+        const root = res.body.find((u: any) => u.id === 'user_root');
         expect(root).toBeDefined();
-        // Sensitive fields should be hidden
+        // This is a PUBLIC endpoint (feeds the about page) — sensitive fields must be hidden
         expect(root).not.toHaveProperty('passwordHash');
-        expect(root.email).toBe('committee@sheffieldclimbing.org');
+        expect(root).not.toHaveProperty('email');
     });
 
     it('should allow committee member to update their own profile', async () => {

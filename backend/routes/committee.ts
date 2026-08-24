@@ -9,13 +9,16 @@ const router = express.Router();
 /** GET /api/committee - Get all committee members */
 router.get('/', (req, res) => {
     const query = `
-        SELECT u.id, u.firstName, u.lastName, u.name, u.email, u.instagram, u.faveCrag, u.bio, u.profilePhoto, u.committeeRole,
+        SELECT u.id, u.firstName, u.lastName, u.name, u.instagram, u.faveCrag, u.bio, u.profilePhoto, u.committeeRole,
                GROUP_CONCAT(cr.role, ', ') as roles
         FROM users u
         LEFT JOIN committee_roles cr ON u.id = cr.userId
         WHERE u.role = 'committee'
         GROUP BY u.id
     `;
+    // NOTE: deliberately excludes u.email — this endpoint is PUBLIC (feeds the about page).
+    // Committee emails are personal contact details and must only be visible through
+    // authenticated admin/member endpoints.
 
     db.all(query, [], (err, rows) => {
         if (err) return res.status(500).json({ error: 'Database error' });
