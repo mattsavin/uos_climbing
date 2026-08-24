@@ -53,7 +53,9 @@ router.get('/users', authenticateToken, requireCommittee, async (req, res) => {
             'SELECT id, firstName, lastName, email, registrationNumber, role, committeeRole, membershipStatus, membershipYear, emergencyContactName, emergencyContactMobile, pronouns, dietaryRequirements FROM users'
         );
         const memberships = await dbAll<any[]>('SELECT * FROM user_memberships');
-        const committeeRoles = await dbAll<{ userId: string; role: string }>('SELECT userId, role FROM committee_roles');
+        const committeeRoles = await dbAll<{ userId: string; role: string }>(
+            'SELECT userId, role FROM committee_roles'
+        );
 
         const membMap: Record<string, any[]> = {};
         memberships.forEach((m: any) => {
@@ -270,8 +272,8 @@ router.post('/users/:id/demote', authenticateToken, requireCommittee, async (req
     }
 
     // Cannot demote root admin
-    const user = await dbGet<{ email: string }>('SELECT email FROM users WHERE id = ?', [req.params.id]).catch(() =>
-        undefined
+    const user = await dbGet<{ email: string }>('SELECT email FROM users WHERE id = ?', [req.params.id]).catch(
+        () => undefined
     );
     if (user === undefined) return res.status(500).json({ error: 'Database error' });
     if (user && typeof user.email === 'string' && user.email.toLowerCase() === ROOT_ADMIN_EMAIL) {
@@ -301,9 +303,9 @@ router.post('/users/:id/committee-role', authenticateToken, requireCommittee, as
     try {
         // Validate all roles against available roles from database
         const validRolesRows = await dbAll<{ id: string }>('SELECT id FROM available_roles');
-        const validRoles = validRolesRows.map(r => r.id);
+        const validRoles = validRolesRows.map((r) => r.id);
 
-        const invalidRole = roles.find(r => !validRoles.includes(r));
+        const invalidRole = roles.find((r) => !validRoles.includes(r));
         if (invalidRole) {
             return res.status(400).json({ error: 'Invalid committee role' });
         }
@@ -355,7 +357,7 @@ router.post('/memberships/:id/approve', authenticateToken, requireCommittee, asy
         );
         if (user) {
             const displayName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
-            const typeLabel = await new Promise<string>(resolve => {
+            const typeLabel = await new Promise<string>((resolve) => {
                 getMembershipLabel(row.membershipType, (label: string) => resolve(label));
             });
             await sendEmail(
@@ -380,9 +382,10 @@ router.post('/memberships/:id/reject', authenticateToken, requireCommittee, asyn
     }
     if (!row) return res.status(404).json({ error: 'Membership row not found' });
 
-    const updated = await dbRun('UPDATE user_memberships SET status = ? WHERE id = ?', ['rejected', req.params.id]).catch(
-        () => null
-    );
+    const updated = await dbRun('UPDATE user_memberships SET status = ? WHERE id = ?', [
+        'rejected',
+        req.params.id
+    ]).catch(() => null);
     if (updated === null) return res.status(500).json({ error: 'Database error' });
 
     void (async () => {
@@ -396,7 +399,7 @@ router.post('/memberships/:id/reject', authenticateToken, requireCommittee, asyn
         );
         if (user) {
             const displayName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
-            const typeLabel = await new Promise<string>(resolve => {
+            const typeLabel = await new Promise<string>((resolve) => {
                 getMembershipLabel(row.membershipType, (label: string) => resolve(label));
             });
             await sendEmail(
@@ -510,9 +513,9 @@ router.delete('/committee-roles/:id', authenticateToken, requireCommittee, async
         });
     }
 
-    const { changes } = await dbRun('DELETE FROM available_roles WHERE id = ?', [req.params.id]).catch(
-        () => ({ changes: -1 })
-    );
+    const { changes } = await dbRun('DELETE FROM available_roles WHERE id = ?', [req.params.id]).catch(() => ({
+        changes: -1
+    }));
     if (changes < 0) return res.status(500).json({ error: 'Database error' });
     if (changes === 0) {
         return res.status(404).json({ error: 'Role not found' });

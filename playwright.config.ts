@@ -9,17 +9,17 @@ export default defineConfig({
     reporter: 'html',
     use: {
         baseURL: 'http://localhost:5174',
-        trace: 'on-first-retry',
+        trace: 'on-first-retry'
     },
     projects: [
         {
             name: 'chromium',
-            use: { ...devices['Desktop Chrome'] },
+            use: { ...devices['Desktop Chrome'] }
         },
         {
             name: 'Mobile Chrome',
-            use: { ...devices['Pixel 5'] },
-        },
+            use: { ...devices['Pixel 5'] }
+        }
     ],
     webServer: [
         {
@@ -40,5 +40,5 @@ export default defineConfig({
                 VITE_PROXY_TARGET: 'http://localhost:3001'
             }
         }
-    ],
+    ]
 });

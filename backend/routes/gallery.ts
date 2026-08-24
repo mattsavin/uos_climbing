@@ -87,13 +87,10 @@ router.post('/', authenticateToken, requireCommittee, (req: any, res) => {
 
                 const id = 'gal_' + crypto.randomUUID();
 
-                await dbRun('INSERT INTO gallery (id, filename, filepath, caption, uploadedBy) VALUES (?, ?, ?, ?, ?)', [
-                    id,
-                    filename,
-                    filepath,
-                    caption,
-                    uploaderId
-                ]);
+                await dbRun(
+                    'INSERT INTO gallery (id, filename, filepath, caption, uploadedBy) VALUES (?, ?, ?, ?, ?)',
+                    [id, filename, filepath, caption, uploaderId]
+                );
 
                 uploadedImages.push({ id, filename, filepath, caption });
                 fileIndex++;

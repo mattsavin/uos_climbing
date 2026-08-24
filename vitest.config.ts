@@ -13,5 +13,5 @@ export default defineConfig({
             include: ['backend/**/*.ts'],
             exclude: ['backend/db.ts', 'backend/server.ts']
         }
-    },
+    }
 });

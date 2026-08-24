@@ -44,10 +44,11 @@ router.put('/:id', authenticateToken, requireCommittee, async (req, res) => {
     const deprecated = req.body?.deprecated ? 1 : 0;
     if (!label) return res.status(400).json({ error: 'Label is required' });
 
-    const { changes } = await dbRun(
-        'UPDATE membership_types SET label = ?, deprecated = ? WHERE id = ?',
-        [label, deprecated, req.params.id]
-    ).catch(() => ({ changes: -1 }));
+    const { changes } = await dbRun('UPDATE membership_types SET label = ?, deprecated = ? WHERE id = ?', [
+        label,
+        deprecated,
+        req.params.id
+    ]).catch(() => ({ changes: -1 }));
 
     if (changes < 0) return res.status(500).json({ error: 'Database error' });
     if (changes === 0) return res.status(404).json({ error: 'Membership type not found' });

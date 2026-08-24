@@ -33,10 +33,13 @@ router.post('/', authenticateToken, requireKitSec, async (req, res) => {
 router.put('/:id', authenticateToken, requireKitSec, async (req, res) => {
     const { name, description, totalQuantity, availableQuantity } = req.body;
 
-    await dbRun(
-        'UPDATE gear SET name = ?, description = ?, totalQuantity = ?, availableQuantity = ? WHERE id = ?',
-        [name, description, totalQuantity, availableQuantity, req.params.id]
-    ).then(
+    await dbRun('UPDATE gear SET name = ?, description = ?, totalQuantity = ?, availableQuantity = ? WHERE id = ?', [
+        name,
+        description,
+        totalQuantity,
+        availableQuantity,
+        req.params.id
+    ]).then(
         () => res.json({ success: true }),
         () => res.status(500).json({ error: 'Database error' })
     );
@@ -174,9 +177,10 @@ router.post('/requests/:request_id/reject', authenticateToken, requireKitSec, as
     if (!request) return res.status(404).json({ error: 'Request not found' });
     if (request.status !== 'pending') return res.status(400).json({ error: 'Request is not pending' });
 
-    const { changes } = await dbRun("UPDATE gear_requests SET status = 'rejected' WHERE id = ? AND status = 'pending'", [
-        requestId
-    ]).catch(() => ({ changes: -1 }));
+    const { changes } = await dbRun(
+        "UPDATE gear_requests SET status = 'rejected' WHERE id = ? AND status = 'pending'",
+        [requestId]
+    ).catch(() => ({ changes: -1 }));
 
     if (changes < 0) return res.status(500).json({ error: 'Database error' });
     if (changes === 0) return res.status(400).json({ error: 'Request is no longer pending' });
@@ -220,17 +224,19 @@ router.post('/requests/:request_id/return', authenticateToken, requireKitSec, as
                     return res.status(400).json({ error: 'Request is no longer approved' });
                 }
 
-                db.run('UPDATE gear SET availableQuantity = availableQuantity + 1 WHERE id = ?', [request.gearId], function (
-                    err
-                ) {
-                    if (err) {
-                        db.run('ROLLBACK');
-                        return res.status(500).json({ error: 'DB Error' });
-                    }
+                db.run(
+                    'UPDATE gear SET availableQuantity = availableQuantity + 1 WHERE id = ?',
+                    [request.gearId],
+                    function (err) {
+                        if (err) {
+                            db.run('ROLLBACK');
+                            return res.status(500).json({ error: 'DB Error' });
+                        }
 
-                    db.run('COMMIT');
-                    res.json({ success: true });
-                });
+                        db.run('COMMIT');
+                        res.json({ success: true });
+                    }
+                );
             }
         );
     });

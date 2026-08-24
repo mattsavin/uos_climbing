@@ -35,14 +35,11 @@ export default tseslint.config(
         plugins: { 'no-unsanitized': noUnsanitized },
         rules: {
             // --- correctness (error) ---
-            'no-unsanitized/property': [
-                'warn',
-                { escape: { methods: ['escapeHTML'] } }
-            ],
+            'no-unsanitized/property': ['warn', { escape: { methods: ['escapeHTML'] } }],
             'no-unsanitized/method': 'warn',
 
             // --- correctness (error) ---
-            'eqeqeq': ['error', 'smart'],
+            eqeqeq: ['error', 'smart'],
             'no-var': 'error',
             'prefer-const': ['warn', { destructuring: 'all' }],
             '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
@@ -54,10 +51,7 @@ export default tseslint.config(
             '@typescript-eslint/no-explicit-any': 'warn',
             '@typescript-eslint/no-non-null-assertion': 'warn',
             '@typescript-eslint/no-unsafe-function-type': 'warn',
-            '@typescript-eslint/ban-ts-comment': [
-                'error',
-                { 'ts-ignore': 'allow-with-description' }
-            ],
+            '@typescript-eslint/ban-ts-comment': ['error', { 'ts-ignore': 'allow-with-description' }],
             '@typescript-eslint/no-require-imports': 'off'
         }
     },

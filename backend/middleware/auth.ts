@@ -33,9 +33,10 @@ export const requireCommittee = async (req: any, res: any, next: any) => {
     // Fallbacks for stale tokens: users table first, then committee_roles junction.
     // DB errors resolve to "not committee" — same behaviour as the callback version,
     // which treated query failures as denial rather than 500.
-    const user = await dbGet('SELECT id FROM users WHERE id = ? AND (role = "committee" OR committeeRole IS NOT NULL)', [
-        req.user.id
-    ]).catch(() => undefined);
+    const user = await dbGet(
+        'SELECT id FROM users WHERE id = ? AND (role = "committee" OR committeeRole IS NOT NULL)',
+        [req.user.id]
+    ).catch(() => undefined);
     if (user) return next();
 
     const junctionRow = await dbGet('SELECT userId FROM committee_roles WHERE userId = ? LIMIT 1', [req.user.id]).catch(

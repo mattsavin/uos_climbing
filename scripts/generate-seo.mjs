@@ -21,28 +21,113 @@ const OG_IMAGE = `${SITE_URL}/climbing%20team%20logo.png`;
 
 /** memberOnly pages get noindex + are excluded from the sitemap */
 const PAGES = [
-    { file: 'index.html', path: '/', title: 'USMC | University of Sheffield Mountaineering & Climbing Club', description: 'University of Sheffield Mountaineering & Climbing Club — weekly indoor sessions, competitions, outdoor trips and a friendly community for every grade of climber.' },
-    { file: 'about.html', path: '/about', title: 'About Indoor & Competitions | USMC', description: 'Meet the USMC Indoor & Competitions committee and find out how our training, comps and socials are organised.' },
-    { file: 'schedule.html', path: '/schedule', title: 'Schedule | USMC', description: 'Upcoming USMC climbing sessions, training and socials — browse the calendar and book your place.' },
-    { file: 'competitions.html', path: '/competitions', title: 'Indoor & Competitions | USMC', description: 'BUCS, NUID, NUBS and varsity competitions — how USMC trains, selects teams and competes across the UK.' },
-    { file: 'beginners.html', path: '/beginners', title: "Beginner's Guide | USMC", description: 'New to climbing? Everything beginners need to know before their first USMC session — gear, walls, costs and what to expect.' },
-    { file: 'walls.html', path: '/walls', title: 'Local Walls | USMC', description: 'Sheffield climbing walls the club trains at — locations, student discounts and what each wall is best for.' },
-    { file: 'faq.html', path: '/faq', title: 'FAQ | USMC', description: 'Answers to common questions about joining and climbing with the University of Sheffield Mountaineering & Climbing Club.' },
-    { file: 'gallery.html', path: '/gallery', title: 'Gallery | USMC', description: 'Photos from USMC sessions, competitions and trips.' },
-    { file: 'login.html', path: '/login', title: 'Member Access | USMC', description: 'Sign in to your USMC member account.', memberOnly: true },
-    { file: 'dashboard.html', path: '/dashboard', title: 'Member Dashboard | USMC', description: 'Your USMC membership dashboard.', memberOnly: true },
-    { file: 'admin.html', path: '/admin', title: 'Committee Portal | USMC', description: 'USMC committee administration.', memberOnly: true },
-    { file: 'elections.html', path: '/dashboard/elections', title: 'Elections | USMC', description: 'USMC committee elections — candidates, manifestos and voting.', memberOnly: true },
-    { file: 'gallery-manager.html', path: '/dashboard/gallery-manager', title: 'Gallery Manager | USMC', description: 'Manage USMC gallery photos.', memberOnly: true },
-    { file: 'social-post.html', path: '/dashboard/social-post', title: 'Generate Social Post | USMC', description: 'Generate USMC social media announcement slides.', memberOnly: true },
-    { file: 'verify.html', path: '/verify', title: 'Verify Membership | USMC', description: 'Verify a USMC membership card.', memberOnly: true }
+    {
+        file: 'index.html',
+        path: '/',
+        title: 'USMC | University of Sheffield Mountaineering & Climbing Club',
+        description:
+            'University of Sheffield Mountaineering & Climbing Club — weekly indoor sessions, competitions, outdoor trips and a friendly community for every grade of climber.'
+    },
+    {
+        file: 'about.html',
+        path: '/about',
+        title: 'About Indoor & Competitions | USMC',
+        description:
+            'Meet the USMC Indoor & Competitions committee and find out how our training, comps and socials are organised.'
+    },
+    {
+        file: 'schedule.html',
+        path: '/schedule',
+        title: 'Schedule | USMC',
+        description: 'Upcoming USMC climbing sessions, training and socials — browse the calendar and book your place.'
+    },
+    {
+        file: 'competitions.html',
+        path: '/competitions',
+        title: 'Indoor & Competitions | USMC',
+        description:
+            'BUCS, NUID, NUBS and varsity competitions — how USMC trains, selects teams and competes across the UK.'
+    },
+    {
+        file: 'beginners.html',
+        path: '/beginners',
+        title: "Beginner's Guide | USMC",
+        description:
+            'New to climbing? Everything beginners need to know before their first USMC session — gear, walls, costs and what to expect.'
+    },
+    {
+        file: 'walls.html',
+        path: '/walls',
+        title: 'Local Walls | USMC',
+        description:
+            'Sheffield climbing walls the club trains at — locations, student discounts and what each wall is best for.'
+    },
+    {
+        file: 'faq.html',
+        path: '/faq',
+        title: 'FAQ | USMC',
+        description:
+            'Answers to common questions about joining and climbing with the University of Sheffield Mountaineering & Climbing Club.'
+    },
+    {
+        file: 'gallery.html',
+        path: '/gallery',
+        title: 'Gallery | USMC',
+        description: 'Photos from USMC sessions, competitions and trips.'
+    },
+    {
+        file: 'login.html',
+        path: '/login',
+        title: 'Member Access | USMC',
+        description: 'Sign in to your USMC member account.',
+        memberOnly: true
+    },
+    {
+        file: 'dashboard.html',
+        path: '/dashboard',
+        title: 'Member Dashboard | USMC',
+        description: 'Your USMC membership dashboard.',
+        memberOnly: true
+    },
+    {
+        file: 'admin.html',
+        path: '/admin',
+        title: 'Committee Portal | USMC',
+        description: 'USMC committee administration.',
+        memberOnly: true
+    },
+    {
+        file: 'elections.html',
+        path: '/dashboard/elections',
+        title: 'Elections | USMC',
+        description: 'USMC committee elections — candidates, manifestos and voting.',
+        memberOnly: true
+    },
+    {
+        file: 'gallery-manager.html',
+        path: '/dashboard/gallery-manager',
+        title: 'Gallery Manager | USMC',
+        description: 'Manage USMC gallery photos.',
+        memberOnly: true
+    },
+    {
+        file: 'social-post.html',
+        path: '/dashboard/social-post',
+        title: 'Generate Social Post | USMC',
+        description: 'Generate USMC social media announcement slides.',
+        memberOnly: true
+    },
+    {
+        file: 'verify.html',
+        path: '/verify',
+        title: 'Verify Membership | USMC',
+        description: 'Verify a USMC membership card.',
+        memberOnly: true
+    }
 ];
 
 function escapeHtmlAttr(s) {
-    return String(s)
-        .replace(/&/g, '&amp;')
-        .replace(/"/g, '&quot;')
-        .replace(/</g, '&lt;');
+    return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 }
 
 function buildManagedBlock(page) {
@@ -100,9 +185,9 @@ for (const page of PAGES) {
 
 // --- 2. Sitemap (public routes only) ---
 const today = new Date().toISOString().slice(0, 10);
-const sitemapEntries = PAGES.filter(p => !p.memberOnly)
+const sitemapEntries = PAGES.filter((p) => !p.memberOnly)
     .map(
-        p => `    <url>
+        (p) => `    <url>
         <loc>${SITE_URL}${p.path === '/' ? '' : p.path}</loc>
         <lastmod>${today}</lastmod>
         <changefreq>weekly</changefreq>

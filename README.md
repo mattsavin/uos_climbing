@@ -45,7 +45,7 @@ to enforce once reports have been quiet.
 Snapshots use SQLite's online backup API via the app's own Docker image, then gzip.
 Each snapshot is verified with `PRAGMA integrity_check` before being counted as success.
 
-**Automatic:** every deploy takes a pre-deploy snapshot of prod *and* beta.
+**Automatic:** every deploy takes a pre-deploy snapshot of prod _and_ beta.
 **Scheduled:** systemd timers on the VPS (installed), staggered so prod and beta never
 run simultaneously:
 
@@ -91,11 +91,11 @@ verify the site after any restore.
 
 1. Take a fresh backup: `scripts/backup-db.sh uos_climbing ~/data /tmp/drill drill`
 2. Extract to a scratch dir and open read-only:
-   ```bash
-   gunzip -c /tmp/drill/uscc-drill-*.db.gz > /tmp/drill/restored.db
-   sqlite3 /tmp/drill/restored.db 'PRAGMA integrity_check;'
-   sqlite3 /tmp/drill/restored.db 'SELECT COUNT(*) FROM users;'
-   ```
+    ```bash
+    gunzip -c /tmp/drill/uscc-drill-*.db.gz > /tmp/drill/restored.db
+    sqlite3 /tmp/drill/restored.db 'PRAGMA integrity_check;'
+    sqlite3 /tmp/drill/restored.db 'SELECT COUNT(*) FROM users;'
+    ```
 3. Full rehearsal: point a throwaway container at the restored file and log in.
    An untested backup is a rumour.
 

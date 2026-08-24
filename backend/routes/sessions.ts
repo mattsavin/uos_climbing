@@ -146,7 +146,18 @@ router.post('/', authenticateToken, requireCommittee, async (req, res) => {
 
         await dbRun(
             'INSERT INTO sessions (id, type, title, date, capacity, bookedSlots, location, requiredMembership, visibility, registrationVisibility) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [id, type, title, date, capacity, 0, location || null, reqMemb, eventVisibility, eventRegistrationVisibility]
+            [
+                id,
+                type,
+                title,
+                date,
+                capacity,
+                0,
+                location || null,
+                reqMemb,
+                eventVisibility,
+                eventRegistrationVisibility
+            ]
         );
 
         res.json({
@@ -167,8 +178,17 @@ router.post('/', authenticateToken, requireCommittee, async (req, res) => {
 });
 
 router.put('/:id', authenticateToken, requireCommittee, async (req, res) => {
-    const { title, type, date, capacity, bookedSlots, location, requiredMembership, visibility, registrationVisibility } =
-        req.body;
+    const {
+        title,
+        type,
+        date,
+        capacity,
+        bookedSlots,
+        location,
+        requiredMembership,
+        visibility,
+        registrationVisibility
+    } = req.body;
     const eventVisibility = visibility === 'committee_only' ? 'committee_only' : 'all';
     const eventRegistrationVisibility = registrationVisibility === 'committee_only' ? 'committee_only' : 'all';
 
@@ -379,7 +399,9 @@ router.delete('/:id/attendees/:userId', authenticateToken, requireCommittee, asy
 });
 
 router.delete('/:id', authenticateToken, requireCommittee, async (req, res) => {
-    const { changes } = await dbRun('DELETE FROM sessions WHERE id = ?', [req.params.id]).catch(() => ({ changes: -1 }));
+    const { changes } = await dbRun('DELETE FROM sessions WHERE id = ?', [req.params.id]).catch(() => ({
+        changes: -1
+    }));
     if (changes < 0) return res.status(500).json({ error: 'Database error' });
     if (changes === 0) return res.status(404).json({ error: 'Session not found' });
     res.json({ success: true });

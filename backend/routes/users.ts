@@ -77,10 +77,9 @@ router.post('/me/photo', authenticateToken, (req: any, res) => {
         }
 
         // Get old photo to delete it (lookup errors ignored — same as before)
-        const oldUser = await dbGet<{ profilePhoto: string | null }>(
-            'SELECT profilePhoto FROM users WHERE id = ?',
-            [req.user.id]
-        ).catch(() => undefined);
+        const oldUser = await dbGet<{ profilePhoto: string | null }>('SELECT profilePhoto FROM users WHERE id = ?', [
+            req.user.id
+        ]).catch(() => undefined);
         if (oldUser?.profilePhoto) {
             const oldPath = path.join(UPLOAD_BASE_DIR, oldUser.profilePhoto.replace(/^\/uploads\//, ''));
             if (fs.existsSync(oldPath)) {
@@ -120,7 +119,8 @@ router.post('/me/memberships', authenticateToken, async (req: any, res) => {
     const currentYear = new Date().getFullYear();
     const currentMonth = new Date().getMonth();
     const year =
-        membershipYear || (currentMonth < 8 ? `${currentYear - 1}/${currentYear}` : `${currentYear}/${currentYear + 1}`);
+        membershipYear ||
+        (currentMonth < 8 ? `${currentYear - 1}/${currentYear}` : `${currentYear}/${currentYear + 1}`);
 
     const id = 'umem_' + crypto.randomUUID();
     // Committee members get auto-approved memberships
