@@ -66,6 +66,12 @@ jobs:
             cd ~/uos_climbing || git clone https://github.com/mattsavin/uos_climbing.git ~/uos_climbing
             cd ~/uos_climbing
             git pull origin main
+            # Snapshot the database BEFORE touching anything. If this fails, abort:
+            # never swap containers without a consistent snapshot on disk.
+            if ! bash scripts/backup-db.sh uos_climbing ~/data ~/backups/prod pre-deploy; then
+              echo "FATAL: pre-deploy backup failed - aborting deploy to protect data"
+              exit 1
+            fi
             docker build -t uos_climbing .
             docker stop uos_climbing || true
             docker rm uos_climbing || true
@@ -107,6 +113,11 @@ jobs:
             cd ~/uos_climbing_beta || git clone https://github.com/mattsavin/uos_climbing.git ~/uos_climbing_beta
             cd ~/uos_climbing_beta
             git pull origin dev
+            # Snapshot the beta database BEFORE touching anything. If this fails, abort.
+            if ! bash scripts/backup-db.sh uos_climbing_beta ~/data_beta ~/backups/beta pre-deploy; then
+              echo "FATAL: pre-deploy backup failed - aborting deploy to protect data"
+              exit 1
+            fi
             docker build -t uos_climbing_beta .
             docker stop uos_climbing_beta || true
             docker rm uos_climbing_beta || true
