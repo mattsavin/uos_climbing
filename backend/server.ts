@@ -22,6 +22,7 @@ import crypto from 'crypto';
 import { betaGate } from './middleware/beta-gate';
 import jwt from 'jsonwebtoken';
 import { UPLOAD_BASE_DIR } from './config';
+import { startReminderScheduler } from './services/bookings';
 
 // ESM dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
@@ -279,4 +280,7 @@ if (process.env.NODE_ENV !== 'test' || process.env.PLAYWRIGHT_TEST === 'true') {
     app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
     });
+
+    // Hourly booking-reminder sweep (no-op under test runners)
+    startReminderScheduler();
 }

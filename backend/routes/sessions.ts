@@ -7,6 +7,7 @@ import { dbAll, dbGet, dbRun } from '../utils/db';
 import { authenticateToken, requireCommittee } from '../middleware/auth';
 import { SECRET_KEY } from '../config';
 import { getDefaultMembershipTypeAsync, getMembershipLabel } from '../services/membership';
+import { sendBookingConfirmation, sendCancellationConfirmation } from '../services/bookings';
 
 const router = express.Router();
 
@@ -303,6 +304,13 @@ router.post('/:id/book', authenticateToken, async (req: any, res) => {
                         return res.status(400).json({ error: 'Session is full' });
                     }
                     db.run('COMMIT');
+                    if (req.user.email) {
+                        void sendBookingConfirmation(
+                            req.user.email,
+                            req.user.firstName || req.user.name || 'there',
+                            session
+                        );
+                    }
                     res.json({ success: true, bookedSlots: session.bookedSlots + 1 });
                 }
             );
@@ -323,7 +331,7 @@ router.post('/:id/cancel', authenticateToken, async (req: any, res) => {
     // Transactional cancel — see book() for rationale
     db.serialize(() => {
         db.run('BEGIN TRANSACTION');
-        db.run('DELETE FROM bookings WHERE userId = ? AND sessionId = ?', [userId, sessionId], function (err) {
+        db.run('DELETE FROM bookings WHERE userId = ? AND sessionId = ?', [userId, sessionId], async function (err) {
             if (err) {
                 db.run('ROLLBACK');
                 return res.status(500).json({ error: 'Database error on cancel' });
@@ -335,12 +343,27 @@ router.post('/:id/cancel', authenticateToken, async (req: any, res) => {
             db.run(
                 'UPDATE sessions SET bookedSlots = bookedSlots - 1 WHERE id = ? AND bookedSlots > 0',
                 [sessionId],
-                function (err) {
+                async function (err) {
                     if (err) {
                         db.run('ROLLBACK');
                         return res.status(500).json({ error: 'Database error on update' });
                     }
                     db.run('COMMIT');
+
+                    // Fire-and-forget cancellation confirmation
+                    const titleRow = await new Promise<{ title: string } | undefined>((resolve) => {
+                        db.get('SELECT title FROM sessions WHERE id = ?', [sessionId], (e: Error | null, r: any) =>
+                            resolve(r)
+                        );
+                    });
+                    if (req.user.email && titleRow) {
+                        void sendCancellationConfirmation(
+                            req.user.email,
+                            req.user.firstName || req.user.name || 'there',
+                            titleRow
+                        );
+                    }
+
                     res.json({ success: true });
                 }
             );
@@ -373,7 +396,7 @@ router.delete('/:id/attendees/:userId', authenticateToken, requireCommittee, asy
     // Transactional removal — see book() for rationale
     db.serialize(() => {
         db.run('BEGIN TRANSACTION');
-        db.run('DELETE FROM bookings WHERE userId = ? AND sessionId = ?', [userId, sessionId], function (err) {
+        db.run('DELETE FROM bookings WHERE userId = ? AND sessionId = ?', [userId, sessionId], async function (err) {
             if (err) {
                 db.run('ROLLBACK');
                 return res.status(500).json({ error: 'Database error' });

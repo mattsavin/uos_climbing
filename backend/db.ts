@@ -209,13 +209,18 @@ function initializeDatabase() {
         db.run('ALTER TABLE sessions ADD COLUMN location TEXT', (err) => {});
 
         // Bookings Table
+        // reminderSentAt: epoch ms of last reminder sent (NULL = not yet reminded)
         db.run(`CREATE TABLE IF NOT EXISTS bookings (
             userId TEXT NOT NULL,
             sessionId TEXT NOT NULL,
+            reminderSentAt INTEGER,
             PRIMARY KEY (userId, sessionId),
             FOREIGN KEY (userId) REFERENCES users(id),
             FOREIGN KEY (sessionId) REFERENCES sessions(id)
         )`);
+
+        // Migration for pre-existing databases
+        db.run('ALTER TABLE bookings ADD COLUMN reminderSentAt INTEGER', () => {});
 
         // Committee Roles Table (many-to-many: one user can hold multiple committee roles)
         db.run(`CREATE TABLE IF NOT EXISTS committee_roles (
