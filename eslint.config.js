@@ -15,13 +15,15 @@ export default tseslint.config(
     { ignores: ['dist/**', 'node_modules/**', 'coverage/**', 'playwright-report/**', 'test-results/**'] },
     {
         // Build/maintenance scripts run in plain Node
-        files: ['scripts/**/*.mjs', '*.config.js'],
+        files: ['scripts/**/*.mjs', 'tests/load/**/*.mjs', '*.config.js'],
         languageOptions: {
             globals: {
                 console: 'readonly',
                 process: 'readonly',
                 URL: 'readonly',
-                fetch: 'readonly'
+                fetch: 'readonly',
+                Buffer: 'readonly',
+                setTimeout: 'readonly'
             }
         },
         rules: {
