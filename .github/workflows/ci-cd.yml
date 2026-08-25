@@ -92,7 +92,9 @@ jobs:
                       docker build -t uos_climbing .
                       docker stop uos_climbing || true
                       docker rm uos_climbing || true
+                      docker image prune -f
                       docker run -d --restart unless-stopped --name uos_climbing \
+                        --log-opt max-size=10m --log-opt max-file=3 \
                         -p 3000:3000 \
                         -v ~/data:/data \
                         -e JWT_SECRET="$JWT_SECRET" \
@@ -139,7 +141,9 @@ jobs:
                       docker build -t uos_climbing_beta .
                       docker stop uos_climbing_beta || true
                       docker rm uos_climbing_beta || true
+                      docker image prune -f
                       docker run -d --restart unless-stopped --name uos_climbing_beta \
+                        --log-opt max-size=10m --log-opt max-file=3 \
                         -p 3001:3000 \
                         -v ~/data_beta:/data \
                         -e NODE_ENV=production \
