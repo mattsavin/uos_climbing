@@ -20,9 +20,11 @@ router.get('/config/elections', authenticateToken, requireCommittee, async (req,
 
 router.post('/config/elections', authenticateToken, requireCommittee, async (req: any, res) => {
     const { open } = req.body;
-    void logAudit(req.user, 'elections.toggle', 'config', 'electionsOpen', { open });
     await dbRun('UPDATE config SET value = ? WHERE key = ?', [open ? 'true' : 'false', 'electionsOpen']).then(
-        () => res.json({ success: true, electionsOpen: open }),
+        () => {
+            void logAudit(req.user, 'elections.toggle', 'config', 'electionsOpen', { open });
+            res.json({ success: true, electionsOpen: open });
+        },
         () => res.status(500).json({ error: 'Database error' })
     );
 });
@@ -485,8 +487,8 @@ router.post('/committee-roles', authenticateToken, requireCommittee, async (req:
     }
 
     try {
-        void logAudit(req.user, 'role.create', 'available_roles', id, { label });
         await dbRun('INSERT INTO available_roles (id, label) VALUES (?, ?)', [id, label]);
+        void logAudit(req.user, 'role.create', 'available_roles', id, { label });
         res.json({ success: true, id, label });
     } catch (err: any) {
         if (err?.message?.includes('UNIQUE')) {
