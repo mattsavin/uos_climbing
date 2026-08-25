@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { authenticateToken, requireCommittee } from '../middleware/auth';
 import { sendEmail } from '../services/email';
 import { ROOT_ADMIN_EMAIL, isRootAdmin, parseSuRoster } from './admin.helpers';
+import { logAudit } from '../services/audit';
 import { getDefaultMembershipTypeAsync, getMembershipLabel } from '../services/membership';
 import { dbAll, dbGet, dbRun } from '../utils/db';
 
@@ -17,8 +18,9 @@ router.get('/config/elections', authenticateToken, requireCommittee, async (req,
     }
 });
 
-router.post('/config/elections', authenticateToken, requireCommittee, async (req, res) => {
+router.post('/config/elections', authenticateToken, requireCommittee, async (req: any, res) => {
     const { open } = req.body;
+    void logAudit(req.user, 'elections.toggle', 'config', 'electionsOpen', { open });
     await dbRun('UPDATE config SET value = ? WHERE key = ?', [open ? 'true' : 'false', 'electionsOpen']).then(
         () => res.json({ success: true, electionsOpen: open }),
         () => res.status(500).json({ error: 'Database error' })
@@ -32,6 +34,7 @@ router.post('/test-email', authenticateToken, requireCommittee, async (req: any,
     }
 
     const target = req.user.email;
+    void logAudit(req.user, 'admin.test-email', 'email', target);
     const sent = await sendEmail(
         target,
         'USMC Test Email',
@@ -81,7 +84,7 @@ router.get('/users', authenticateToken, requireCommittee, async (req, res) => {
     }
 });
 
-router.post('/memberships/import-su-roster', authenticateToken, requireCommittee, async (req, res) => {
+router.post('/memberships/import-su-roster', authenticateToken, requireCommittee, async (req: any, res) => {
     try {
         const raw = (req.body?.raw || '').toString();
         if (!raw.trim()) return res.status(400).json({ error: 'No roster text provided' });
@@ -159,6 +162,12 @@ router.post('/memberships/import-su-roster', authenticateToken, requireCommittee
             yearFallbackUsed,
             skipped
         });
+        void logAudit(req.user, 'roster.import', 'memberships', undefined, {
+            parsedRows: parsed.length,
+            approvedExisting,
+            preapprovedOnly,
+            skipped: skipped.length
+        });
     } catch (err: any) {
         console.error('Failed to import SU roster:', err);
         res.status(500).json({ error: 'Failed to import SU roster' });
@@ -220,6 +229,7 @@ router.post('/users/:id/approve', authenticateToken, requireCommittee, async (re
         })();
 
         await notifyMembershipDecision(req.params.id, true);
+        void logAudit(req.user, 'member.approve', 'user', req.params.id);
 
         res.json({ success: true });
     } catch {
@@ -251,6 +261,7 @@ router.post('/users/:id/reject', authenticateToken, requireCommittee, async (req
         })();
 
         await notifyMembershipDecision(req.params.id, false);
+        void logAudit(req.user, 'member.reject', 'user', req.params.id);
 
         res.json({ success: true });
     } catch {
@@ -258,9 +269,12 @@ router.post('/users/:id/reject', authenticateToken, requireCommittee, async (req
     }
 });
 
-router.post('/users/:id/promote', authenticateToken, requireCommittee, async (req, res) => {
+router.post('/users/:id/promote', authenticateToken, requireCommittee, async (req: any, res) => {
     await dbRun('UPDATE users SET role = ? WHERE id = ?', ['committee', req.params.id]).then(
-        () => res.json({ success: true }),
+        () => {
+            void logAudit(req.user, 'member.promote', 'user', req.params.id);
+            res.json({ success: true });
+        },
         () => res.status(500).json({ error: 'Database error' })
     );
 });
@@ -284,6 +298,7 @@ router.post('/users/:id/demote', authenticateToken, requireCommittee, async (req
         await dbRun('UPDATE users SET role = ?, committeeRole = ? WHERE id = ?', ['member', null, req.params.id]);
         // Also clear all committee roles from the junction table
         await dbRun('DELETE FROM committee_roles WHERE userId = ?', [req.params.id]);
+        void logAudit(req.user, 'member.demote', 'user', req.params.id);
         res.json({ success: true });
     } catch {
         res.status(500).json({ error: 'Database error' });
@@ -323,6 +338,7 @@ router.post('/users/:id/committee-role', authenticateToken, requireCommittee, as
         for (const r of roles) {
             await dbRun('INSERT OR IGNORE INTO committee_roles (userId, role) VALUES (?, ?)', [req.params.id, r]);
         }
+        void logAudit(req.user, 'roles.assign', 'user', req.params.id, { roles });
         res.json({ success: true });
     } catch {
         res.status(500).json({ error: 'Database error' });
@@ -330,7 +346,7 @@ router.post('/users/:id/committee-role', authenticateToken, requireCommittee, as
 });
 
 /** Approve a specific user_memberships row */
-router.post('/memberships/:id/approve', authenticateToken, requireCommittee, async (req, res) => {
+router.post('/memberships/:id/approve', authenticateToken, requireCommittee, async (req: any, res) => {
     let row: any;
     try {
         row = await dbGet('SELECT * FROM user_memberships WHERE id = ?', [req.params.id]);
@@ -344,6 +360,7 @@ router.post('/memberships/:id/approve', authenticateToken, requireCommittee, asy
     );
     if (updated === null) return res.status(500).json({ error: 'Database error' });
 
+    void logAudit(req.user, 'membership.approve', 'user_memberships', req.params.id, { type: row.membershipType });
     // Fire-and-forget side effects (original did not wait for these either)
     void (async () => {
         // If this is a 'basic' membership approval, also set the user's top-level membershipStatus to active
@@ -373,7 +390,7 @@ router.post('/memberships/:id/approve', authenticateToken, requireCommittee, asy
 });
 
 /** Reject a specific user_memberships row */
-router.post('/memberships/:id/reject', authenticateToken, requireCommittee, async (req, res) => {
+router.post('/memberships/:id/reject', authenticateToken, requireCommittee, async (req: any, res) => {
     let row: any;
     try {
         row = await dbGet('SELECT * FROM user_memberships WHERE id = ?', [req.params.id]);
@@ -387,6 +404,8 @@ router.post('/memberships/:id/reject', authenticateToken, requireCommittee, asyn
         req.params.id
     ]).catch(() => null);
     if (updated === null) return res.status(500).json({ error: 'Database error' });
+
+    void logAudit(req.user, 'membership.reject', 'user_memberships', req.params.id, { type: row.membershipType });
 
     void (async () => {
         // If this is a 'basic' membership rejection, also set the user's top-level membershipStatus to rejected
@@ -415,7 +434,7 @@ router.post('/memberships/:id/reject', authenticateToken, requireCommittee, asyn
 });
 
 /** Delete a specific user_memberships row */
-router.delete('/memberships/:id', authenticateToken, requireCommittee, async (req, res) => {
+router.delete('/memberships/:id', authenticateToken, requireCommittee, async (req: any, res) => {
     let row: any;
     try {
         row = await dbGet('SELECT * FROM user_memberships WHERE id = ?', [req.params.id]);
@@ -426,6 +445,8 @@ router.delete('/memberships/:id', authenticateToken, requireCommittee, async (re
 
     const deleted = await dbRun('DELETE FROM user_memberships WHERE id = ?', [req.params.id]).catch(() => null);
     if (deleted === null) return res.status(500).json({ error: 'Database error' });
+
+    void logAudit(req.user, 'membership.delete', 'user_memberships', req.params.id, { type: row.membershipType });
 
     // If we just deleted the user's only active basic membership, mark them as pending
     if (row.membershipType === 'basic') {
@@ -464,6 +485,7 @@ router.post('/committee-roles', authenticateToken, requireCommittee, async (req:
     }
 
     try {
+        void logAudit(req.user, 'role.create', 'available_roles', id, { label });
         await dbRun('INSERT INTO available_roles (id, label) VALUES (?, ?)', [id, label]);
         res.json({ success: true, id, label });
     } catch (err: any) {
@@ -492,6 +514,7 @@ router.put('/committee-roles/:id', authenticateToken, requireCommittee, async (r
     if (changes === 0) {
         return res.status(404).json({ error: 'Role not found' });
     }
+    void logAudit(req.user, 'role.update', 'available_roles', req.params.id, { label });
     res.json({ success: true, id: req.params.id, label });
 });
 
@@ -520,7 +543,23 @@ router.delete('/committee-roles/:id', authenticateToken, requireCommittee, async
     if (changes === 0) {
         return res.status(404).json({ error: 'Role not found' });
     }
+    void logAudit(req.user, 'role.delete', 'available_roles', req.params.id);
     res.json({ success: true });
+});
+
+/** Read the audit trail (committee only), newest first */
+router.get('/audit-log', authenticateToken, requireCommittee, async (req: any, res) => {
+    const limit = Math.min(Math.max(parseInt(String(req.query.limit)) || 50, 1), 200);
+    const offset = Math.max(parseInt(String(req.query.offset)) || 0, 0);
+    try {
+        const rows = await dbAll<any[]>('SELECT * FROM audit_log ORDER BY createdAt DESC LIMIT ? OFFSET ?', [
+            limit,
+            offset
+        ]);
+        res.json((rows || []).map((r: any) => ({ ...r, details: r.details ? JSON.parse(r.details) : null })));
+    } catch {
+        res.status(500).json({ error: 'Database error' });
+    }
 });
 
 export default router;

@@ -26,6 +26,20 @@ export const db = new sqlite3.Database(dbPath, (err) => {
 
 function initializeDatabase() {
     db.serialize(() => {
+        // Admin Audit Trail: append-only record of privileged actions.
+        // details holds a JSON blob; createdAt is epoch ms.
+        db.run(`CREATE TABLE IF NOT EXISTS audit_log (
+            id TEXT PRIMARY KEY,
+            actorId TEXT,
+            actorEmail TEXT,
+            action TEXT NOT NULL,
+            entityType TEXT,
+            entityId TEXT,
+            details TEXT,
+            createdAt INTEGER NOT NULL
+        )`);
+        db.run('CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log (createdAt DESC)');
+
         // Write-Ahead Logging: readers no longer block the writer (and vice versa)
         // under concurrent booking traffic. Safe with our backup script, which uses
         // SQLite's online backup API.

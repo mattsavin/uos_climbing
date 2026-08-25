@@ -4,6 +4,7 @@ import { initAdminConfirm, initSuRosterImport, renderAdminLists } from './lib/da
 import { initSessionTypeHandlers, renderSessionTypes } from './lib/dashboard/session-types';
 import { initMembershipTypeHandlers, renderMembershipTypes } from './lib/dashboard/membership-types';
 import { initCommitteeRoleHandlers, renderCommitteeRoles } from './lib/dashboard/committee-roles';
+import { initAuditLogViewer } from './lib/dashboard/audit';
 import { adminConfirmModalHtml } from './components';
 import { csvExportModalHtml } from './components';
 import { initCsvExportModal } from './lib/dashboard/committee';
@@ -28,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize Handlers
     initAdminConfirm();
     initSuRosterImport();
+    initAuditLogViewer();
     initSessionTypeHandlers();
     initMembershipTypeHandlers();
     initCommitteeRoleHandlers();
