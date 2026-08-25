@@ -5,7 +5,7 @@ import { db } from '../../backend/db';
 
 describe('GET /api/health', () => {
     beforeAll(async () => {
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
     });
 
     afterAll(() => {

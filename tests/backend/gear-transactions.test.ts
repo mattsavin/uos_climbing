@@ -14,7 +14,7 @@ describe('Gear transactions', () => {
     let gearId = '';
 
     beforeAll(async () => {
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
 
         const userRes = await request(app).post('/api/auth/register').send({
             firstName: 'Tx',

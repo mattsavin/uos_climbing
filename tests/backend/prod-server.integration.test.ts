@@ -38,7 +38,7 @@ async function waitForHealth(timeoutMs = 20000): Promise<void> {
         } catch {
             /* not up yet */
         }
-        await new Promise(r => setTimeout(r, 300));
+        await new Promise((r) => setTimeout(r, 300));
     }
     throw new Error('server did not become healthy in time');
 }
@@ -65,7 +65,7 @@ describe.skipIf(!distReady)('production server (child process integration)', () 
         await waitForHealth();
 
         // 1. Health endpoint reflects DB connectivity
-        const health = await fetch(`${BASE}/api/health`).then(r => r.json());
+        const health = await fetch(`${BASE}/api/health`).then((r) => r.json());
         expect(health).toMatchObject({ ok: true, db: true });
 
         // 2. Known clean route serves its entry file

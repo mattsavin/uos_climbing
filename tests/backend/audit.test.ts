@@ -9,16 +9,18 @@ describe('Admin audit trail', () => {
     let targetUserId = '';
 
     beforeAll(async () => {
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
 
-        const userRes = await request(app).post('/api/auth/register').send({
-            firstName: 'Audit',
-            lastName: 'Target',
-            email: `audit_target_${Date.now()}@example.com`,
-            password: 'Password123!',
-            passwordConfirm: 'Password123!',
-            registrationNumber: 'AUD001'
-        });
+        const userRes = await request(app)
+            .post('/api/auth/register')
+            .send({
+                firstName: 'Audit',
+                lastName: 'Target',
+                email: `audit_target_${Date.now()}@example.com`,
+                password: 'Password123!',
+                passwordConfirm: 'Password123!',
+                registrationNumber: 'AUD001'
+            });
         targetUserId = userRes.body.userId ?? userRes.body.user?.id;
 
         const userLogin = await request(app)
@@ -26,14 +28,16 @@ describe('Admin audit trail', () => {
             .send({ email: `audit_target_${Date.now()}@example.com`, password: 'Password123!' });
 
         // Register the regular member token via a dedicated account
-        const memberRes = await request(app).post('/api/auth/register').send({
-            firstName: 'Plain',
-            lastName: 'Member',
-            email: `audit_member_${Date.now()}@example.com`,
-            password: 'Password123!',
-            passwordConfirm: 'Password123!',
-            registrationNumber: 'AUD002'
-        });
+        const memberRes = await request(app)
+            .post('/api/auth/register')
+            .send({
+                firstName: 'Plain',
+                lastName: 'Member',
+                email: `audit_member_${Date.now()}@example.com`,
+                password: 'Password123!',
+                passwordConfirm: 'Password123!',
+                registrationNumber: 'AUD002'
+            });
         userToken = memberRes.body.token;
 
         const adminRes = await request(app)
@@ -43,7 +47,9 @@ describe('Admin audit trail', () => {
 
         // Trigger an audited action so there is at least one entry
         if (targetUserId) {
-            await request(app).post(`/api/admin/users/${targetUserId}/approve`).set('Authorization', `Bearer ${rootToken}`);
+            await request(app)
+                .post(`/api/admin/users/${targetUserId}/approve`)
+                .set('Authorization', `Bearer ${rootToken}`);
         }
     }, 20000);
 
@@ -52,9 +58,7 @@ describe('Admin audit trail', () => {
     });
 
     it('records approve actions with actor identity and timestamp', async () => {
-        const res = await request(app)
-            .get('/api/admin/audit-log?limit=10')
-            .set('Authorization', `Bearer ${rootToken}`);
+        const res = await request(app).get('/api/admin/audit-log?limit=10').set('Authorization', `Bearer ${rootToken}`);
         expect(res.status).toBe(200);
         const entry = res.body.find((e: any) => e.action === 'member.approve');
         expect(entry).toBeDefined();
@@ -63,9 +67,7 @@ describe('Admin audit trail', () => {
     });
 
     it('returns entries newest-first', async () => {
-        const res = await request(app)
-            .get('/api/admin/audit-log?limit=50')
-            .set('Authorization', `Bearer ${rootToken}`);
+        const res = await request(app).get('/api/admin/audit-log?limit=50').set('Authorization', `Bearer ${rootToken}`);
         const times = res.body.map((e: any) => e.createdAt);
         const sorted = [...times].sort((a: number, b: number) => b - a);
         expect(times).toEqual(sorted);

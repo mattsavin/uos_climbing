@@ -26,7 +26,7 @@ export async function loadAuditLog(): Promise<void> {
             return;
         }
         list.innerHTML = entries
-            .map(e => {
+            .map((e) => {
                 const when = new Date(e.createdAt).toLocaleString('en-GB');
                 return `<div class="py-2 flex flex-col gap-0.5">
                     <span class="text-white font-bold">${escapeHTML(e.action)}</span>
