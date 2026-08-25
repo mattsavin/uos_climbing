@@ -1,0 +1,21 @@
+version: 2
+
+updates:
+    # Production + dev dependencies: grouped weekly PR so the audit gate
+    # and CI validate everything together
+    - package-ecosystem: 'npm'
+      directory: '/'
+      schedule:
+          interval: 'weekly'
+          day: 'monday'
+      groups:
+          all-dependencies:
+              applies-to: version-updates
+              patterns:
+                  - '*'
+
+    # Keep GitHub Actions current (Node-runtime deprecations, SHA pinning)
+    - package-ecosystem: 'github-actions'
+      directory: '/'
+      schedule:
+          interval: 'monthly'

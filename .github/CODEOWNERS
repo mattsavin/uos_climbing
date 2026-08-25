@@ -1,0 +1,6 @@
+# Backend, deploy infrastructure and maintenance scripts require Matt's review
+# (CODEOWNERS auto-requests these reviews on PRs; enforcement level is set in
+# the main branch ruleset)
+/backend/ @mattsavin
+/scripts/ @mattsavin
+/.github/ @mattsavin
