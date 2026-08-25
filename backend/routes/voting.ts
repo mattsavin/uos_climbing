@@ -1,5 +1,5 @@
 import express from 'express';
-import { dbAll, dbGet, dbRun } from '../utils/db';
+import { dbAll, dbGet, dbRun, inTransaction } from '../utils/db';
 import { authenticateToken, requireCommittee } from '../middleware/auth';
 import crypto from 'crypto';
 import { logAudit } from '../services/audit';
@@ -105,23 +105,22 @@ router.post('/vote', authenticateToken, async (req: any, res) => {
     }
 });
 
-// Committee-only full election reset. Genuinely transactional now — the old
-// callback form wrapped async db.run calls in a synchronous try/catch, so
-// failures were never rolled back and still returned success. Failures now
-// roll back and surface as 500.
+// Committee-only full election reset. Genuinely transactional: the whole
+// statement list runs inside one serialized BEGIN IMMEDIATE…COMMIT block
+// (utils/db.ts), so concurrent resets queue instead of interleaving into a
+// nested-transaction error, and failures roll back and surface as 500.
 router.post('/reset', authenticateToken, requireCommittee, async (req: any, res) => {
     try {
-        await dbRun('BEGIN TRANSACTION');
-        await dbRun('DELETE FROM votes');
-        await dbRun('DELETE FROM candidates');
-        await dbRun('DELETE FROM referendum_votes');
-        await dbRun('DELETE FROM referendums');
-        await dbRun('UPDATE config SET value = ? WHERE key = ?', ['false', 'electionsOpen']);
-        await dbRun('COMMIT');
+        await inTransaction(async () => {
+            await dbRun('DELETE FROM votes');
+            await dbRun('DELETE FROM candidates');
+            await dbRun('DELETE FROM referendum_votes');
+            await dbRun('DELETE FROM referendums');
+            await dbRun('UPDATE config SET value = ? WHERE key = ?', ['false', 'electionsOpen']);
+        });
         void logAudit(req.user, 'elections.reset', 'elections');
         res.json({ success: true });
-    } catch (err) {
-        await dbRun('ROLLBACK').catch(() => {});
+    } catch {
         res.status(500).json({ error: 'Database error during reset' });
     }
 });
@@ -168,13 +167,12 @@ router.post('/referendums', authenticateToken, requireCommittee, async (req, res
 router.delete('/referendums/:id', authenticateToken, requireCommittee, async (req, res) => {
     const { id } = req.params;
     try {
-        await dbRun('BEGIN TRANSACTION');
-        await dbRun('DELETE FROM referendum_votes WHERE referendumId = ?', [id]);
-        await dbRun('DELETE FROM referendums WHERE id = ?', [id]);
-        await dbRun('COMMIT');
+        await inTransaction(async () => {
+            await dbRun('DELETE FROM referendum_votes WHERE referendumId = ?', [id]);
+            await dbRun('DELETE FROM referendums WHERE id = ?', [id]);
+        });
         res.json({ success: true });
     } catch {
-        await dbRun('ROLLBACK').catch(() => {});
         res.status(500).json({ error: 'Database error' });
     }
 });

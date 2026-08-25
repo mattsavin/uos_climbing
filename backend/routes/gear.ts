@@ -1,6 +1,5 @@
 import express from 'express';
-import { db } from '../db';
-import { dbAll, dbGet, dbRun } from '../utils/db';
+import { dbAll, dbGet, dbRun, inTransaction, StagedError } from '../utils/db';
 import { authenticateToken, requireKitSec } from '../middleware/auth';
 import { sendEmail } from '../services/email';
 import crypto from 'crypto';
@@ -121,49 +120,41 @@ router.post('/requests/:request_id/approve', authenticateToken, requireKitSec, a
     if (!request) return res.status(404).json({ error: 'Request not found' });
     if (request.status !== 'pending') return res.status(400).json({ error: 'Request is not pending' });
 
-    // Transactional: serialize + BEGIN/COMMIT so concurrent approvals cannot both
-    // decrement stock. Kept callback-based deliberately (see utils/db.ts).
-    db.serialize(() => {
-        db.run('BEGIN TRANSACTION');
-        db.run(
-            "UPDATE gear_requests SET status = 'approved' WHERE id = ? AND status = 'pending'",
-            [requestId],
-            function (err) {
-                if (err) {
-                    db.run('ROLLBACK');
-                    return res.status(500).json({ error: 'DB Error' });
-                }
-                if (this.changes === 0) {
-                    db.run('ROLLBACK');
-                    return res.status(400).json({ error: 'Request is no longer pending' });
-                }
-
-                db.run(
-                    'UPDATE gear SET availableQuantity = availableQuantity - 1 WHERE id = ?',
-                    [request.gearId],
-                    function (err) {
-                        if (err) {
-                            db.run('ROLLBACK');
-                            return res.status(500).json({ error: 'DB Error' });
-                        }
-
-                        db.run('COMMIT');
-
-                        if (request.email) {
-                            sendEmail(
-                                request.email,
-                                'Gear Request Approved',
-                                `Hi ${request.name || 'User'},\n\nYour gear request has been approved. Please collect it from the Kit Sec.`,
-                                `<p>Hi ${request.name || 'User'},</p><p>Your gear request has been approved. Please collect it from the Kit Sec.</p>`
-                            ).catch((e: any) => console.error('Failed to send approval email:', e));
-                        }
-
-                        res.json({ success: true });
-                    }
-                );
+    // Transactional: BEGIN IMMEDIATE…COMMIT in the process-wide serialized
+    // queue (see utils/db.ts), so concurrent approvals cannot both decrement
+    // stock — and can no longer interleave into a server crash.
+    try {
+        await inTransaction(async () => {
+            const { changes } = await dbRun(
+                "UPDATE gear_requests SET status = 'approved' WHERE id = ? AND status = 'pending'",
+                [requestId]
+            ).catch(() => {
+                throw new StagedError('approve request', 500, { error: 'DB Error' });
+            });
+            if (changes === 0) {
+                throw new StagedError('pending guard', 400, { error: 'Request is no longer pending' });
             }
-        );
-    });
+            await dbRun('UPDATE gear SET availableQuantity = availableQuantity - 1 WHERE id = ?', [
+                request.gearId
+            ]).catch(() => {
+                throw new StagedError('decrement stock', 500, { error: 'DB Error' });
+            });
+        });
+
+        if (request.email) {
+            sendEmail(
+                request.email,
+                'Gear Request Approved',
+                `Hi ${request.name || 'User'},\n\nYour gear request has been approved. Please collect it from the Kit Sec.`,
+                `<p>Hi ${request.name || 'User'},</p><p>Your gear request has been approved. Please collect it from the Kit Sec.</p>`
+            ).catch((e: any) => console.error('Failed to send approval email:', e));
+        }
+
+        res.json({ success: true });
+    } catch (err) {
+        if (err instanceof StagedError) return res.status(err.status).json(err.body);
+        res.status(500).json({ error: 'DB Error' });
+    }
 });
 
 router.post('/requests/:request_id/reject', authenticateToken, requireKitSec, async (req, res) => {
@@ -209,37 +200,28 @@ router.post('/requests/:request_id/return', authenticateToken, requireKitSec, as
     if (request.status !== 'approved') return res.status(400).json({ error: 'Request is not approved' });
 
     // Transactional: same rationale as approve
-    db.serialize(() => {
-        db.run('BEGIN TRANSACTION');
-        db.run(
-            "UPDATE gear_requests SET status = 'returned', returnDate = ? WHERE id = ? AND status = 'approved'",
-            [returnDate, requestId],
-            function (err) {
-                if (err) {
-                    db.run('ROLLBACK');
-                    return res.status(500).json({ error: 'DB Error' });
-                }
-                if (this.changes === 0) {
-                    db.run('ROLLBACK');
-                    return res.status(400).json({ error: 'Request is no longer approved' });
-                }
-
-                db.run(
-                    'UPDATE gear SET availableQuantity = availableQuantity + 1 WHERE id = ?',
-                    [request.gearId],
-                    function (err) {
-                        if (err) {
-                            db.run('ROLLBACK');
-                            return res.status(500).json({ error: 'DB Error' });
-                        }
-
-                        db.run('COMMIT');
-                        res.json({ success: true });
-                    }
-                );
+    try {
+        await inTransaction(async () => {
+            const { changes } = await dbRun(
+                "UPDATE gear_requests SET status = 'returned', returnDate = ? WHERE id = ? AND status = 'approved'",
+                [returnDate, requestId]
+            ).catch(() => {
+                throw new StagedError('mark returned', 500, { error: 'DB Error' });
+            });
+            if (changes === 0) {
+                throw new StagedError('approved guard', 400, { error: 'Request is no longer approved' });
             }
-        );
-    });
+            await dbRun('UPDATE gear SET availableQuantity = availableQuantity + 1 WHERE id = ?', [
+                request.gearId
+            ]).catch(() => {
+                throw new StagedError('increment stock', 500, { error: 'DB Error' });
+            });
+        });
+        res.json({ success: true });
+    } catch (err) {
+        if (err instanceof StagedError) return res.status(err.status).json(err.body);
+        res.status(500).json({ error: 'DB Error' });
+    }
 });
 
 export default router;
