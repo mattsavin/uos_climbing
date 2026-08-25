@@ -77,7 +77,7 @@ jobs:
                   key: ${{ secrets.SSH_PRIVATE_KEY }}
                   envs: JWT_SECRET,EMAIL_USER,EMAIL_CLIENT_ID,EMAIL_CLIENT_SECRET,EMAIL_REFRESH_TOKEN,RESEND_API_KEY,EMAIL_FROM,COOKIE_SECURE
                   script: |
-                      cd ~/uos_climbing || git clone https://github.com/mattsavin/uos_climbing.git ~/uos_climbing
+                      cd ~/uos_climbing || git clone https://github.com/uos-climbing/club-website.git ~/uos_climbing
                       cd ~/uos_climbing
                       git pull origin main
                       # Snapshot the database BEFORE touching anything. If this fails, abort:
@@ -127,7 +127,7 @@ jobs:
                   key: ${{ secrets.SSH_PRIVATE_KEY }}
                   envs: JWT_SECRET,EMAIL_USER,EMAIL_CLIENT_ID,EMAIL_CLIENT_SECRET,EMAIL_REFRESH_TOKEN,RESEND_API_KEY,EMAIL_FROM,COOKIE_SECURE,BETA_PASSCODE,BETA_ACCESS_SECRET
                   script: |
-                      cd ~/uos_climbing_beta || git clone https://github.com/mattsavin/uos_climbing.git ~/uos_climbing_beta
+                      cd ~/uos_climbing_beta || git clone https://github.com/uos-climbing/club-website.git ~/uos_climbing_beta
                       cd ~/uos_climbing_beta
                       git pull origin dev
                       # Snapshot the beta database BEFORE touching anything. If this fails, abort.
