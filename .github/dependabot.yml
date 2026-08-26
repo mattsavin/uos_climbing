@@ -8,6 +8,8 @@ updates:
       schedule:
           interval: 'weekly'
           day: 'monday'
+      # All changes flow dev -> beta soak -> main promotion; never straight to prod
+      target-branch: 'dev'
       groups:
           all-dependencies:
               applies-to: version-updates
