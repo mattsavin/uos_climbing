@@ -80,6 +80,13 @@ describe.skipIf(!distReady)('production server (child process integration)', () 
         expect(root.status).toBe(200);
         expect(root.headers.get('cache-control')).toBe('no-cache');
 
+        // 2c. /trips is mapped in PAGE_ROUTES even while unlinked from nav —
+        // its canonical URL (stamped in the seo:managed block) must not 404.
+        const trips = await fetch(`${BASE}/trips`);
+        expect(trips.status).toBe(200);
+        expect(trips.headers.get('cache-control')).toBe('no-cache');
+        expect(await trips.text()).toContain('<title>Trips | USMC</title>');
+
         // 3. Unknown browser request -> branded 404 page with correct status
         const missing = await fetch(`${BASE}/definitely-not-a-page`, {
             headers: { Accept: 'text/html' }

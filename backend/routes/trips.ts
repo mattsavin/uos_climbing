@@ -3,7 +3,8 @@ import crypto from 'crypto';
 import { dbAll, dbGet, dbRun, inTransaction, StagedError } from '../utils/db';
 import { authenticateToken, requireCommittee } from '../middleware/auth';
 import { logAudit } from '../services/audit';
-import { getDefaultMembershipTypeAsync, getMembershipLabel } from '../services/membership';
+import { getMembershipLabel } from '../services/membership';
+import { ROOT_ADMIN_EMAIL } from './admin.helpers';
 import { sendTripSignupConfirmation, sendTripCancellationConfirmation } from '../services/trips';
 
 /**
@@ -239,7 +240,14 @@ router.get('/:id/signups', authenticateToken, requireCommittee, async (req, res)
 router.post('/:id/signup', authenticateToken, async (req: any, res) => {
     const userId = req.user.id;
 
-    const trip = await dbGet<any>('SELECT * FROM trips WHERE id = ?', [req.params.id]).catch(() => undefined);
+    // Lookup failures and "no such trip" are deliberately distinguished: a
+    // genuine DB error must 500, not masquerade as a 404.
+    let trip: any;
+    try {
+        trip = await dbGet<any>('SELECT * FROM trips WHERE id = ?', [req.params.id]);
+    } catch {
+        return res.status(500).json({ error: 'Database error' });
+    }
     if (!trip) return res.status(404).json({ error: 'Trip not found' });
     if (trip.visibility === 'committee_only' && !isCommitteeUser(req.user)) {
         return res.status(404).json({ error: 'Trip not found' });
@@ -261,7 +269,7 @@ router.post('/:id/signup', authenticateToken, async (req: any, res) => {
 
     if (userMembership === null) return res.status(500).json({ error: 'Database error checking membership' });
 
-    if (!userMembership && req.user.email !== 'committee@sheffieldclimbing.org') {
+    if (!userMembership && req.user.email !== ROOT_ADMIN_EMAIL) {
         return getMembershipLabel(requiredMembership, (typeLabel: string) => {
             return res.status(403).json({ error: `This trip requires an active ${typeLabel} membership.` });
         });
@@ -306,7 +314,9 @@ router.post('/:id/signup', authenticateToken, async (req: any, res) => {
             ]);
         });
 
-        void sendTripSignupConfirmation(req.user.email, req.user.firstName || req.user.name || 'there', trip);
+        void sendTripSignupConfirmation(req.user.email, req.user.firstName || req.user.name || 'there', trip).catch(
+            console.error
+        );
         res.json({ success: true });
     } catch (err) {
         if (err instanceof StagedError) return res.status(err.status).json(err.body);
@@ -318,9 +328,15 @@ router.post('/:id/signup', authenticateToken, async (req: any, res) => {
 // cancels are flagged lateCancel in the audit log (no automatic penalty v1,
 // refund wording pending committee decision).
 router.post('/:id/cancel-signup', authenticateToken, async (req: any, res) => {
-    const trip = await dbGet<any>('SELECT id, title, destination, startDate, signupClosesAt FROM trips WHERE id = ?', [
-        req.params.id
-    ]).catch(() => undefined);
+    // Full row: TripEmailData requires endDate/cost fields even though today's
+    // cancellation email happens not to read them — a narrower SELECT here is
+    // how a future edit ends up rendering £undefined.
+    let trip: any;
+    try {
+        trip = await dbGet<any>('SELECT * FROM trips WHERE id = ?', [req.params.id]);
+    } catch {
+        return res.status(500).json({ error: 'Database error' });
+    }
     if (!trip) return res.status(404).json({ error: 'Trip not found' });
 
     const now = Date.now();
@@ -346,7 +362,7 @@ router.post('/:id/cancel-signup', authenticateToken, async (req: any, res) => {
             req.user.firstName || req.user.name || 'there',
             trip,
             lateCancel
-        );
+        ).catch(console.error);
         res.json({ success: true, lateCancel });
     } catch (err) {
         if (err instanceof StagedError) return res.status(err.status).json(err.body);

@@ -273,6 +273,7 @@ if (process.env.NODE_ENV === 'production') {
         '/beginners': 'beginners.html',
         '/walls': 'walls.html',
         '/faq': 'faq.html',
+        '/trips': 'trips.html',
         '/gear': 'gear.html',
         '/login': 'login.html',
         '/elections': 'elections.html',

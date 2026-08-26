@@ -74,7 +74,7 @@ export async function sendTripCancellationConfirmation(
 
     await sendEmail(
         email,
-        `Trip cancelled: ${trip.title}`,
+        `Your trip place has been cancelled: ${trip.title}`,
         `Hi ${firstName ?? 'there'},\n\nYour place on ${trip.title} (${trip.destination}, ${formatTripDate(trip.startDate)}) has been cancelled and released.${refundNote}\n\nManage your trips on the club trips page.`,
         `<p>Hi ${firstName ?? 'there'},</p><p>Your place on <strong>${trip.title}</strong> (${trip.destination}, ${formatTripDate(trip.startDate)}) has been cancelled and released.</p>${refundNoteHtml}`
     ).catch((e) => console.error('Failed to send trip cancellation confirmation:', e));

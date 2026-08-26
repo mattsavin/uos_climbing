@@ -19,6 +19,11 @@ import type { NextFunction, Request, Response } from 'express';
  */
 export const SLOW_REQUEST_MS = 1000;
 
+/** Path segments that carry bearer-equivalent secrets (calendar/verify tokens). */
+function redactPath(path: string): string {
+    return path.replace(/(\/ical\/|\/verify\/)([^/?]+)/gi, '$1<redacted>');
+}
+
 export function slowRequestLog(req: Request, res: Response, next: NextFunction): void {
     if (process.env.PERF_LOG !== 'true') {
         next();
@@ -29,15 +34,17 @@ export function slowRequestLog(req: Request, res: Response, next: NextFunction):
         const durationMs = Number(process.hrtime.bigint() - start) / 1e6;
         if (durationMs > SLOW_REQUEST_MS) {
             // req.originalUrl is path+query; the log wants the path only.
-            const path = req.originalUrl.split('?')[0];
-            console.log(
-                `[PERF] ${JSON.stringify({
-                    method: req.method,
-                    path,
-                    durationMs: Math.round(durationMs),
-                    status: res.statusCode
-                })}`
-            );
+            const payload: Record<string, unknown> = {
+                method: req.method,
+                path: redactPath(req.originalUrl.split('?')[0]),
+                durationMs: Math.round(durationMs),
+                status: res.statusCode
+            };
+            // Client gave up (Cloudflare abandoning a hung origin): nothing was
+            // sent, so the statusCode is just the default. Flag it so slow logs
+            // don't read as server responses.
+            if (!res.writableEnded) payload.aborted = true;
+            console.log(`[PERF] ${JSON.stringify(payload)}`);
         }
     });
     next();

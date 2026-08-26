@@ -38,7 +38,7 @@ export const tripsApi = {
         return apiFetch(`/api/trips/${id}`);
     },
 
-    async signUp(tripId: string) {
+    async signUp(tripId: string): Promise<{ success: true }> {
         return apiFetch(`/api/trips/${tripId}/signup`, { method: 'POST' });
     },
 

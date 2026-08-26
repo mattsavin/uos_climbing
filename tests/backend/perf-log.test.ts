@@ -33,6 +33,24 @@ describe('slowRequestLog middleware (P0-B perf instrumentation)', () => {
         expect(payload.durationMs).toBeGreaterThanOrEqual(SLOW_REQUEST_MS);
     });
 
+    it('redacts path-carried tokens (ical/verify) before logging', async () => {
+        process.env.PERF_LOG = 'true';
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        const app = express();
+        app.use(slowRequestLog);
+        app.get('/api/verify/:token', (_req, res) => {
+            setTimeout(() => res.json({ ok: true }), SLOW_REQUEST_MS + 150);
+        });
+
+        await request(app).get('/api/verify/super-secret-token').expect(200);
+        await new Promise((r) => setTimeout(r, 50));
+
+        const payload = JSON.parse((logSpy.mock.calls[0][0] as string).replace('[PERF] ', ''));
+        expect(payload.path).toBe('/api/verify/<redacted>');
+        expect(JSON.stringify(payload)).not.toContain('super-secret-token');
+    });
+
     it('stays quiet when a request is under the threshold', async () => {
         process.env.PERF_LOG = 'true';
         const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});

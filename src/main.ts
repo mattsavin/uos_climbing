@@ -13,10 +13,12 @@ const primaryNavLinks = [
     { href: '/competitions', label: 'Indoor & Competitions', mobileLabel: 'Indoor & Comps' },
     { href: '/gallery', label: 'Gallery' },
     { href: '/schedule', label: 'Schedule' }
-    // Trips is hidden until the trips system is fully implemented (payment
-    // tracking, phase 3 of docs/TRIPS_PLAN.md) — prod 404s /trips until
-    // dev→main promotion anyway. To restore: add { href: '/trips', label: 'Trips' }
-    // here AND the desktop link next to Schedule in createNavbar().
+    // Trips is hidden from nav until the trips system is fully implemented
+    // (payment tracking, phase 3 of docs/TRIPS_PLAN.md). The page itself stays
+    // routable: the clean /trips URL is mapped in PAGE_ROUTES (backend/server.ts)
+    // so the canonical URL works even while unlinked. To restore the nav link:
+    // add { href: '/trips', label: 'Trips' } here AND the desktop link next to
+    // Schedule in createNavbar().
 ] as const satisfies readonly NavLink[];
 
 const resourceNavLinks = [
@@ -35,11 +37,11 @@ const renderLinks = (links: readonly NavLink[], template: (link: NavLink) => str
 
 const desktopDropdownHtml = (label: string, links: readonly NavLink[]) => `
       <div class="relative group">
-        <button class="nav-link flex items-center gap-1">
+        <button class="nav-link flex items-center gap-1" aria-haspopup="true">
           ${label}
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
         </button>
-        <div class="absolute left-0 pt-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
+        <div class="absolute left-0 pt-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-all duration-300 z-50">
           <div class="glass-card !p-2 flex flex-col gap-1 border border-white/10 shadow-2xl">
             ${renderLinks(
                 links,

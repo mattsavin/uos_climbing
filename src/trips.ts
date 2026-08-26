@@ -128,7 +128,9 @@ document.addEventListener('click', async (e) => {
             if (!ok) return;
             const res = await tripsApi.cancelSignUp(tripId);
             showToast(
-                res.lateCancel ? 'Place cancelled (after deadline — see refund policy).' : 'Place cancelled.',
+                res.lateCancel
+                    ? 'Place cancelled (after deadline — refund policy TBC by committee).'
+                    : 'Place cancelled.',
                 'info'
             );
         }
