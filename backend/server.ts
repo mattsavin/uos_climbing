@@ -23,6 +23,7 @@ import { fileURLToPath } from 'url';
 import cookieParser from 'cookie-parser';
 import crypto from 'crypto';
 import { betaGate } from './middleware/beta-gate';
+import { scannerFastFail } from './middleware/scanner-fast-fail';
 import jwt from 'jsonwebtoken';
 import { UPLOAD_BASE_DIR } from './config';
 import { startReminderScheduler } from './services/bookings';
@@ -44,6 +45,13 @@ if (process.env.TRUST_PROXY || process.env.NODE_ENV === 'production') {
 // single [PERF] JSON line for any request over 1s. PERF_LOG=true to enable —
 // permanently useful, negligible overhead, quiet by default outside prod ops.
 app.use(slowRequestLog);
+
+// Scanner-path fast-fail (P1, docs/BUILD_IMPROVEMENTS.md): CF edge data showed
+// ~36% of origin traffic was bot probes for /.env*, /wp-admin/* etc., each one
+// consuming global rate-limiter budget shared with real members. Registered
+// ahead of globalLimiter so probes are answered 404 with no further processing.
+app.use(scannerFastFail);
+
 const PORT = process.env.PORT || 3000;
 
 app.use(
