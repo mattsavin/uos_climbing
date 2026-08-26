@@ -27,7 +27,7 @@
 @layer components {
     /* Navigation */
     .nav-link {
-        @apply text-slate-300 hover:text-brand-gold transition-colors duration-300 text-sm md:text-base font-medium uppercase tracking-wider relative;
+        @apply text-slate-300 hover:text-brand-gold transition-colors duration-300 text-sm md:text-base font-medium uppercase tracking-wider relative whitespace-nowrap;
     }
 
     .nav-link::after {

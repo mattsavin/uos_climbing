@@ -1,8 +1,11 @@
 import express from 'express';
 import crypto from 'crypto';
-import { dbAll, dbGet, dbRun } from '../utils/db';
+import { dbAll, dbGet, dbRun, inTransaction, StagedError } from '../utils/db';
 import { authenticateToken, requireCommittee } from '../middleware/auth';
 import { logAudit } from '../services/audit';
+import { getMembershipLabel } from '../services/membership';
+import { ROOT_ADMIN_EMAIL } from './admin.helpers';
+import { sendTripSignupConfirmation, sendTripCancellationConfirmation } from '../services/trips';
 
 /**
  * Trips API — docs/TRIPS_PLAN.md, phase 1.
@@ -231,6 +234,139 @@ router.get('/:id/signups', authenticateToken, requireCommittee, async (req, res)
         );
     } catch {
         res.status(500).json({ error: 'Database error' });
+    }
+});
+
+router.post('/:id/signup', authenticateToken, async (req: any, res) => {
+    const userId = req.user.id;
+
+    // Lookup failures and "no such trip" are deliberately distinguished: a
+    // genuine DB error must 500, not masquerade as a 404.
+    let trip: any;
+    try {
+        trip = await dbGet<any>('SELECT * FROM trips WHERE id = ?', [req.params.id]);
+    } catch {
+        return res.status(500).json({ error: 'Database error' });
+    }
+    if (!trip) return res.status(404).json({ error: 'Trip not found' });
+    if (trip.visibility === 'committee_only' && !isCommitteeUser(req.user)) {
+        return res.status(404).json({ error: 'Trip not found' });
+    }
+
+    if (trip.status !== 'open') {
+        return res.status(400).json({ error: 'This trip is not open for sign-ups' });
+    }
+    if (new Date(trip.signupClosesAt) <= new Date()) {
+        return res.status(400).json({ error: 'Sign-ups for this trip have closed' });
+    }
+
+    // Membership gate — mirrors session booking (root admin exempt for testing)
+    const requiredMembership = trip.requiredMembership || 'basic';
+    const userMembership = await dbGet<any>(
+        'SELECT * FROM user_memberships WHERE userId = ? AND membershipType = ? AND status = "active"',
+        [userId, requiredMembership]
+    ).catch(() => null);
+
+    if (userMembership === null) return res.status(500).json({ error: 'Database error checking membership' });
+
+    if (!userMembership && req.user.email !== ROOT_ADMIN_EMAIL) {
+        return getMembershipLabel(requiredMembership, (typeLabel: string) => {
+            return res.status(403).json({ error: `This trip requires an active ${typeLabel} membership.` });
+        });
+    }
+
+    // Capacity-guarded signup inside the serialized transaction queue — same
+    // oversell protection as session booking (docs/TRIPS_PLAN.md).
+    try {
+        await inTransaction(async () => {
+            const existing = await dbGet<any>(
+                'SELECT id, cancelledAt FROM trip_signups WHERE tripId = ? AND userId = ?',
+                [trip.id, userId]
+            );
+            if (existing && !existing.cancelledAt) {
+                throw new StagedError('already signed up', 400, { error: 'You are already signed up to this trip' });
+            }
+
+            const countRow = await dbGet<{ taken: number }>(
+                'SELECT COUNT(*) AS taken FROM trip_signups WHERE tripId = ? AND cancelledAt IS NULL',
+                [trip.id]
+            );
+            if ((countRow?.taken ?? 0) >= trip.capacity) {
+                throw new StagedError('capacity guard', 400, { error: 'Trip is full' });
+            }
+
+            if (existing) {
+                // Revive a previously-cancelled signup — UNIQUE(tripId,userId)
+                // blocks re-insert, and payment history must survive anyway.
+                // Capacity already checked above (cancelled rows don't count).
+                await dbRun('UPDATE trip_signups SET cancelledAt = NULL, signedUpAt = ? WHERE id = ?', [
+                    Date.now(),
+                    existing.id
+                ]);
+                return;
+            }
+
+            await dbRun('INSERT INTO trip_signups (id, tripId, userId, signedUpAt) VALUES (?, ?, ?, ?)', [
+                'tsu_' + crypto.randomUUID(),
+                trip.id,
+                userId,
+                Date.now()
+            ]);
+        });
+
+        void sendTripSignupConfirmation(req.user.email, req.user.firstName || req.user.name || 'there', trip).catch(
+            console.error
+        );
+        res.json({ success: true });
+    } catch (err) {
+        if (err instanceof StagedError) return res.status(err.status).json(err.body);
+        res.status(500).json({ error: 'Database error on sign-up' });
+    }
+});
+
+// Members may cancel any time before OR after the deadline; post-deadline
+// cancels are flagged lateCancel in the audit log (no automatic penalty v1,
+// refund wording pending committee decision).
+router.post('/:id/cancel-signup', authenticateToken, async (req: any, res) => {
+    // Full row: TripEmailData requires endDate/cost fields even though today's
+    // cancellation email happens not to read them — a narrower SELECT here is
+    // how a future edit ends up rendering £undefined.
+    let trip: any;
+    try {
+        trip = await dbGet<any>('SELECT * FROM trips WHERE id = ?', [req.params.id]);
+    } catch {
+        return res.status(500).json({ error: 'Database error' });
+    }
+    if (!trip) return res.status(404).json({ error: 'Trip not found' });
+
+    const now = Date.now();
+    const lateCancel = new Date(trip.signupClosesAt) <= new Date(now);
+
+    try {
+        await inTransaction(async () => {
+            const upd = await dbRun(
+                'UPDATE trip_signups SET cancelledAt = ? WHERE tripId = ? AND userId = ? AND cancelledAt IS NULL',
+                [now, trip.id, req.user.id]
+            );
+            if (upd.changes === 0) {
+                throw new StagedError('not signed up', 400, { error: 'You are not signed up to this trip' });
+            }
+        });
+
+        if (lateCancel) {
+            void logAudit(req.user, 'trip.cancel-late', 'trip', trip.id, { userId: req.user.id });
+        }
+
+        void sendTripCancellationConfirmation(
+            req.user.email,
+            req.user.firstName || req.user.name || 'there',
+            trip,
+            lateCancel
+        ).catch(console.error);
+        res.json({ success: true, lateCancel });
+    } catch (err) {
+        if (err instanceof StagedError) return res.status(err.status).json(err.body);
+        res.status(500).json({ error: 'Database error on cancellation' });
     }
 });
 

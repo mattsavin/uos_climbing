@@ -6,6 +6,8 @@ import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import adminRoutes from './routes/admin';
 import helmet from 'helmet';
+import compression from 'compression';
+import { slowRequestLog } from './perfLog';
 import rateLimit from 'express-rate-limit';
 import sessionRoutes from './routes/sessions';
 import sessionTypeRoutes from './routes/session-types';
@@ -37,6 +39,11 @@ if (process.env.TRUST_PROXY || process.env.NODE_ENV === 'production') {
     // If TRUST_PROXY is set to a specific value use it, otherwise trust the first proxy.
     app.set('trust proxy', process.env.TRUST_PROXY || 1);
 }
+
+// Slow-request logging (P0-B, docs/BUILD_IMPROVEMENTS.md): outermost middleware,
+// single [PERF] JSON line for any request over 1s. PERF_LOG=true to enable —
+// permanently useful, negligible overhead, quiet by default outside prod ops.
+app.use(slowRequestLog);
 const PORT = process.env.PORT || 3000;
 
 app.use(
@@ -149,8 +156,24 @@ app.post(
     }
 );
 
-// Serve profile photos
-app.use('/uploads', express.static(UPLOAD_BASE_DIR));
+// Compress responses (bundles, SVG, JSON) ahead of the static mounts. The
+// default filter skips already-compressed media like PNG/WebP.
+app.use(compression());
+
+// Serve profile photos. Upload filenames are unique-per-upload (gallery-/profile-
+// prefixes + timestamp + random suffix — see gallery.ts/users.ts), so objects are
+// effectively immutable: 30d client/edge cache with must-revalidate is safe. The
+// header stays production-only so local dev keeps default no-cache behaviour.
+app.use(
+    '/uploads',
+    express.static(UPLOAD_BASE_DIR, {
+        setHeaders: (res) => {
+            if (process.env.NODE_ENV === 'production') {
+                res.setHeader('Cache-Control', 'public, max-age=2592000, must-revalidate');
+            }
+        }
+    })
+);
 
 // Beta Gate Middleware
 app.use(betaGate);
@@ -210,7 +233,29 @@ if (process.env.NODE_ENV === 'production') {
     // 1. Serve static files from the build directory (Assets MUST come first)
     const distPath = path.join(__dirname, '../dist');
     console.log(`Serving static files from: ${distPath}`);
-    app.use(express.static(distPath));
+
+    // Vite content-hashed bundles are immutable: safe to cache for a year at
+    // the edge and in browsers (same URL is never re-published with new bytes).
+    app.use(
+        '/assets',
+        express.static(path.join(distPath, 'assets'), {
+            setHeaders: (res) => {
+                res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+            }
+        })
+    );
+
+    // Remaining dist files (logo, favicons, robots.txt, sitemap.xml) are
+    // long-lived but NOT hash-named, so cap at 7 days with no immutable.
+    // HTML entries served from dist (including / -> index.html via the static
+    // index handler and direct *.html requests) must revalidate.
+    app.use(
+        express.static(distPath, {
+            setHeaders: (res, filePath) => {
+                res.setHeader('Cache-Control', filePath.endsWith('.html') ? 'no-cache' : 'public, max-age=604800');
+            }
+        })
+    );
 
     // Single source of truth for clean page routes on this server.
     // (vite.config.ts keeps its own dev-server copy — see backlog note.)
@@ -228,6 +273,7 @@ if (process.env.NODE_ENV === 'production') {
         '/beginners': 'beginners.html',
         '/walls': 'walls.html',
         '/faq': 'faq.html',
+        '/trips': 'trips.html',
         '/gear': 'gear.html',
         '/login': 'login.html',
         '/elections': 'elections.html',
@@ -245,6 +291,9 @@ if (process.env.NODE_ENV === 'production') {
     app.use((req, res, next) => {
         if (req.method !== 'GET' || req.path.startsWith('/api')) return next();
         const pathname = req.path.replace(/\/+$/, '') || '/';
+        // HTML entries must revalidate: club content changes around elections
+        // and freshers, so pages can never be cached long by edge or browser.
+        res.setHeader('Cache-Control', 'no-cache');
         if (pathname === '/') {
             return res.sendFile(path.join(distPath, 'index.html'));
         }

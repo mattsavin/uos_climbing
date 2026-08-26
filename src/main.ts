@@ -13,6 +13,12 @@ const primaryNavLinks = [
     { href: '/competitions', label: 'Indoor & Competitions', mobileLabel: 'Indoor & Comps' },
     { href: '/gallery', label: 'Gallery' },
     { href: '/schedule', label: 'Schedule' }
+    // Trips is hidden from nav until the trips system is fully implemented
+    // (payment tracking, phase 3 of docs/TRIPS_PLAN.md). The page itself stays
+    // routable: the clean /trips URL is mapped in PAGE_ROUTES (backend/server.ts)
+    // so the canonical URL works even while unlinked. To restore the nav link:
+    // add { href: '/trips', label: 'Trips' } here AND the desktop link next to
+    // Schedule in createNavbar().
 ] as const satisfies readonly NavLink[];
 
 const resourceNavLinks = [
@@ -21,19 +27,30 @@ const resourceNavLinks = [
     { href: '/faq', label: 'FAQ', mobileLabel: 'Club FAQ' }
 ] as const satisfies readonly NavLink[];
 
+// Desktop top bar groups content pages under two dropdowns to keep it scannable;
+// Schedule stays top-level as the member action. Home is reachable via the logo
+// on desktop (still listed in the mobile menu).
+const aboutSectionLinks = primaryNavLinks.filter((link) => ['/about', '/competitions', '/gallery'].includes(link.href));
+
 const renderLinks = (links: readonly NavLink[], template: (link: NavLink) => string) =>
     links.map((link) => template(link)).join('');
 
-const desktopPrimaryLinksHtml = renderLinks(
-    primaryNavLinks.filter((link) => link.label !== 'Schedule'),
-    (link) => `<a href="${link.href}" class="nav-link">${link.label}</a>`
-);
-
-const desktopResourceLinksHtml = renderLinks(
-    resourceNavLinks,
-    (link) =>
-        `<a href="${link.href}" class="px-4 py-2 text-sm text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors">${link.label}</a>`
-);
+const desktopDropdownHtml = (label: string, links: readonly NavLink[]) => `
+      <div class="relative group">
+        <button class="nav-link flex items-center gap-1" aria-haspopup="true">
+          ${label}
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </button>
+        <div class="absolute left-0 pt-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-all duration-300 z-50">
+          <div class="glass-card !p-2 flex flex-col gap-1 border border-white/10 shadow-2xl">
+            ${renderLinks(
+                links,
+                (link) =>
+                    `<a href="${link.href}" class="px-4 py-2 text-sm text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors whitespace-nowrap">${link.label}</a>`
+            )}
+          </div>
+        </div>
+      </div>`;
 
 const mobilePrimaryLinksHtml = renderLinks(
     primaryNavLinks,
@@ -63,18 +80,8 @@ const createNavbar = () => `
         
         <!-- Desktop Nav -->
         <div class="hidden lg:flex items-center space-x-8">
-            ${desktopPrimaryLinksHtml}
-            <div class="relative group">
-              <button class="nav-link flex items-center gap-1">
-                Resources
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-              </button>
-              <div class="absolute left-0 pt-2 w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
-                <div class="glass-card !p-2 flex flex-col gap-1 border border-white/10 shadow-2xl">
-                  ${desktopResourceLinksHtml}
-                </div>
-              </div>
-            </div>
+            ${desktopDropdownHtml('About', aboutSectionLinks)}
+            ${desktopDropdownHtml('Resources', resourceNavLinks)}
             <a href="/schedule" class="nav-link">Schedule</a>
             <div class="flex items-center gap-4">
               <a href="/login" id="nav-auth-btn" class="text-sm font-bold text-slate-400 hover:text-brand-gold transition-colors uppercase tracking-wider px-4 py-2 border border-slate-700 hover:border-brand-gold/50 rounded-lg">

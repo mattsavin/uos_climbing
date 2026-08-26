@@ -47,3 +47,6 @@ coverage_output.txt
 
 # Uploads
 uploads/*
+
+# pi agent harness session data
+.pi/
