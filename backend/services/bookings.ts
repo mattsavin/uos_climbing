@@ -78,10 +78,12 @@ export async function processBookingReminders(windowHours = 24, now = Date.now()
 
         // Claim first (atomic conditional update), then send — a crash between
         // claim and send loses one reminder, but can never double-send.
+        // Persist the injected `now`, not wall-clock: keeps the function
+        // deterministic when callers pass a fixed time (tests).
         try {
             await dbRun(
                 'UPDATE bookings SET reminderSentAt = ? WHERE sessionId = ? AND userId = ? AND reminderSentAt IS NULL',
-                [Date.now(), row.sid, row.uid]
+                [now, row.sid, row.uid]
             );
             await sendEmail(
                 row.email,

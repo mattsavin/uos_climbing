@@ -64,7 +64,6 @@ router.delete('/:id', authenticateToken, requireCommittee, async (req, res) => {
         () => undefined
     );
     if (countRow === undefined) return res.status(500).json({ error: 'Database error' });
-    if (countRow === undefined) return res.status(500).json({ error: 'Database error' });
     if ((countRow?.count || 0) <= 1) {
         return res.status(400).json({ error: 'At least one membership type must remain' });
     }

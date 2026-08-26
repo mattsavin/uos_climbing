@@ -3,7 +3,7 @@ import request from 'supertest';
 import { app } from '../../backend/server';
 import { db } from '../../backend/db';
 import { processBookingReminders } from '../../backend/services/bookings';
-import { dbAll } from '../../backend/utils/db';
+import { dbAll, dbRun } from '../../backend/utils/db';
 
 /**
  * Reminder sweep logic. Emails are globally mocked (tests/setup.ts);
@@ -14,7 +14,7 @@ describe('Booking reminder sweep', () => {
     let userToken = '';
 
     const seedSession = async (id: string, isoDate: string) => {
-        await db.run('INSERT INTO sessions (id, type, title, date, capacity, bookedSlots) VALUES (?, ?, ?, ?, ?, ?)', [
+        await dbRun('INSERT INTO sessions (id, type, title, date, capacity, bookedSlots) VALUES (?, ?, ?, ?, ?, ?)', [
             id,
             'Social',
             `Reminder Session ${id}`,
@@ -82,11 +82,11 @@ describe('Booking reminder sweep', () => {
         const spy = vi.fn();
         // book via API then count total sendMail calls delta
         const before = 0;
-        await db.run(
+        await dbRun(
             'INSERT OR IGNORE INTO bookings (sessionId, userId) SELECT "rem_past", id FROM users WHERE email LIKE ?',
             ['rem_%']
         );
-        await db.run(
+        await dbRun(
             'INSERT OR IGNORE INTO bookings (sessionId, userId) SELECT "rem_far", id FROM users WHERE email LIKE ?',
             ['rem_%']
         );
