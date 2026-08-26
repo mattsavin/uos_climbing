@@ -6,6 +6,7 @@ import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import adminRoutes from './routes/admin';
 import helmet from 'helmet';
+import { slowRequestLog } from './perfLog';
 import rateLimit from 'express-rate-limit';
 import sessionRoutes from './routes/sessions';
 import sessionTypeRoutes from './routes/session-types';
@@ -37,6 +38,11 @@ if (process.env.TRUST_PROXY || process.env.NODE_ENV === 'production') {
     // If TRUST_PROXY is set to a specific value use it, otherwise trust the first proxy.
     app.set('trust proxy', process.env.TRUST_PROXY || 1);
 }
+
+// Slow-request logging (P0-B, docs/BUILD_IMPROVEMENTS.md): outermost middleware,
+// single [PERF] JSON line for any request over 1s. PERF_LOG=true to enable —
+// permanently useful, negligible overhead, quiet by default outside prod ops.
+app.use(slowRequestLog);
 const PORT = process.env.PORT || 3000;
 
 app.use(
