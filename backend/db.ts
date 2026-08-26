@@ -279,6 +279,40 @@ function initializeDatabase() {
             FOREIGN KEY (referendumId) REFERENCES referendums(id)
         )`);
 
+        // Trips (docs/TRIPS_PLAN.md phase 1): outdoor meets as first-class
+        // entities. status lifecycle: open | closed | cancelled | completed.
+        // costBreakdown is a JSON blob ({ transport: 25, bunkhouse: 30 }); the
+        // system tracks money as committee bookkeeping, never handles it.
+        db.run(`CREATE TABLE IF NOT EXISTS trips (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            destination TEXT NOT NULL,
+            description TEXT,
+            startDate TEXT NOT NULL,
+            endDate TEXT NOT NULL,
+            meetupPoint TEXT,
+            costBreakdown TEXT,
+            totalCostPerPerson REAL NOT NULL,
+            depositAmount REAL NOT NULL DEFAULT 0,
+            capacity INTEGER NOT NULL,
+            signupClosesAt TEXT NOT NULL,
+            requiredMembership TEXT DEFAULT 'basic',
+            visibility TEXT DEFAULT 'all',
+            status TEXT NOT NULL DEFAULT 'open'
+        )`);
+
+        // Soft-cancelled signups keep payment history; UNIQUE blocks double signups.
+        db.run(`CREATE TABLE IF NOT EXISTS trip_signups (
+            id TEXT PRIMARY KEY,
+            tripId TEXT NOT NULL REFERENCES trips(id),
+            userId TEXT NOT NULL REFERENCES users(id),
+            signedUpAt INTEGER NOT NULL,
+            paymentStatus TEXT NOT NULL DEFAULT 'unpaid',
+            paidAmount REAL NOT NULL DEFAULT 0,
+            cancelledAt INTEGER,
+            UNIQUE (tripId, userId)
+        )`);
+
         // Gear Table
         db.run(`CREATE TABLE IF NOT EXISTS gear (
             id TEXT PRIMARY KEY,
