@@ -45,6 +45,29 @@ function initializeDatabase() {
         // SQLite's online backup API.
         db.run('PRAGMA journal_mode = WAL;');
 
+        // busy_timeout: with WAL enabled a held write lock previously made read
+        // callbacks queue silently (the suspected cause of Cloudflare ~100s origin
+        // timeouts / 504s on /api/auth/me etc — docs/BUILD_IMPROVEMENTS.md P0-B).
+        // Give the writer up to 5s to acquire the lock before surfacing SQLITE_BUSY.
+        db.run('PRAGMA busy_timeout = 5000;');
+
+        // foreign_keys: the schema declares REFERENCES clauses but SQLite ignores
+        // them unless this per-connection pragma is on. Enforce from now on, and
+        // log (read-only check, no data changes) any pre-existing violations at
+        // boot so legacy rows can be remediated before they bite as write failures.
+        db.run('PRAGMA foreign_keys = ON;');
+        db.all('PRAGMA foreign_key_check;', [], (err, rows) => {
+            if (err) {
+                console.error('foreign_key_check failed:', err.message);
+            } else if (rows.length > 0) {
+                console.error(
+                    `[FK] ${rows.length} existing foreign key violation(s) at boot — ` +
+                        'enforcement is now ON; remediate these rows (sample of first 10):',
+                    JSON.stringify(rows.slice(0, 10))
+                );
+            }
+        });
+
         // Users Table
         db.run(`CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
