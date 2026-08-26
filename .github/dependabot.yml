@@ -15,6 +15,14 @@ updates:
               applies-to: version-updates
               patterns:
                   - '*'
+      # TypeScript 7 is now npm 'latest', but typescript-eslint@8 peers cap
+      # TS at <6.1.0, so Dependabot's updater fails the whole grouped job
+      # with "Error while updating peer dependency" when it tries to
+      # resolve it. Hold back TS majors until its peers declare support.
+      ignore:
+          - dependency-name: 'typescript'
+            versions:
+                - '>=6'
 
     # Keep GitHub Actions current (Node-runtime deprecations, SHA pinning)
     - package-ecosystem: 'github-actions'
