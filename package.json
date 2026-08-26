@@ -68,11 +68,14 @@
         "nodemailer": "^9.0.5",
         "qrcode": "^1.5.4",
         "sharp": "^0.35.3",
-        "sqlite3": "^5.1.7",
+        "sqlite3": "^6.0.1",
         "tsx": "^4.21.0"
     },
     "overrides": {
         "tar": "^7.5.9",
         "@tootallnate/once": "^3.0.1"
+    },
+    "allowScripts": {
+        "sqlite3@6.0.1": true
     }
 }
