@@ -25,8 +25,10 @@ const resourceNavLinks = [
 const renderLinks = (links: readonly NavLink[], template: (link: NavLink) => string) =>
     links.map((link) => template(link)).join('');
 
+// Schedule and Trips are rendered as dedicated links after the Resources dropdown,
+// so keep them out of the primary link list to avoid duplicates.
 const desktopPrimaryLinksHtml = renderLinks(
-    primaryNavLinks.filter((link) => link.label !== 'Schedule'),
+    primaryNavLinks.filter((link) => link.label !== 'Schedule' && link.label !== 'Trips'),
     (link) => `<a href="${link.href}" class="nav-link">${link.label}</a>`
 );
 
