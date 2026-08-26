@@ -68,11 +68,17 @@ describe.skipIf(!distReady)('production server (child process integration)', () 
         const health = await fetch(`${BASE}/api/health`).then((r) => r.json());
         expect(health).toMatchObject({ ok: true, db: true });
 
-        // 2. Known clean route serves its entry file
+        // 2. Known clean route serves its entry file — HTML must revalidate
         const schedule = await fetch(`${BASE}/schedule`);
         expect(schedule.status).toBe(200);
+        expect(schedule.headers.get('cache-control')).toBe('no-cache');
         const scheduleBody = await schedule.text();
         expect(scheduleBody).toContain('<title>Schedule | USMC</title>');
+
+        // 2b. Root serves index.html through the static index handler — no-cache there too
+        const root = await fetch(`${BASE}/`);
+        expect(root.status).toBe(200);
+        expect(root.headers.get('cache-control')).toBe('no-cache');
 
         // 3. Unknown browser request -> branded 404 page with correct status
         const missing = await fetch(`${BASE}/definitely-not-a-page`, {
@@ -90,5 +96,28 @@ describe.skipIf(!distReady)('production server (child process integration)', () 
         const verify = await fetch(`${BASE}/verify/some-token`);
         expect(verify.status).toBe(200);
         expect(await verify.text()).toContain('<title>Verify Membership | USMC</title>');
+
+        // 6. Cache headers: content-hashed bundles are immutable for a year and
+        // served gzipped (compression middleware runs above the static mounts).
+        const rootBody = await (await fetch(`${BASE}/`)).text();
+        const bundlePath = rootBody.match(/src="(\/assets\/[^"']+\.js)"/)?.[1];
+        expect(bundlePath).toBeTruthy();
+        const bundle = await fetch(`${BASE}${bundlePath}`, {
+            headers: { 'accept-encoding': 'gzip' }
+        });
+        expect(bundle.status).toBe(200);
+        expect(bundle.headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
+        expect(bundle.headers.get('content-encoding')).toBe('gzip');
+
+        // 7. Un-hashed public files: 7 days, no immutable
+        const logo = await fetch(`${BASE}/logo-mark.png`);
+        expect(logo.status).toBe(200);
+        expect(logo.headers.get('cache-control')).toBe('public, max-age=604800');
+
+        // 8. Uploads are unique-per-upload names: 30d + must-revalidate (prod only)
+        fs.writeFileSync(path.join(TMP, 'cache-probe.png'), 'x');
+        const upload = await fetch(`${BASE}/uploads/cache-probe.png`);
+        expect(upload.status).toBe(200);
+        expect(upload.headers.get('cache-control')).toBe('public, max-age=2592000, must-revalidate');
     }, 40000);
 });
