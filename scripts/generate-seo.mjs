@@ -144,6 +144,66 @@ function escapeHtmlAttr(s) {
     return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 }
 
+/**
+ * Extract the FAQ list from src/config.ts at generation time so the FAQPage
+ * structured data always matches what members actually see. Fails loudly if
+ * the parse turns up nothing, rather than silently shipping stale schema.
+ */
+function extractFaqs() {
+    const source = fs.readFileSync(path.resolve('src', 'config.ts'), 'utf8');
+    const match = source.match(/faqs:\s*\[([\s\S]*?)\n {4}\]/);
+    if (!match) return [];
+    const pairs = [];
+    const re =
+        /question:\s*('(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")\s*,\s*answer:\s*('(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")/g;
+    let m;
+    while ((m = re.exec(match[1]))) {
+        const unquote = (lit) =>
+            JSON.parse(lit[0] === "'" ? `"${lit.slice(1, -1).replace(/\\'/g, "'").replace(/"/g, '\\"')}"` : lit);
+        pairs.push({ question: unquote(m[1]), answer: unquote(m[2]) });
+    }
+    return pairs;
+}
+
+function buildSportsClubLd() {
+    return {
+        '@context': 'https://schema.org',
+        '@type': 'SportsClub',
+        name: 'USMC — University of Sheffield Mountaineering & Climbing Club',
+        alternateName: 'USMC Indoor & Competitions',
+        url: SITE_URL,
+        logo: `${SITE_URL}/logo-mark.png`,
+        image: OG_IMAGE,
+        description:
+            'University of Sheffield Mountaineering & Climbing Club — weekly indoor sessions, competitions, outdoor trips and a friendly community for every grade of climber.',
+        sport: 'Climbing',
+        sameAs: ['https://www.instagram.com/uos_climb/'],
+        address: {
+            '@type': 'PostalAddress',
+            addressLocality: 'Sheffield',
+            addressCountry: 'GB'
+        }
+    };
+}
+
+function buildFaqLd(faqs) {
+    return {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: faqs.map((f) => ({
+            '@type': 'Question',
+            name: f.question,
+            acceptedAnswer: { '@type': 'Answer', text: f.answer }
+        }))
+    };
+}
+
+/** JSON-LD script tag; "<" is unicode-escaped so </script> can never appear in the payload. */
+function ldScriptTag(obj) {
+    const json = JSON.stringify(obj, null, 2).replace(/</g, '\\u003c');
+    return `<script type="application/ld+json">${json}</script>`;
+}
+
 function buildManagedBlock(page) {
     const url = `${SITE_URL}${page.path === '/' ? '' : page.path}`;
     const lines = [
@@ -167,6 +227,16 @@ function buildManagedBlock(page) {
     ];
     if (page.memberOnly) {
         lines.push('<meta name="robots" content="noindex, nofollow">');
+    } else {
+        // Rich results: club entity on every public page, FAQPage on /faq only.
+        const faqs = extractFaqs();
+        if (faqs.length === 0) {
+            console.error('  ! extractFaqs found no Q&A pairs in src/config.ts — FAQ schema skipped');
+        }
+        lines.push(ldScriptTag(buildSportsClubLd()));
+        if (page.path === '/faq' && faqs.length > 0) {
+            lines.push(ldScriptTag(buildFaqLd(faqs)));
+        }
     }
     lines.push('<!-- /seo:managed -->');
     return lines.join('\n    ');
