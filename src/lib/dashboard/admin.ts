@@ -23,7 +23,7 @@ export function initAdminConfirm() {
         confirmActionCallback = null;
     }
 
-    [adminConfirmCancelBtn, adminConfirmBackdrop].forEach(el => {
+    [adminConfirmCancelBtn, adminConfirmBackdrop].forEach((el) => {
         if (el) el.addEventListener('click', closeAdminConfirm);
     });
 
@@ -42,7 +42,7 @@ export function initAdminConfirm() {
                     btn.disabled = false;
                     btn.textContent = 'Proceed';
                     closeAdminConfirm();
-                    // We need a way to trigger UI update. 
+                    // We need a way to trigger UI update.
                     // Maybe pass a callback or dispatch an event.
                     window.dispatchEvent(new CustomEvent('dashboardUpdate'));
                 }
@@ -113,13 +113,15 @@ export async function renderAdminLists() {
 
     try {
         const [membershipTypes, allUsersRaw] = await Promise.all([
-            adminApi.getMembershipTypes().catch(e => { console.error('Failed to fetch membership types', e); return []; }),
+            adminApi.getMembershipTypes().catch((e) => {
+                console.error('Failed to fetch membership types', e);
+                return [];
+            }),
             adminApi.getAllUsersRaw()
         ]);
 
         membershipTypeLabelMap = Object.fromEntries(
-            (Array.isArray(membershipTypes) ? membershipTypes : [])
-                .map((t: any) => [t.id, t.label])
+            (Array.isArray(membershipTypes) ? membershipTypes : []).map((t: any) => [t.id, t.label])
         );
 
         if (!Array.isArray(allUsersRaw)) {
@@ -131,9 +133,9 @@ export async function renderAdminLists() {
 
         // Flatten ALL pending membership rows (across all users)
         const pendingMemberships: any[] = [];
-        allUsersRaw.forEach(u => {
+        allUsersRaw.forEach((u) => {
             if (u.memberships && Array.isArray(u.memberships)) {
-                (u.memberships as any[]).forEach(m => {
+                (u.memberships as any[]).forEach((m) => {
                     if (m.status === 'pending') {
                         pendingMemberships.push({ user: u, membership: m });
                     }
@@ -142,19 +144,24 @@ export async function renderAdminLists() {
         });
 
         pendingList.innerHTML = pendingMemberships.length
-            ? pendingMemberships.map(pm => createPendingMembershipRow(pm.user, pm.membership, membershipTypeLabel)).join('')
+            ? pendingMemberships
+                  .map((pm) => createPendingMembershipRow(pm.user, pm.membership, membershipTypeLabel))
+                  .join('')
             : '<p class="p-5 text-sm text-slate-500 text-center">No pending registrations.</p>';
 
         // Render Active — committee members/role-holders + anyone with active membership data.
         const allActive = allUsersRaw.filter((u: any) => {
-            const isCommittee = u.role === 'committee' || !!u.committeeRole || (Array.isArray(u.committeeRoles) && u.committeeRoles.length > 0);
+            const isCommittee =
+                u.role === 'committee' ||
+                !!u.committeeRole ||
+                (Array.isArray(u.committeeRoles) && u.committeeRoles.length > 0);
             if (isCommittee) return true;
-            const hasActiveMembershipRow = (u.memberships as any[] || []).some((m: any) => m.status === 'active');
+            const hasActiveMembershipRow = ((u.memberships as any[]) || []).some((m: any) => m.status === 'active');
             return hasActiveMembershipRow || u.membershipStatus === 'active';
         });
 
         // Apply search filter if query exists
-        const filteredActive = allActive.filter(u => {
+        const filteredActive = allActive.filter((u) => {
             if (!currentSearchQuery) return true;
             const q = currentSearchQuery.toLowerCase();
             const displayName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.name || '';
@@ -183,11 +190,15 @@ export async function renderAdminLists() {
 
         let activeHtml = searchHtml;
         activeHtml += pagedActive.length
-            ? pagedActive.map(u => createMemberRow(u, false, {
-                membershipTypeLabel,
-                currentUserId: authState.user?.id,
-                currentUserEmail: authState.user?.email
-            })).join('')
+            ? pagedActive
+                  .map((u) =>
+                      createMemberRow(u, false, {
+                          membershipTypeLabel,
+                          currentUserId: authState.user?.id,
+                          currentUserEmail: authState.user?.email
+                      })
+                  )
+                  .join('')
             : '<p class="p-5 text-sm text-slate-500 text-center">No active members found.</p>';
 
         if (totalActive > ITEMS_PER_PAGE) {
@@ -210,8 +221,10 @@ export async function renderAdminLists() {
     }
 
     // Restore open state
-    openRoleDropdowns.forEach(id => {
-        const details = document.querySelector(`details.admin-role-details[data-id="${id}"]`) as HTMLDetailsElement | null;
+    openRoleDropdowns.forEach((id) => {
+        const details = document.querySelector(
+            `details.admin-role-details[data-id="${id}"]`
+        ) as HTMLDetailsElement | null;
         if (details) details.open = true;
     });
 
@@ -234,11 +247,19 @@ export async function renderAdminLists() {
     // Attach pagination listeners
     const prevPageBtn = document.getElementById('prev-member-page-btn');
     const nextPageBtn = document.getElementById('next-member-page-btn');
-    if (prevPageBtn) prevPageBtn.addEventListener('click', async () => { activeRosterPage--; await renderAdminLists(); });
-    if (nextPageBtn) nextPageBtn.addEventListener('click', async () => { activeRosterPage++; await renderAdminLists(); });
+    if (prevPageBtn)
+        prevPageBtn.addEventListener('click', async () => {
+            activeRosterPage--;
+            await renderAdminLists();
+        });
+    if (nextPageBtn)
+        nextPageBtn.addEventListener('click', async () => {
+            activeRosterPage++;
+            await renderAdminLists();
+        });
 
     // Attach Event Listeners to generated action buttons
-    document.querySelectorAll('.admin-action-btn').forEach(btn => {
+    document.querySelectorAll('.admin-action-btn').forEach((btn) => {
         btn.addEventListener('click', async (e) => {
             const target = e.target as HTMLElement;
             const button = target.closest('.admin-action-btn') as HTMLElement;
@@ -249,30 +270,36 @@ export async function renderAdminLists() {
             if (id && action) {
                 let title = 'Confirm Action';
                 let message = `Are you sure you want to perform this action?`;
-                let actionCallback: () => Promise<any> = async () => { };
+                let actionCallback: () => Promise<any> = async () => {};
 
                 if (action === 'approve') {
-                    title = 'Approve Member'; message = `Are you sure you want to approve ${name} for active membership?`;
+                    title = 'Approve Member';
+                    message = `Are you sure you want to approve ${name} for active membership?`;
                     actionCallback = async () => adminApi.approveMember(id);
                 }
                 if (action === 'reject') {
-                    title = 'Reject Member'; message = `Are you sure you want to reject ${name}'s membership registration?`;
+                    title = 'Reject Member';
+                    message = `Are you sure you want to reject ${name}'s membership registration?`;
                     actionCallback = async () => adminApi.rejectMember(id);
                 }
                 if (action === 'approve-membership') {
-                    title = 'Approve Membership Type'; message = `Approve this specific membership type for ${name}?`;
+                    title = 'Approve Membership Type';
+                    message = `Approve this specific membership type for ${name}?`;
                     actionCallback = async () => adminApi.approveMembershipRow(id);
                 }
                 if (action === 'reject-membership') {
-                    title = 'Reject Membership Type'; message = `Reject this specific membership type for ${name}?`;
+                    title = 'Reject Membership Type';
+                    message = `Reject this specific membership type for ${name}?`;
                     actionCallback = async () => adminApi.rejectMembershipRow(id);
                 }
                 if (action === 'promote') {
-                    title = 'Promote to Admin'; message = `Are you sure you want to promote ${name} to committee admin? They will have full access.`;
+                    title = 'Promote to Admin';
+                    message = `Are you sure you want to promote ${name} to committee admin? They will have full access.`;
                     actionCallback = async () => adminApi.promoteToCommittee(id);
                 }
                 if (action === 'demote') {
-                    title = 'Remove Admin'; message = `Are you sure you want to remove admin privileges for ${name}?`;
+                    title = 'Remove Admin';
+                    message = `Are you sure you want to remove admin privileges for ${name}?`;
                     actionCallback = async () => adminApi.demoteToMember(id);
                 }
                 if (action === 'delete') {
@@ -280,11 +307,13 @@ export async function renderAdminLists() {
                         showToast('You cannot delete your own account from the admin roster.', 'error');
                         return;
                     }
-                    title = 'Delete Member'; message = `Are you absolutely sure you want to permanently delete ${escapeHTML(name)}'s account? This action cannot be undone.`;
+                    title = 'Delete Member';
+                    message = `Are you absolutely sure you want to permanently delete ${escapeHTML(name)}'s account? This action cannot be undone.`;
                     actionCallback = async () => adminApi.deleteUser(id);
                 }
                 if (action === 'delete-membership') {
-                    title = 'Remove Membership'; message = `Remove this membership from ${name}? This cannot be undone.`;
+                    title = 'Remove Membership';
+                    message = `Remove this membership from ${name}? This cannot be undone.`;
                     actionCallback = async () => adminApi.deleteMembershipRow(id);
                 }
 
@@ -294,7 +323,7 @@ export async function renderAdminLists() {
     });
 
     // Attach Event Listeners to committee role checkboxes
-    document.querySelectorAll('.admin-role-checkbox').forEach(checkbox => {
+    document.querySelectorAll('.admin-role-checkbox').forEach((checkbox) => {
         checkbox.addEventListener('change', async (e) => {
             const target = e.target as HTMLInputElement;
             const id = target.dataset.id;
@@ -303,10 +332,12 @@ export async function renderAdminLists() {
             // Collect all checked roles for this user
             const allChecked = Array.from(
                 document.querySelectorAll<HTMLInputElement>(`.admin-role-checkbox[data-id="${id}"]:checked`)
-            ).map(cb => cb.value);
+            ).map((cb) => cb.value);
 
             // Disable all checkboxes for this user while saving
-            document.querySelectorAll<HTMLInputElement>(`.admin-role-checkbox[data-id="${id}"]`).forEach(cb => cb.disabled = true);
+            document
+                .querySelectorAll<HTMLInputElement>(`.admin-role-checkbox[data-id="${id}"]`)
+                .forEach((cb) => (cb.disabled = true));
 
             try {
                 await adminApi.setCommitteeRole(id, allChecked);
@@ -318,7 +349,9 @@ export async function renderAdminLists() {
                 showToast(err.message || 'Failed to update role', 'error');
                 // Revert this checkbox
                 target.checked = !target.checked;
-                document.querySelectorAll<HTMLInputElement>(`.admin-role-checkbox[data-id="${id}"]`).forEach(cb => cb.disabled = false);
+                document
+                    .querySelectorAll<HTMLInputElement>(`.admin-role-checkbox[data-id="${id}"]`)
+                    .forEach((cb) => (cb.disabled = false));
             }
         });
     });

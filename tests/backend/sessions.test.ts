@@ -16,51 +16,59 @@ describe('Sessions API', () => {
 
     beforeAll(async () => {
         // Wait for DB initialization
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
 
         // Create a regular user
-        const userRes = await request(app)
-            .post('/api/auth/register')
-            .send({
-                firstName: 'Regular',
-                lastName: 'User',
-                email: 'user@example.com',
-                password: 'Password123!', passwordConfirm: 'Password123!',
-                registrationNumber: 'REG123'
-            });
+        const userRes = await request(app).post('/api/auth/register').send({
+            firstName: 'Regular',
+            lastName: 'User',
+            email: 'user@example.com',
+            password: 'Password123!',
+            passwordConfirm: 'Password123!',
+            registrationNumber: 'REG123'
+        });
         const tokenCookie1 = (userRes.headers['set-cookie'] as any)?.find((c: string) => c.startsWith('uscc_token='));
-        userToken = tokenCookie1 ? tokenCookie1.split(';')[0].split('=')[1] : (userRes.body.token || '');
+        userToken = tokenCookie1 ? tokenCookie1.split(';')[0].split('=')[1] : userRes.body.token || '';
 
         // Create a committee user (promoted by root admin)
-        const committeeRes = await request(app)
-            .post('/api/auth/register')
-            .send({
-                firstName: 'Committee',
-                lastName: 'User',
-                email: 'committee_sessions@example.com',
-                password: 'Password123!', passwordConfirm: 'Password123!',
-                registrationNumber: 'ADM123'
-            });
-        const tokenCookie2 = (committeeRes.headers['set-cookie'] as any)?.find((c: string) => c.startsWith('uscc_token='));
-        committeeToken = tokenCookie2 ? tokenCookie2.split(';')[0].split('=')[1] : (committeeRes.body.token || '');
+        const committeeRes = await request(app).post('/api/auth/register').send({
+            firstName: 'Committee',
+            lastName: 'User',
+            email: 'committee_sessions@example.com',
+            password: 'Password123!',
+            passwordConfirm: 'Password123!',
+            registrationNumber: 'ADM123'
+        });
+        const tokenCookie2 = (committeeRes.headers['set-cookie'] as any)?.find((c: string) =>
+            c.startsWith('uscc_token=')
+        );
+        committeeToken = tokenCookie2 ? tokenCookie2.split(';')[0].split('=')[1] : committeeRes.body.token || '';
         const committeeUserId = committeeRes.body.user?.id || '';
 
         // Promote via root admin
         const adminLoginRes = await request(app).post('/api/auth/login').send({
-            email: 'committee@sheffieldclimbing.org', password: 'SuperSecret123!'
+            email: 'committee@sheffieldclimbing.org',
+            password: 'SuperSecret123!'
         });
         const adminCookies = adminLoginRes.headers['set-cookie'];
-        const adminCookieArray = Array.isArray(adminCookies) ? adminCookies : (adminCookies ? [adminCookies] : []);
+        const adminCookieArray = Array.isArray(adminCookies) ? adminCookies : adminCookies ? [adminCookies] : [];
         const adminCookie = adminCookieArray.find((c: string) => c.startsWith('uscc_token='));
         const adminToken = adminCookie ? adminCookie.split(';')[0].split('=')[1] : '';
-        await request(app).post(`/api/admin/users/${committeeUserId}/promote`).set('Authorization', `Bearer ${adminToken}`);
+        await request(app)
+            .post(`/api/admin/users/${committeeUserId}/promote`)
+            .set('Authorization', `Bearer ${adminToken}`);
 
         // Re-login to get a fresh JWT with the updated committee role
         const refreshRes = await request(app).post('/api/auth/login').send({
-            email: 'committee_sessions@example.com', password: 'Password123!'
+            email: 'committee_sessions@example.com',
+            password: 'Password123!'
         });
         const refreshCookies = refreshRes.headers['set-cookie'];
-        const refreshCookieArray = Array.isArray(refreshCookies) ? refreshCookies : (refreshCookies ? [refreshCookies] : []);
+        const refreshCookieArray = Array.isArray(refreshCookies)
+            ? refreshCookies
+            : refreshCookies
+              ? [refreshCookies]
+              : [];
         const refreshCookie = refreshCookieArray.find((c: string) => c.startsWith('uscc_token='));
         committeeToken = refreshCookie ? refreshCookie.split(';')[0].split('=')[1] : '';
     });
@@ -78,9 +86,16 @@ describe('Sessions API', () => {
     };
 
     const createSession = async (token: string, title: string, extra: Record<string, any> = {}) => {
-        const res = await request(app).post('/api/sessions').set('Authorization', `Bearer ${token}`).send({
-            title, type: 'Social', date: futureIso(7), capacity: 10, ...extra
-        });
+        const res = await request(app)
+            .post('/api/sessions')
+            .set('Authorization', `Bearer ${token}`)
+            .send({
+                title,
+                type: 'Social',
+                date: futureIso(7),
+                capacity: 10,
+                ...extra
+            });
         return res.body.id;
     };
 
@@ -113,20 +128,20 @@ describe('Sessions API', () => {
     });
 
     it('should hide committee-only sessions from non-committee users', async () => {
-        const sessionId = await createSession(committeeToken, 'Committee Hidden Session', { visibility: 'committee_only' });
-        const res = await request(app)
-            .get('/api/sessions')
-            .set('Authorization', `Bearer ${userToken}`);
+        const sessionId = await createSession(committeeToken, 'Committee Hidden Session', {
+            visibility: 'committee_only'
+        });
+        const res = await request(app).get('/api/sessions').set('Authorization', `Bearer ${userToken}`);
 
         expect(res.status).toBe(200);
         expect(res.body.some((s: any) => s.id === sessionId)).toBe(false);
     });
 
     it('should show committee-only sessions to committee users', async () => {
-        const sessionId = await createSession(committeeToken, 'Committee Visible Session', { visibility: 'committee_only' });
-        const res = await request(app)
-            .get('/api/sessions')
-            .set('Authorization', `Bearer ${committeeToken}`);
+        const sessionId = await createSession(committeeToken, 'Committee Visible Session', {
+            visibility: 'committee_only'
+        });
+        const res = await request(app).get('/api/sessions').set('Authorization', `Bearer ${committeeToken}`);
 
         expect(res.status).toBe(200);
         expect(res.body.some((s: any) => s.id === sessionId)).toBe(true);
@@ -156,7 +171,9 @@ describe('Sessions API', () => {
     });
 
     it('should prevent non-committee users booking committee-restricted registration sessions', async () => {
-        const sessionId = await createSession(committeeToken, 'Committee Booking Guard', { registrationVisibility: 'committee_only' });
+        const sessionId = await createSession(committeeToken, 'Committee Booking Guard', {
+            registrationVisibility: 'committee_only'
+        });
         const res = await request(app)
             .post(`/api/sessions/${sessionId}/book`)
             .set('Authorization', `Bearer ${userToken}`);
@@ -183,9 +200,7 @@ describe('Sessions API', () => {
             visibility: 'all',
             registrationVisibility: 'committee_only'
         });
-        const res = await request(app)
-            .get('/api/sessions')
-            .set('Authorization', `Bearer ${userToken}`);
+        const res = await request(app).get('/api/sessions').set('Authorization', `Bearer ${userToken}`);
 
         expect(res.status).toBe(200);
         expect(res.body.some((s: any) => s.id === sessionId)).toBe(true);
@@ -195,9 +210,7 @@ describe('Sessions API', () => {
         const sessionId = await createSession(committeeToken, 'My Booking Session');
         await bookSession(userToken, sessionId);
 
-        const res = await request(app)
-            .get('/api/sessions/me/bookings')
-            .set('Authorization', `Bearer ${userToken}`);
+        const res = await request(app).get('/api/sessions/me/bookings').set('Authorization', `Bearer ${userToken}`);
 
         expect(res.status).toBe(200);
         expect(res.body).toContain(sessionId);
@@ -221,7 +234,11 @@ describe('Sessions API', () => {
             .put(`/api/sessions/${sessionId}`)
             .set('Authorization', `Bearer ${committeeToken}`)
             .send({
-                title: 'Updated Title', type: 'Training', date: futureIso(8), capacity: 20, bookedSlots: 0
+                title: 'Updated Title',
+                type: 'Training',
+                date: futureIso(8),
+                capacity: 20,
+                bookedSlots: 0
             });
 
         expect(res.status).toBe(200);
@@ -240,9 +257,15 @@ describe('Sessions API', () => {
 
     it('should prevent booking a full session', async () => {
         // Create session with capacity 1
-        const resCreate = await request(app).post('/api/sessions').set('Authorization', `Bearer ${committeeToken}`).send({
-            title: 'Full Session', type: 'Social', date: futureIso(9), capacity: 1
-        });
+        const resCreate = await request(app)
+            .post('/api/sessions')
+            .set('Authorization', `Bearer ${committeeToken}`)
+            .send({
+                title: 'Full Session',
+                type: 'Social',
+                date: futureIso(9),
+                capacity: 1
+            });
         const sessionId = resCreate.body.id;
 
         // Book it once
@@ -250,10 +273,15 @@ describe('Sessions API', () => {
 
         // Another user tries to book
         const user2Res = await request(app).post('/api/auth/register').send({
-            firstName: 'User', lastName: '2', email: 'user2_full@example.com', password: 'Password123!', passwordConfirm: 'Password123!', registrationNumber: 'U2FULL'
+            firstName: 'User',
+            lastName: '2',
+            email: 'user2_full@example.com',
+            password: 'Password123!',
+            passwordConfirm: 'Password123!',
+            registrationNumber: 'U2FULL'
         });
         const tokenCookie3 = (user2Res.headers['set-cookie'] as any)?.find((c: string) => c.startsWith('uscc_token='));
-        const user2Token = tokenCookie3 ? tokenCookie3.split(';')[0].split('=')[1] : (user2Res.body.token || '');
+        const user2Token = tokenCookie3 ? tokenCookie3.split(';')[0].split('=')[1] : user2Res.body.token || '';
 
         const res = await request(app)
             .post(`/api/sessions/${sessionId}/book`)
@@ -293,21 +321,40 @@ describe('Sessions API', () => {
     it('should return an empty iCal feed when user has no bookings', async () => {
         // Fresh user with no bookings
         const user3Res = await request(app).post('/api/auth/register').send({
-            firstName: 'User', lastName: '3', email: 'user3_ical@example.com', password: 'Password123!', passwordConfirm: 'Password123!', registrationNumber: 'U3ICAL'
+            firstName: 'User',
+            lastName: '3',
+            email: 'user3_ical@example.com',
+            password: 'Password123!',
+            passwordConfirm: 'Password123!',
+            registrationNumber: 'U3ICAL'
         });
         const tokenCookie = (user3Res.headers['set-cookie'] as any)?.find((c: string) => c.startsWith('uscc_token='));
-        const user3Token = tokenCookie ? tokenCookie.split(';')[0].split('=')[1] : (user3Res.body.token || '');
+        const user3Token = tokenCookie ? tokenCookie.split(';')[0].split('=')[1] : user3Res.body.token || '';
 
         const meRes = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${user3Token}`);
         const user3 = meRes.body.user;
 
         // Create sessions but do not book them
-        await request(app).post('/api/sessions').set('Authorization', `Bearer ${committeeToken}`).send({
-            title: 'Public iCal Session', type: 'Social', date: futureIso(10), capacity: 20, visibility: 'all'
-        });
-        await request(app).post('/api/sessions').set('Authorization', `Bearer ${committeeToken}`).send({
-            title: 'Committee iCal Session', type: 'Meeting', date: futureIso(11), capacity: 20, visibility: 'committee_only'
-        });
+        await request(app)
+            .post('/api/sessions')
+            .set('Authorization', `Bearer ${committeeToken}`)
+            .send({
+                title: 'Public iCal Session',
+                type: 'Social',
+                date: futureIso(10),
+                capacity: 20,
+                visibility: 'all'
+            });
+        await request(app)
+            .post('/api/sessions')
+            .set('Authorization', `Bearer ${committeeToken}`)
+            .send({
+                title: 'Committee iCal Session',
+                type: 'Meeting',
+                date: futureIso(11),
+                capacity: 20,
+                visibility: 'committee_only'
+            });
 
         const res = await request(app).get(`/api/sessions/ical/${user3.calendarToken}`);
         expect(res.status).toBe(200);
@@ -318,10 +365,15 @@ describe('Sessions API', () => {
 
     it('should include only booked sessions in iCal', async () => {
         const user4Res = await request(app).post('/api/auth/register').send({
-            firstName: 'User', lastName: '4', email: 'user4_ical@example.com', password: 'Password123!', passwordConfirm: 'Password123!', registrationNumber: 'U4ICAL'
+            firstName: 'User',
+            lastName: '4',
+            email: 'user4_ical@example.com',
+            password: 'Password123!',
+            passwordConfirm: 'Password123!',
+            registrationNumber: 'U4ICAL'
         });
         const tokenCookie = (user4Res.headers['set-cookie'] as any)?.find((c: string) => c.startsWith('uscc_token='));
-        const user4Token = tokenCookie ? tokenCookie.split(';')[0].split('=')[1] : (user4Res.body.token || '');
+        const user4Token = tokenCookie ? tokenCookie.split(';')[0].split('=')[1] : user4Res.body.token || '';
         const meRes = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${user4Token}`);
         const user4 = meRes.body.user;
 
@@ -339,19 +391,38 @@ describe('Sessions API', () => {
 
     it('should include all visible sessions in all-sessions iCal feed for regular users', async () => {
         const user5Res = await request(app).post('/api/auth/register').send({
-            firstName: 'User', lastName: '5', email: 'user5_ical@example.com', password: 'Password123!', passwordConfirm: 'Password123!', registrationNumber: 'U5ICAL'
+            firstName: 'User',
+            lastName: '5',
+            email: 'user5_ical@example.com',
+            password: 'Password123!',
+            passwordConfirm: 'Password123!',
+            registrationNumber: 'U5ICAL'
         });
         const tokenCookie = (user5Res.headers['set-cookie'] as any)?.find((c: string) => c.startsWith('uscc_token='));
-        const user5Token = tokenCookie ? tokenCookie.split(';')[0].split('=')[1] : (user5Res.body.token || '');
+        const user5Token = tokenCookie ? tokenCookie.split(';')[0].split('=')[1] : user5Res.body.token || '';
         const meRes = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${user5Token}`);
         const user5 = meRes.body.user;
 
-        await request(app).post('/api/sessions').set('Authorization', `Bearer ${committeeToken}`).send({
-            title: 'All Feed Public Session', type: 'Social', date: futureIso(12), capacity: 20, visibility: 'all'
-        });
-        await request(app).post('/api/sessions').set('Authorization', `Bearer ${committeeToken}`).send({
-            title: 'All Feed Committee Session', type: 'Meeting', date: futureIso(13), capacity: 20, visibility: 'committee_only'
-        });
+        await request(app)
+            .post('/api/sessions')
+            .set('Authorization', `Bearer ${committeeToken}`)
+            .send({
+                title: 'All Feed Public Session',
+                type: 'Social',
+                date: futureIso(12),
+                capacity: 20,
+                visibility: 'all'
+            });
+        await request(app)
+            .post('/api/sessions')
+            .set('Authorization', `Bearer ${committeeToken}`)
+            .send({
+                title: 'All Feed Committee Session',
+                type: 'Meeting',
+                date: futureIso(13),
+                capacity: 20,
+                visibility: 'committee_only'
+            });
 
         const res = await request(app).get(`/api/sessions/ical/${user5.calendarToken}/all`);
         expect(res.status).toBe(200);
@@ -363,9 +434,16 @@ describe('Sessions API', () => {
         const meRes = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${committeeToken}`);
         const committeeUser = meRes.body.user;
 
-        await request(app).post('/api/sessions').set('Authorization', `Bearer ${committeeToken}`).send({
-            title: 'All Feed Committee Visible', type: 'Meeting', date: futureIso(14), capacity: 20, visibility: 'committee_only'
-        });
+        await request(app)
+            .post('/api/sessions')
+            .set('Authorization', `Bearer ${committeeToken}`)
+            .send({
+                title: 'All Feed Committee Visible',
+                type: 'Meeting',
+                date: futureIso(14),
+                capacity: 20,
+                visibility: 'committee_only'
+            });
 
         const res = await request(app).get(`/api/sessions/ical/${committeeUser.calendarToken}/all`);
         expect(res.status).toBe(200);
@@ -407,9 +485,15 @@ describe('Sessions API', () => {
     });
 
     it('should prevent booking a past session', async () => {
-        const resCreate = await request(app).post('/api/sessions').set('Authorization', `Bearer ${committeeToken}`).send({
-            title: 'Past Session', type: 'Social', date: '2020-01-01T10:00:00', capacity: 10
-        });
+        const resCreate = await request(app)
+            .post('/api/sessions')
+            .set('Authorization', `Bearer ${committeeToken}`)
+            .send({
+                title: 'Past Session',
+                type: 'Social',
+                date: '2020-01-01T10:00:00',
+                capacity: 10
+            });
         const sessionId = resCreate.body.id;
 
         const res = await request(app)
@@ -423,7 +507,9 @@ describe('Sessions API', () => {
     describe('Database Errors', () => {
         it('should handle list sessions DB errors', async () => {
             const { vi } = await import('vitest');
-            const spy = vi.spyOn(db, 'all').mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null));
+            const spy = vi
+                .spyOn(db, 'all')
+                .mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null));
             const res = await request(app).get('/api/sessions');
             expect(res.status).toBe(500);
             spy.mockRestore();
@@ -431,7 +517,9 @@ describe('Sessions API', () => {
 
         it('should handle iCal DB errors (user fetch)', async () => {
             const { vi } = await import('vitest');
-            const spy = vi.spyOn(db, 'get').mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null));
+            const spy = vi
+                .spyOn(db, 'get')
+                .mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null));
             const res = await request(app).get('/api/sessions/ical/1');
             expect(res.status).toBe(404);
             spy.mockRestore();
@@ -443,7 +531,9 @@ describe('Sessions API', () => {
             const user = meRes.body.user;
 
             const { vi } = await import('vitest');
-            const spyAll = vi.spyOn(db, 'all').mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null));
+            const spyAll = vi
+                .spyOn(db, 'all')
+                .mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null));
 
             const res = await request(app).get(`/api/sessions/ical/${user.calendarToken}`);
             expect(res.status).toBe(500);
@@ -452,9 +542,14 @@ describe('Sessions API', () => {
 
         it('should handle create session DB errors', async () => {
             const { vi } = await import('vitest');
-            const spy = vi.spyOn(db, 'run').mockImplementationOnce((query, params, cb) => cb.call({}, new Error('DB Error')));
+            const spy = vi
+                .spyOn(db, 'run')
+                .mockImplementationOnce((query, params, cb) => cb.call({}, new Error('DB Error')));
             const res = await request(app).post('/api/sessions').set('Authorization', `Bearer ${committeeToken}`).send({
-                title: 'T', type: 'T', date: 'D', capacity: 1
+                title: 'T',
+                type: 'T',
+                date: 'D',
+                capacity: 1
             });
             expect(res.status).toBe(500);
             spy.mockRestore();
@@ -462,17 +557,28 @@ describe('Sessions API', () => {
 
         it('should handle update session DB errors', async () => {
             const { vi } = await import('vitest');
-            const spy = vi.spyOn(db, 'run').mockImplementationOnce((query, params, cb) => cb.call({}, new Error('DB Error')));
-            const res = await request(app).put('/api/sessions/1').set('Authorization', `Bearer ${committeeToken}`).send({
-                title: 'T', type: 'T', date: 'D', capacity: 1, bookedSlots: 1
-            });
+            const spy = vi
+                .spyOn(db, 'run')
+                .mockImplementationOnce((query, params, cb) => cb.call({}, new Error('DB Error')));
+            const res = await request(app)
+                .put('/api/sessions/1')
+                .set('Authorization', `Bearer ${committeeToken}`)
+                .send({
+                    title: 'T',
+                    type: 'T',
+                    date: 'D',
+                    capacity: 1,
+                    bookedSlots: 1
+                });
             expect(res.status).toBe(500);
             spy.mockRestore();
         });
 
         it('should handle get bookings DB errors', async () => {
             const { vi } = await import('vitest');
-            const spy = vi.spyOn(db, 'all').mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null));
+            const spy = vi
+                .spyOn(db, 'all')
+                .mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null));
             const res = await request(app).get('/api/sessions/me/bookings').set('Authorization', `Bearer ${userToken}`);
             expect(res.status).toBe(500);
             spy.mockRestore();
@@ -481,7 +587,9 @@ describe('Sessions API', () => {
         it('should handle book session DB errors', async () => {
             const { vi } = await import('vitest');
             const spyGet1 = vi.spyOn(db, 'get').mockImplementationOnce((query, params, cb) => cb(null, null)); // No booking yet
-            const spyGet2 = vi.spyOn(db, 'get').mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null)); // Fail fetching session
+            const spyGet2 = vi
+                .spyOn(db, 'get')
+                .mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null)); // Fail fetching session
 
             const res = await request(app).post('/api/sessions/1/book').set('Authorization', `Bearer ${userToken}`);
             expect(res.status).toBe(404);
@@ -491,7 +599,9 @@ describe('Sessions API', () => {
 
         it('should handle cancel session DB errors (get booking)', async () => {
             const { vi } = await import('vitest');
-            const spyGet = vi.spyOn(db, 'get').mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null));
+            const spyGet = vi
+                .spyOn(db, 'get')
+                .mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null));
 
             const res = await request(app).post('/api/sessions/1/cancel').set('Authorization', `Bearer ${userToken}`);
             expect(res.status).toBe(400); // Route logic checks if booking returns falsy
@@ -500,21 +610,26 @@ describe('Sessions API', () => {
 
         it('should handle cancel session DB errors (delete booking)', async () => {
             const { vi } = await import('vitest');
-            const spyGet = vi.spyOn(db, 'get').mockImplementationOnce((query, params, cb) => cb(null, { id: 'booking1', userId: 'user', sessionId: '1' }));
-            const spyRun = vi.spyOn(db, 'run')
+            const spyGet = vi
+                .spyOn(db, 'get')
+                .mockImplementationOnce((query, params, cb) =>
+                    cb(null, { id: 'booking1', userId: 'user', sessionId: '1' })
+                );
+            const spyRun = vi
+                .spyOn(db, 'run')
                 .mockImplementationOnce((query, params, cb) => {
-                    const callback = typeof cb === 'function' ? cb : (typeof params === 'function' ? params : null);
+                    const callback = typeof cb === 'function' ? cb : typeof params === 'function' ? params : null;
                     if (callback) callback.call({}, null);
                     return db as any;
                 })
                 .mockImplementationOnce((query, params, cb) => {
-                    const callback = typeof cb === 'function' ? cb : (typeof params === 'function' ? params : null);
+                    const callback = typeof cb === 'function' ? cb : typeof params === 'function' ? params : null;
                     if (callback) callback.call({}, new Error('DB Error'));
                     return db as any;
                 })
                 .mockImplementationOnce((query, params, cb) => {
                     // Catch the ROLLBACK
-                    const callback = typeof cb === 'function' ? cb : (typeof params === 'function' ? params : null);
+                    const callback = typeof cb === 'function' ? cb : typeof params === 'function' ? params : null;
                     if (callback) callback.call({}, null);
                     return db as any;
                 });
@@ -523,33 +638,38 @@ describe('Sessions API', () => {
             expect(res.status).toBe(500);
             expect(res.body).toHaveProperty('error', 'Database error on cancel');
             // wait for background db calls to settle before restoring spy
-            await new Promise(r => setTimeout(r, 20));
+            await new Promise((r) => setTimeout(r, 20));
             spyGet.mockRestore();
             spyRun.mockRestore();
         });
 
         it('should handle cancel session DB errors (update session)', async () => {
             const { vi } = await import('vitest');
-            const spyGet = vi.spyOn(db, 'get').mockImplementationOnce((query, params, cb) => cb(null, { id: 'booking1', userId: 'user', sessionId: '1' }));
-            const spyRun = vi.spyOn(db, 'run')
+            const spyGet = vi
+                .spyOn(db, 'get')
+                .mockImplementationOnce((query, params, cb) =>
+                    cb(null, { id: 'booking1', userId: 'user', sessionId: '1' })
+                );
+            const spyRun = vi
+                .spyOn(db, 'run')
                 .mockImplementationOnce((query, params, cb) => {
-                    const callback = typeof cb === 'function' ? cb : (typeof params === 'function' ? params : null);
+                    const callback = typeof cb === 'function' ? cb : typeof params === 'function' ? params : null;
                     if (callback) callback.call({}, null);
                     return db as any;
                 })
                 .mockImplementationOnce((query, params, cb) => {
-                    const callback = typeof cb === 'function' ? cb : (typeof params === 'function' ? params : null);
+                    const callback = typeof cb === 'function' ? cb : typeof params === 'function' ? params : null;
                     if (callback) callback.call({}, null);
                     return db as any;
                 })
                 .mockImplementationOnce((query, params, cb) => {
-                    const callback = typeof cb === 'function' ? cb : (typeof params === 'function' ? params : null);
+                    const callback = typeof cb === 'function' ? cb : typeof params === 'function' ? params : null;
                     if (callback) callback.call({}, new Error('DB Error'));
                     return db as any;
                 })
                 .mockImplementationOnce((query, params, cb) => {
                     // Catch the ROLLBACK
-                    const callback = typeof cb === 'function' ? cb : (typeof params === 'function' ? params : null);
+                    const callback = typeof cb === 'function' ? cb : typeof params === 'function' ? params : null;
                     if (callback) callback.call({}, null);
                     return db as any;
                 });
@@ -557,14 +677,16 @@ describe('Sessions API', () => {
             const res = await request(app).post('/api/sessions/1/cancel').set('Authorization', `Bearer ${userToken}`);
             expect(res.status).toBe(500);
             expect(res.body).toHaveProperty('error', 'Database error on update');
-            await new Promise(r => setTimeout(r, 20));
+            await new Promise((r) => setTimeout(r, 20));
             spyGet.mockRestore();
             spyRun.mockRestore();
         });
 
         it('should handle delete session DB errors', async () => {
             const { vi } = await import('vitest');
-            const spy = vi.spyOn(db, 'run').mockImplementationOnce((query, params, cb) => cb.call({}, new Error('DB Error')));
+            const spy = vi
+                .spyOn(db, 'run')
+                .mockImplementationOnce((query, params, cb) => cb.call({}, new Error('DB Error')));
             const res = await request(app).delete('/api/sessions/1').set('Authorization', `Bearer ${committeeToken}`);
             expect(res.status).toBe(500);
             spy.mockRestore();

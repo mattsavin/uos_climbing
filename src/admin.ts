@@ -4,6 +4,7 @@ import { initAdminConfirm, initSuRosterImport, renderAdminLists } from './lib/da
 import { initSessionTypeHandlers, renderSessionTypes } from './lib/dashboard/session-types';
 import { initMembershipTypeHandlers, renderMembershipTypes } from './lib/dashboard/membership-types';
 import { initCommitteeRoleHandlers, renderCommitteeRoles } from './lib/dashboard/committee-roles';
+import { initAuditLogViewer } from './lib/dashboard/audit';
 import { adminConfirmModalHtml } from './components';
 import { csvExportModalHtml } from './components';
 import { initCsvExportModal } from './lib/dashboard/committee';
@@ -28,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize Handlers
     initAdminConfirm();
     initSuRosterImport();
+    initAuditLogViewer();
     initSessionTypeHandlers();
     initMembershipTypeHandlers();
     initCommitteeRoleHandlers();
@@ -42,7 +44,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const isCommittee = user.role === 'committee' || !!user.committeeRole || (Array.isArray(user.committeeRoles) && user.committeeRoles.length > 0);
+        const isCommittee =
+            user.role === 'committee' ||
+            !!user.committeeRole ||
+            (Array.isArray(user.committeeRoles) && user.committeeRoles.length > 0);
 
         // Boot non-committee users back to dashboard
         if (!isCommittee && user.email !== 'committee@sheffieldclimbing.org') {
@@ -64,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const prevText = newBtn.textContent || 'Send Test Email';
                 newBtn.textContent = 'Sending...';
                 try {
-                    const result = await adminApi.sendTestEmail() as any;
+                    const result = (await adminApi.sendTestEmail()) as any;
                     if (result?.sent) {
                         showToast(`Test email sent to ${result.target}`, 'success');
                     } else {

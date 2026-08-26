@@ -11,17 +11,8 @@ type DomainPopupElements = {
 };
 
 export function createDomainEmailPopupController(elements: DomainPopupElements) {
-    const {
-        popup,
-        backdrop,
-        title,
-        closeButton,
-        confirmButton,
-        message,
-        confirmWrap,
-        confirmInput,
-        confirmError
-    } = elements;
+    const { popup, backdrop, title, closeButton, confirmButton, message, confirmWrap, confirmInput, confirmError } =
+        elements;
 
     let popupResolve: ((confirmed: boolean) => void) | null = null;
     let popupExpectedRegistrationNumber: string | null = null;

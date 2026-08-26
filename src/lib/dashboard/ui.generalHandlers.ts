@@ -7,6 +7,7 @@ async function copyTextWithFallback(text: string): Promise<boolean> {
             return true;
         }
     } catch {
+        // Clipboard API unavailable/denied — fall through to execCommand fallback
     }
 
     const textArea = document.createElement('textarea');
@@ -19,7 +20,7 @@ async function copyTextWithFallback(text: string): Promise<boolean> {
     textArea.focus();
     textArea.select();
 
-    let copied = false;
+    let copied: boolean;
     try {
         copied = document.execCommand('copy');
     } catch {

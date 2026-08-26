@@ -18,7 +18,7 @@ export const membershipCardModalHtml = `
                     <div id="modal-card-photo-placeholder" class="w-full h-full flex items-center justify-center text-slate-600 font-bold text-xl sm:text-2xl">?</div>
                 </div>
                 <div class="flex items-center justify-center gap-2 mb-1">
-                    <img src="/climbing%20team%20logo.png" alt="Logo" class="h-4 sm:h-5 md:h-6 w-auto">
+                    <img src="/logo-mark.png" alt="Logo" class="h-4 sm:h-5 md:h-6 w-auto">
                     <span class="text-base sm:text-lg md:text-xl font-black text-white tracking-tighter">USMC</span>
                 </div>
                 <div class="flex flex-col items-center gap-1">

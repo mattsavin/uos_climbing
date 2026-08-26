@@ -12,11 +12,14 @@ export function createPendingMembershipRow(
     membership: any,
     membershipTypeLabel: (typeId: string) => string
 ) {
-    const displayName = `${(user as any).firstName || ''} ${(user as any).lastName || ''}`.trim() || user.name || user.email;
+    const displayName =
+        `${(user as any).firstName || ''} ${(user as any).lastName || ''}`.trim() || user.name || user.email;
     const safeName = escapeHTML(displayName);
     const safeEmail = escapeHTML(user.email);
     const safeRegNo = escapeHTML(user.registrationNumber || '');
-    const regLabel = safeRegNo ? `<span class="px-2 py-0.5 mt-1 font-mono text-[10px] bg-slate-800 text-slate-300 rounded block w-fit">REG: ${safeRegNo}</span>` : '';
+    const regLabel = safeRegNo
+        ? `<span class="px-2 py-0.5 mt-1 font-mono text-[10px] bg-slate-800 text-slate-300 rounded block w-fit">REG: ${safeRegNo}</span>`
+        : '';
 
     const typeLabel = membershipTypeLabel(membership.membershipType as string);
 
@@ -50,41 +53,59 @@ export function createPendingMembershipRow(
 }
 
 export function createMemberRow(user: User, isPending: boolean, context: MemberRowRenderContext) {
-    const displayName = `${(user as any).firstName || ''} ${(user as any).lastName || ''}`.trim() || user.name || user.email;
+    const displayName =
+        `${(user as any).firstName || ''} ${(user as any).lastName || ''}`.trim() || user.name || user.email;
     const safeName = escapeHTML(displayName);
     const safeEmail = escapeHTML(user.email);
     const safeRegNo = escapeHTML(user.registrationNumber || '');
 
-    const regLabel = safeRegNo ? `<p class="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">Reg: ${safeRegNo}</p>` : '';
+    const regLabel = safeRegNo
+        ? `<p class="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">Reg: ${safeRegNo}</p>`
+        : '';
 
-    const pronounsLabel = user.pronouns ? `<span class="bg-white/10 text-slate-300 px-1.5 py-0.5 rounded ml-1">${escapeHTML(user.pronouns)}</span>` : '';
-    const dietLabel = user.dietaryRequirements ? `<p class="text-[10px] text-red-300 mt-1 max-w-[200px] truncate" title="Dietary: ${escapeHTML(user.dietaryRequirements)}">⚠️ ${escapeHTML(user.dietaryRequirements)}</p>` : '';
-    const emergencyInfo = (!isPending && (user.emergencyContactName || user.emergencyContactMobile))
-        ? `<div class="mt-1 flex items-center gap-1.5 text-[9px] text-slate-400 bg-red-500/10 border border-red-500/20 px-2 py-1 rounded w-max">
+    const pronounsLabel = user.pronouns
+        ? `<span class="bg-white/10 text-slate-300 px-1.5 py-0.5 rounded ml-1">${escapeHTML(user.pronouns)}</span>`
+        : '';
+    const dietLabel = user.dietaryRequirements
+        ? `<p class="text-[10px] text-red-300 mt-1 max-w-[200px] truncate" title="Dietary: ${escapeHTML(user.dietaryRequirements)}">⚠️ ${escapeHTML(user.dietaryRequirements)}</p>`
+        : '';
+    const emergencyInfo =
+        !isPending && (user.emergencyContactName || user.emergencyContactMobile)
+            ? `<div class="mt-1 flex items-center gap-1.5 text-[9px] text-slate-400 bg-red-500/10 border border-red-500/20 px-2 py-1 rounded w-max">
              <span class="text-red-400">🚨 ICE:</span>
              <span class="font-bold text-white">${escapeHTML(user.emergencyContactName || 'Unknown')}</span>
              <span>${escapeHTML(user.emergencyContactMobile || 'No number')}</span>
            </div>`
-        : '';
+            : '';
 
     let actions = '';
     let committeeRoleSelector = '';
     const isSelf = user.id === context.currentUserId;
 
     if (!isPending) {
-        const isCommittee = user.role === 'committee' || !!user.committeeRole || (Array.isArray(user.committeeRoles) && user.committeeRoles.length > 0);
+        const isCommittee =
+            user.role === 'committee' ||
+            !!user.committeeRole ||
+            (Array.isArray(user.committeeRoles) && user.committeeRoles.length > 0);
         const isRootAdmin = context.currentUserEmail === 'committee@sheffieldclimbing.org';
 
         if (isCommittee) {
             const ROLES = [
-                'Chair', 'Secretary', 'Treasurer', 'Welfare & Inclusions',
-                'Team Captain', 'Social Sec', "Women's Captain",
-                "Men's Captain", 'Publicity', 'Kit & Safety Sec'
+                'Chair',
+                'Secretary',
+                'Treasurer',
+                'Welfare & Inclusions',
+                'Team Captain',
+                'Social Sec',
+                "Women's Captain",
+                "Men's Captain",
+                'Publicity',
+                'Kit & Safety Sec'
             ];
 
             const currentRoles: string[] = (user as any).committeeRoles || [];
 
-            const checkboxRows = ROLES.map(r => {
+            const checkboxRows = ROLES.map((r) => {
                 const checked = currentRoles.includes(r) ? 'checked' : '';
                 const safeRole = escapeHTML(r);
                 return `
@@ -94,9 +115,10 @@ export function createMemberRow(user: User, isPending: boolean, context: MemberR
                     </label>`;
             }).join('');
 
-            const rolesBadge = currentRoles.length > 0
-                ? `<span class="text-[10px] text-amber-400/80">${escapeHTML(currentRoles.join(', '))}</span>`
-                : `<span class="text-[10px] text-slate-500">No specific roles</span>`;
+            const rolesBadge =
+                currentRoles.length > 0
+                    ? `<span class="text-[10px] text-amber-400/80">${escapeHTML(currentRoles.join(', '))}</span>`
+                    : `<span class="text-[10px] text-slate-500">No specific roles</span>`;
 
             committeeRoleSelector = `
                 <div class="mt-2">
@@ -125,11 +147,15 @@ export function createMemberRow(user: User, isPending: boolean, context: MemberR
                 <button class="admin-action-btn text-xs font-bold px-3 py-1 bg-brand-gold/10 text-brand-gold border border-brand-gold/30 rounded hover:bg-brand-gold/20 mr-1" data-action="promote" data-id="${user.id}" data-name="${safeName}">
                     Make Admin
                 </button>
-                ${isSelf ? '' : `
+                ${
+                    isSelf
+                        ? ''
+                        : `
                 <button class="admin-action-btn text-xs font-bold px-3 py-1 bg-red-500/10 text-red-500 border border-red-500/30 rounded hover:bg-red-500/20" data-action="delete" data-id="${user.id}" data-name="${safeName}">
                     Delete
                 </button>
-                `}
+                `
+                }
             `;
         }
     }
@@ -138,7 +164,9 @@ export function createMemberRow(user: User, isPending: boolean, context: MemberR
     const activeMemberships = memberships.filter((m: any) => m.status === 'active' || m.status === 'rejected');
     const typeLabel = (t: string) => context.membershipTypeLabel(t);
 
-    const membershipsList = activeMemberships.length > 0 ? `
+    const membershipsList =
+        activeMemberships.length > 0
+            ? `
         <div class="mt-2">
             <details class="group">
                 <summary class="text-xs text-slate-400 cursor-pointer list-none flex items-center gap-1 hover:text-slate-200">
@@ -146,20 +174,23 @@ export function createMemberRow(user: User, isPending: boolean, context: MemberR
                     Memberships (${activeMemberships.length})
                 </summary>
                 <div class="mt-1 space-y-1">
-                    ${activeMemberships.map((m: any) => {
-        const statusColor = m.status === 'active' ? 'text-emerald-400' : 'text-red-400';
-        return `<div class="flex items-center justify-between px-2 py-1 rounded bg-slate-900/50 border border-white/5">
+                    ${activeMemberships
+                        .map((m: any) => {
+                            const statusColor = m.status === 'active' ? 'text-emerald-400' : 'text-red-400';
+                            return `<div class="flex items-center justify-between px-2 py-1 rounded bg-slate-900/50 border border-white/5">
                             <span class="text-xs text-slate-300">${escapeHTML(typeLabel(m.membershipType))}</span>
                             <div class="flex items-center gap-2">
                                 <span class="text-[10px] ${statusColor}">${m.status}</span>
                                 <button class="admin-action-btn text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded px-1 py-0.5 text-[10px] font-bold leading-none" data-action="delete-membership" data-id="${m.id}" data-name="${escapeHTML(safeName)} (${escapeHTML(typeLabel(m.membershipType))})" title="Remove membership">×</button>
                             </div>
                         </div>`;
-    }).join('')}
+                        })
+                        .join('')}
                 </div>
             </details>
         </div>
-    ` : '';
+    `
+            : '';
 
     return `
         <div class="p-4 flex items-center justify-between hover:bg-white/5 transition-colors">

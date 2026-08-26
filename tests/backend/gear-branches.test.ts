@@ -79,21 +79,31 @@ describe('Gear Router Branches', () => {
         const { app, db } = await loadGearApp();
         db.get
             .mockImplementationOnce((_sql: string, _params: any[], cb: Function) =>
-                cb(null, { gearId: 'g1', status: 'pending', name: 'User', email: 'u@example.com' }))
+                cb(null, { gearId: 'g1', status: 'pending', name: 'User', email: 'u@example.com' })
+            )
             .mockImplementationOnce((_sql: string, _params: any[], cb: Function) =>
-                cb(null, { gearId: 'g1', status: 'approved' }));
+                cb(null, { gearId: 'g1', status: 'approved' })
+            );
 
         const originalRun = db.run.getMockImplementation();
         let approveUpdateHit = false;
         let returnUpdateHit = false;
         db.run.mockImplementation((sql: string, params: any, cb?: Function) => {
             const callback = typeof params === 'function' ? params : cb;
-            if (!approveUpdateHit && typeof sql === 'string' && sql.includes("UPDATE gear_requests SET status = 'approved'")) {
+            if (
+                !approveUpdateHit &&
+                typeof sql === 'string' &&
+                sql.includes("UPDATE gear_requests SET status = 'approved'")
+            ) {
                 approveUpdateHit = true;
                 if (callback) callback.call({ changes: 0 }, new Error('DB Error'));
                 return db;
             }
-            if (!returnUpdateHit && typeof sql === 'string' && sql.includes("UPDATE gear_requests SET status = 'returned'")) {
+            if (
+                !returnUpdateHit &&
+                typeof sql === 'string' &&
+                sql.includes("UPDATE gear_requests SET status = 'returned'")
+            ) {
                 returnUpdateHit = true;
                 if (callback) callback.call({ changes: 0 }, new Error('DB Error'));
                 return db;

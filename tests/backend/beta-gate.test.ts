@@ -11,7 +11,7 @@ describe('Beta Gate Middleware & API', () => {
 
     beforeAll(async () => {
         // Wait for DB initialization
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
         process.env = { ...originalEnv, IS_BETA: 'true', BETA_ACCESS_SECRET: BETA_SECRET, BETA_PASSCODE: PASSCODE };
     });
 
@@ -33,9 +33,7 @@ describe('Beta Gate Middleware & API', () => {
     });
 
     it('redirects to /beta-gate when an invalid token is present', async () => {
-        const res = await request(app)
-            .get('/dashboard.html')
-            .set('Cookie', [`BETA_ACCESS_TOKEN=invalid-token`]);
+        const res = await request(app).get('/dashboard.html').set('Cookie', [`BETA_ACCESS_TOKEN=invalid-token`]);
         expect(res.status).toBe(302);
         expect(res.header.location).toBe('/beta-gate');
     });
@@ -51,17 +49,13 @@ describe('Beta Gate Middleware & API', () => {
     });
 
     it('fails beta authentication with wrong passcode', async () => {
-        const res = await request(app)
-            .post('/api/beta-auth')
-            .send({ passcode: 'wrong' });
+        const res = await request(app).post('/api/beta-auth').send({ passcode: 'wrong' });
         expect(res.status).toBe(401);
         expect(res.body.success).toBe(false);
     });
 
     it('succeeds beta authentication with correct passcode', async () => {
-        const res = await request(app)
-            .post('/api/beta-auth')
-            .send({ passcode: PASSCODE });
+        const res = await request(app).post('/api/beta-auth').send({ passcode: PASSCODE });
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
         expect(res.header['set-cookie']).toBeDefined();
@@ -71,9 +65,7 @@ describe('Beta Gate Middleware & API', () => {
     it('returns 500 if BETA_PASSCODE is not configured', async () => {
         const oldPasscode = process.env.BETA_PASSCODE;
         delete process.env.BETA_PASSCODE;
-        const res = await request(app)
-            .post('/api/beta-auth')
-            .send({ passcode: PASSCODE });
+        const res = await request(app).post('/api/beta-auth').send({ passcode: PASSCODE });
         expect(res.status).toBe(500);
         expect(res.body.message).toContain('not configured');
         process.env.BETA_PASSCODE = oldPasscode;

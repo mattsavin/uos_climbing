@@ -7,35 +7,42 @@ describe('Membership Types API', () => {
     let committeeToken: string;
 
     beforeAll(async () => {
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
 
-        const committeeRes = await request(app)
-            .post('/api/auth/register')
-            .send({
-                firstName: 'Membership',
-                lastName: 'Admin',
-                email: 'committee_membership_types@example.com',
-                password: 'Password123!', passwordConfirm: 'Password123!',
-                registrationNumber: 'ADM_MEM_TYPES'
-            });
+        const committeeRes = await request(app).post('/api/auth/register').send({
+            firstName: 'Membership',
+            lastName: 'Admin',
+            email: 'committee_membership_types@example.com',
+            password: 'Password123!',
+            passwordConfirm: 'Password123!',
+            registrationNumber: 'ADM_MEM_TYPES'
+        });
 
         const committeeUserId = committeeRes.body.user?.id;
 
         const adminLoginRes = await request(app).post('/api/auth/login').send({
-            email: 'committee@sheffieldclimbing.org', password: 'SuperSecret123!'
+            email: 'committee@sheffieldclimbing.org',
+            password: 'SuperSecret123!'
         });
         const adminCookies = adminLoginRes.headers['set-cookie'];
-        const adminCookieArray = Array.isArray(adminCookies) ? adminCookies : (adminCookies ? [adminCookies] : []);
+        const adminCookieArray = Array.isArray(adminCookies) ? adminCookies : adminCookies ? [adminCookies] : [];
         const adminCookie = adminCookieArray.find((c: string) => c.startsWith('uscc_token='));
         const adminToken = adminCookie ? adminCookie.split(';')[0].split('=')[1] : '';
 
-        await request(app).post(`/api/admin/users/${committeeUserId}/promote`).set('Authorization', `Bearer ${adminToken}`);
+        await request(app)
+            .post(`/api/admin/users/${committeeUserId}/promote`)
+            .set('Authorization', `Bearer ${adminToken}`);
 
         const refreshRes = await request(app).post('/api/auth/login').send({
-            email: 'committee_membership_types@example.com', password: 'Password123!'
+            email: 'committee_membership_types@example.com',
+            password: 'Password123!'
         });
         const refreshCookies = refreshRes.headers['set-cookie'];
-        const refreshCookieArray = Array.isArray(refreshCookies) ? refreshCookies : (refreshCookies ? [refreshCookies] : []);
+        const refreshCookieArray = Array.isArray(refreshCookies)
+            ? refreshCookies
+            : refreshCookies
+              ? [refreshCookies]
+              : [];
         const refreshCookie = refreshCookieArray.find((c: string) => c.startsWith('uscc_token='));
         committeeToken = refreshCookie ? refreshCookie.split(';')[0].split('=')[1] : '';
     });

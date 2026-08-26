@@ -36,7 +36,9 @@ export function initProfileHandlers() {
                 if (profileSuccess) profileSuccess.classList.remove('hidden');
                 const updatedUser = authState.user;
                 const displayName = updatedUser
-                    ? `${updatedUser.firstName || ''} ${updatedUser.lastName || ''}`.trim() || updatedUser.name || updatedUser.email
+                    ? `${updatedUser.firstName || ''} ${updatedUser.lastName || ''}`.trim() ||
+                      updatedUser.name ||
+                      updatedUser.email
                     : '';
                 if (userNameSpan) userNameSpan.textContent = displayName;
             } catch (err: any) {
@@ -67,7 +69,7 @@ export function initProfileHandlers() {
 
             try {
                 if (passNew.value !== passConfirm.value) {
-                    throw new Error("New passwords do not match.");
+                    throw new Error('New passwords do not match.');
                 }
 
                 if (submitBtn) submitBtn.disabled = true;
@@ -92,17 +94,20 @@ export function initProfileHandlers() {
     const deleteSelfAccountBtn = document.getElementById('delete-self-account-btn');
     if (deleteSelfAccountBtn) {
         deleteSelfAccountBtn.addEventListener('click', async () => {
-            const pwd = await showPromptModal("Please enter your password to confirm account deletion:");
+            const pwd = await showPromptModal('Please enter your password to confirm account deletion:');
             if (pwd) {
                 deleteSelfAccountBtn.textContent = 'Deleting...';
                 (deleteSelfAccountBtn as HTMLButtonElement).disabled = true;
-                authState.deleteAccount(pwd).then(() => {
-                    window.location.href = '/login';
-                }).catch(err => {
-                    showToast(err.message || "Failed to delete account", 'error');
-                    deleteSelfAccountBtn.textContent = 'Delete Account';
-                    (deleteSelfAccountBtn as HTMLButtonElement).disabled = false;
-                });
+                authState
+                    .deleteAccount(pwd)
+                    .then(() => {
+                        window.location.href = '/login';
+                    })
+                    .catch((err) => {
+                        showToast(err.message || 'Failed to delete account', 'error');
+                        deleteSelfAccountBtn.textContent = 'Delete Account';
+                        (deleteSelfAccountBtn as HTMLButtonElement).disabled = false;
+                    });
             }
         });
     }
@@ -134,51 +139,52 @@ export function initAccountModalHandlers() {
         if (accountModal) accountModal.classList.add('hidden');
     }
 
-    if (openAccountBtn) openAccountBtn.addEventListener('click', async () => {
-        if (accountModal) accountModal.classList.remove('hidden');
-        if (profileSuccess) profileSuccess.classList.add('hidden');
-        if (profileError) profileError.classList.add('hidden');
-        if (passSuccess) passSuccess.classList.add('hidden');
-        if (passError) passError.classList.add('hidden');
+    if (openAccountBtn)
+        openAccountBtn.addEventListener('click', async () => {
+            if (accountModal) accountModal.classList.remove('hidden');
+            if (profileSuccess) profileSuccess.classList.add('hidden');
+            if (profileError) profileError.classList.add('hidden');
+            if (passSuccess) passSuccess.classList.add('hidden');
+            if (passError) passError.classList.add('hidden');
 
-        try {
-            // Load user data to populate the form
-            // @ts-ignore
-            const { authState } = await import('../../auth');
-            const userProfile = await authState.getProfile();
+            try {
+                // Load user data to populate the form
+                // @ts-ignore -- circular import: auth.ts imports dashboard modules, so load it lazily
+                const { authState } = await import('../../auth');
+                const userProfile = await authState.getProfile();
 
-            const fnameEl = document.getElementById('profile-fname') as HTMLInputElement;
-            const snameEl = document.getElementById('profile-sname') as HTMLInputElement;
-            const pronounsEl = document.getElementById('profile-pronouns') as HTMLInputElement;
-            const dietEl = document.getElementById('profile-dietary') as HTMLInputElement;
-            const emergNameEl = document.getElementById('profile-emergency-name') as HTMLInputElement;
-            const emergMobileEl = document.getElementById('profile-emergency-mobile') as HTMLInputElement;
-            const photoPreview = document.getElementById('profile-photo-preview') as HTMLImageElement;
-            const photoPlaceholder = document.getElementById('profile-photo-placeholder');
+                const fnameEl = document.getElementById('profile-fname') as HTMLInputElement;
+                const snameEl = document.getElementById('profile-sname') as HTMLInputElement;
+                const pronounsEl = document.getElementById('profile-pronouns') as HTMLInputElement;
+                const dietEl = document.getElementById('profile-dietary') as HTMLInputElement;
+                const emergNameEl = document.getElementById('profile-emergency-name') as HTMLInputElement;
+                const emergMobileEl = document.getElementById('profile-emergency-mobile') as HTMLInputElement;
+                const photoPreview = document.getElementById('profile-photo-preview') as HTMLImageElement;
+                const photoPlaceholder = document.getElementById('profile-photo-placeholder');
 
-            if (fnameEl) fnameEl.value = userProfile.firstName || '';
-            if (snameEl) snameEl.value = userProfile.lastName || '';
-            if (pronounsEl) pronounsEl.value = userProfile.pronouns || '';
-            if (dietEl) dietEl.value = userProfile.dietaryRequirements || '';
-            if (emergNameEl) emergNameEl.value = userProfile.emergencyContactName || '';
-            if (emergMobileEl) emergMobileEl.value = userProfile.emergencyContactMobile || '';
+                if (fnameEl) fnameEl.value = userProfile.firstName || '';
+                if (snameEl) snameEl.value = userProfile.lastName || '';
+                if (pronounsEl) pronounsEl.value = userProfile.pronouns || '';
+                if (dietEl) dietEl.value = userProfile.dietaryRequirements || '';
+                if (emergNameEl) emergNameEl.value = userProfile.emergencyContactName || '';
+                if (emergMobileEl) emergMobileEl.value = userProfile.emergencyContactMobile || '';
 
-            if (userProfile.profilePhoto) {
-                if (photoPreview) {
-                    photoPreview.src = userProfile.profilePhoto;
-                    photoPreview.classList.remove('hidden');
+                if (userProfile.profilePhoto) {
+                    if (photoPreview) {
+                        photoPreview.src = userProfile.profilePhoto;
+                        photoPreview.classList.remove('hidden');
+                    }
+                    if (photoPlaceholder) photoPlaceholder.classList.add('hidden');
+                } else {
+                    photoPreview?.classList.add('hidden');
+                    photoPlaceholder?.classList.remove('hidden');
                 }
-                if (photoPlaceholder) photoPlaceholder.classList.add('hidden');
-            } else {
-                photoPreview?.classList.add('hidden');
-                photoPlaceholder?.classList.remove('hidden');
+            } catch (e) {
+                console.error('Failed to pre-populate profile:', e);
             }
-        } catch (e) {
-            console.error('Failed to pre-populate profile:', e);
-        }
-    });
+        });
 
-    [closeAccountBtn, accountBackdrop].forEach(el => {
+    [closeAccountBtn, accountBackdrop].forEach((el) => {
         if (el) el.addEventListener('click', closeAccountModal);
     });
 

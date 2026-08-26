@@ -3,7 +3,24 @@ import { db } from '../db';
 export function getMembershipTypeIds(callback: (err: Error | null, ids: string[]) => void) {
     db.all('SELECT id FROM membership_types', [], (err, rows: any[]) => {
         if (err) return callback(err as any, []);
-        callback(null, (rows || []).map((r: any) => r.id));
+        callback(
+            null,
+            (rows || []).map((r: any) => r.id)
+        );
+    });
+}
+
+/** Promisified variant for async/await routes */
+export function getMembershipTypeIdsAsync(): Promise<string[]> {
+    return new Promise((resolve, reject) => {
+        getMembershipTypeIds((typeErr, ids) => (typeErr ? reject(typeErr) : resolve(ids)));
+    });
+}
+
+/** Promisified variant for async/await routes */
+export function getDefaultMembershipTypeAsync(): Promise<string | null> {
+    return new Promise((resolve, reject) => {
+        getDefaultMembershipType((typeErr, id) => (typeErr ? reject(typeErr) : resolve(id)));
     });
 }
 

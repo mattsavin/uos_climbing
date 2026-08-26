@@ -12,17 +12,18 @@ import sessionTypeRoutes from './routes/session-types';
 import membershipTypeRoutes from './routes/membership-types';
 import votingRoutes from './routes/voting';
 import gearRoutes from './routes/gear';
+import tripRoutes from './routes/trips';
 import committeeRoutes from './routes/committee';
 import verifyRoutes from './routes/verify';
 import galleryRoutes from './routes/gallery';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import history from 'connect-history-api-fallback';
 import cookieParser from 'cookie-parser';
 import crypto from 'crypto';
 import { betaGate } from './middleware/beta-gate';
 import jwt from 'jsonwebtoken';
 import { UPLOAD_BASE_DIR } from './config';
+import { startReminderScheduler } from './services/bookings';
 
 // ESM dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
@@ -38,36 +39,43 @@ if (process.env.TRUST_PROXY || process.env.NODE_ENV === 'production') {
 }
 const PORT = process.env.PORT || 3000;
 
-app.use(cors({
-    origin: process.env.NODE_ENV === 'production' ? (process.env.APP_URL || false) : ['http://localhost:5173', 'http://127.0.0.1:5173'],
-    credentials: true,
-}));
+app.use(
+    cors({
+        origin:
+            process.env.NODE_ENV === 'production'
+                ? process.env.APP_URL || false
+                : ['http://localhost:5173', 'http://127.0.0.1:5173'],
+        credentials: true
+    })
+);
 
 // Apply security headers
 // CSP ships in report-only mode: browsers evaluate the policy and POST violations
 // to /api/csp-report, but nothing is blocked yet. Once reports are quiet for a
 // while, set CSP_ENFORCE=true (env var, no redeploy needed) to switch to an
 // enforcing Content-Security-Policy.
-app.use(helmet({
-    crossOriginEmbedderPolicy: false,
-    contentSecurityPolicy: {
-        reportOnly: process.env.CSP_ENFORCE !== 'true',
-        directives: {
-            defaultSrc: ["'self'"],
-            scriptSrc: ["'self'"],
-            scriptSrcAttr: ["'none'"], // no inline event handlers anywhere in the templates
-            styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-            fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
-            imgSrc: ["'self'", 'data:', 'blob:'], // blob: for photo-crop previews
-            connectSrc: ["'self'"],
-            objectSrc: ["'none'"],
-            baseUri: ["'self'"],
-            formAction: ["'self'"],
-            frameAncestors: ["'self'"],
-            reportUri: ['/api/csp-report'],
-        },
-    },
-}));
+app.use(
+    helmet({
+        crossOriginEmbedderPolicy: false,
+        contentSecurityPolicy: {
+            reportOnly: process.env.CSP_ENFORCE !== 'true',
+            directives: {
+                defaultSrc: ["'self'"],
+                scriptSrc: ["'self'"],
+                scriptSrcAttr: ["'none'"], // no inline event handlers anywhere in the templates
+                styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+                fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+                imgSrc: ["'self'", 'data:', 'blob:'], // blob: for photo-crop previews
+                connectSrc: ["'self'", 'https://fonts.googleapis.com', 'https://fonts.gstatic.com'], // fonts.googleapis/gstatic: social-post export embeds Outfit font files
+                objectSrc: ["'none'"],
+                baseUri: ["'self'"],
+                formAction: ["'self'"],
+                frameAncestors: ["'self'"],
+                reportUri: ['/api/csp-report']
+            }
+        }
+    })
+);
 
 // Global rate limiting
 const globalLimiter = rateLimit({
@@ -75,12 +83,40 @@ const globalLimiter = rateLimit({
     max: 1000, // 1000 requests per IP
     message: { error: 'Too many requests from this IP, please try again after 15 minutes' },
     standardHeaders: true,
-    legacyHeaders: false,
+    legacyHeaders: false
 });
 app.use(globalLimiter);
 
 app.use(express.json());
 app.use(cookieParser());
+
+// Liveness/readiness probe: verifies the process can reach its database.
+// Public (allow-listed through the beta gate) so uptime monitors and Docker
+// HEALTHCHECK work regardless of gate state.
+app.get('/api/health', (_req, res) => {
+    // Fail-safe: if the database never opens (e.g. unwritable volume), sqlite3
+    // queues operations without invoking callbacks — answer 503 rather than hang,
+    // because a health probe that hangs defeats its own purpose.
+    let settled = false;
+    const timeout = setTimeout(() => {
+        if (!settled) {
+            settled = true;
+            res.status(503).json({ ok: false, db: 'timeout' });
+        }
+    }, 2000);
+    timeout.unref?.();
+
+    db.get('SELECT 1', [], (err) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        if (err) {
+            console.error('Health check DB failure:', err.message);
+            return res.status(503).json({ ok: false, db: false });
+        }
+        res.json({ ok: true, db: true, uptime: Math.round(process.uptime()) });
+    });
+});
 
 // Collect Content-Security-Policy violation reports from browsers.
 // Browsers POST application/csp-report bodies here when a directive trips,
@@ -89,24 +125,29 @@ const cspReportLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 50,
     standardHeaders: true,
-    legacyHeaders: false,
+    legacyHeaders: false
 });
-app.post('/api/csp-report',
+app.post(
+    '/api/csp-report',
     cspReportLimiter,
     express.json({ type: ['application/csp-report', 'application/reports+json'] }),
     (req, res) => {
         const report = req.body?.['csp-report'] ?? req.body;
         if (report && typeof report === 'object') {
-            console.warn('[CSP]', JSON.stringify({
-                directive: report['violated-directive'] ?? report.effectiveDirective,
-                blocked: report['blocked-uri'] ?? report.blockedURL,
-                page: report['document-uri'] ?? report.documentURI,
-                sourceFile: report['source-file'],
-                line: report['line-number'],
-            }));
+            console.warn(
+                '[CSP]',
+                JSON.stringify({
+                    directive: report['violated-directive'] ?? report.effectiveDirective,
+                    blocked: report['blocked-uri'] ?? report.blockedURL,
+                    page: report['document-uri'] ?? report.documentURI,
+                    sourceFile: report['source-file'],
+                    line: report['line-number']
+                })
+            );
         }
         res.status(204).end();
-    });
+    }
+);
 
 // Serve profile photos
 app.use('/uploads', express.static(UPLOAD_BASE_DIR));
@@ -160,17 +201,10 @@ app.use('/api/session-types', sessionTypeRoutes);
 app.use('/api/membership-types', membershipTypeRoutes);
 app.use('/api/voting', votingRoutes);
 app.use('/api/gear', gearRoutes);
+app.use('/api/trips', tripRoutes);
 app.use('/api/committee', committeeRoutes);
 app.use('/api/verify', verifyRoutes);
 app.use('/api/gallery', galleryRoutes);
-
-// Shared route for iCal (also registered in sessions.ts but keeping here for backward compatibility if needed, 
-// though /api/sessions/ical/:userId is preferred now. The original was /api/ical/:userId)
-app.use('/api/ical', (req, res, next) => {
-    // Forward /api/ical/:userId to sessions router logic if desired, 
-    // but we can just use the sessions router directly by prefixing it.
-    next();
-});
 
 if (process.env.NODE_ENV === 'production') {
     // 1. Serve static files from the build directory (Assets MUST come first)
@@ -178,41 +212,63 @@ if (process.env.NODE_ENV === 'production') {
     console.log(`Serving static files from: ${distPath}`);
     app.use(express.static(distPath));
 
-    // 2. Fallback for SPA routing - handles page refreshes on sub-routes
-    app.use(history({
-        rewrites: [
-            // Ensure requests to '/api' aren't intercepted by history
-            { from: /^\/api\/.*$/, to: function (context: any) { return context.parsedUrl?.pathname || '/'; } },
+    // Single source of truth for clean page routes on this server.
+    // (vite.config.ts keeps its own dev-server copy — see backlog note.)
+    const PAGE_ROUTES: Record<string, string> = {
+        '/': 'index.html',
+        '/about': 'about.html',
+        '/competitions': 'competitions.html',
+        '/schedule': 'schedule.html',
+        '/dashboard': 'dashboard.html',
+        '/dashboard/elections': 'elections.html',
+        '/dashboard/gear': 'gear.html',
+        '/dashboard/admin': 'admin.html',
+        '/dashboard/gallery-manager': 'gallery-manager.html',
+        '/dashboard/social-post': 'social-post.html',
+        '/beginners': 'beginners.html',
+        '/walls': 'walls.html',
+        '/faq': 'faq.html',
+        '/gear': 'gear.html',
+        '/login': 'login.html',
+        '/elections': 'elections.html',
+        '/gallery': 'gallery.html',
+        '/gallery-manager': 'gallery-manager.html',
+        '/social-agm': 'social-post.html',
+        '/beta-gate': 'beta-gate.html',
+        '/verify': 'verify.html'
+    };
 
-            // Re-route Vite's HTML entrypoints
-            { from: /^\/dashboard$/, to: '/dashboard.html' },
-            { from: /^\/dashboard\/$/, to: '/dashboard.html' },
-            { from: /^\/dashboard\/elections$/, to: '/elections.html' },
-            { from: /^\/dashboard\/gear$/, to: '/gear.html' },
-            { from: /^\/dashboard\/admin$/, to: '/admin.html' },
-            { from: /^\/dashboard\/gallery-manager$/, to: '/gallery-manager.html' },
-            { from: /^\/about$/, to: '/about.html' },
-            { from: /^\/schedule$/, to: '/schedule.html' },
-            { from: /^\/competitions$/, to: '/competitions.html' },
-            { from: /^\/beginners$/, to: '/beginners.html' },
-            { from: /^\/walls$/, to: '/walls.html' },
-            { from: /^\/faq$/, to: '/faq.html' },
-            { from: /^\/gear$/, to: '/gear.html' },
-            { from: /^\/admin$/, to: '/admin.html' },
-            { from: /^\/login$/, to: '/login.html' },
-            { from: /^\/elections$/, to: '/elections.html' },
-            { from: /^\/gallery$/, to: '/gallery.html' },
-            { from: /^\/gallery-manager$/, to: '/gallery-manager.html' },
-            { from: /^\/social-agm$/, to: '/social-post.html' },
-            { from: /^\/dashboard\/social-post$/, to: '/social-post.html' },
-            { from: /^\/beta-gate$/, to: '/beta-gate.html' },
-            { from: /^\/verify$/, to: '/verify.html' },
-            { from: /^\/verify\/.*$/, to: '/verify.html' }
-        ]
-    }));
+    // 2. Page routing: known clean routes serve their entry files directly.
+    //    (Replaces connect-history-api-fallback: an explicit map is typed,
+    //    testable, and lets unknown URLs fall through to the branded 404
+    //    instead of soft-404ing as index.html.)
+    app.use((req, res, next) => {
+        if (req.method !== 'GET' || req.path.startsWith('/api')) return next();
+        const pathname = req.path.replace(/\/+$/, '') || '/';
+        if (pathname === '/') {
+            return res.sendFile(path.join(distPath, 'index.html'));
+        }
+        const page = PAGE_ROUTES[pathname];
+        if (page) {
+            return res.sendFile(path.join(distPath, page));
+        }
+        if (pathname.startsWith('/verify/')) {
+            return res.sendFile(path.join(distPath, 'verify.html'));
+        }
+        next(); // unknown -> terminal 404 below
+    });
 
-    // 3. Serve static files again AFTER history fallback has rewritten the URL
-    app.use(express.static(distPath));
+    // 4. Terminal handler: everything still unmatched is a genuine 404.
+    //    (Previously unknown pages silently served index.html — soft-404s.)
+    app.use((req, res) => {
+        if (req.path.startsWith('/api')) {
+            return res.status(404).json({ error: 'Not found' });
+        }
+        if (String(req.headers.accept || '').includes('text/html')) {
+            return res.status(404).sendFile(path.join(distPath, '404.html'));
+        }
+        res.status(404).json({ error: 'Not found' });
+    });
 } else {
     // Also handle beta-gate in dev for testing
     app.get('/beta-gate', (req, res) => {
@@ -222,9 +278,11 @@ if (process.env.NODE_ENV === 'production') {
 
 export { app };
 
-
 if (process.env.NODE_ENV !== 'test' || process.env.PLAYWRIGHT_TEST === 'true') {
     app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
     });
+
+    // Hourly booking-reminder sweep (no-op under test runners)
+    startReminderScheduler();
 }

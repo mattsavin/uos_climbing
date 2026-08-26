@@ -39,7 +39,9 @@ async function initGallery() {
 
         const imgEl = document.createElement('img');
         imgEl.src = img.filepath;
-        imgEl.alt = img.caption || 'Gallery Image';
+        imgEl.loading = 'lazy';
+        imgEl.decoding = 'async';
+        imgEl.alt = img.caption || 'Club climbing photo';
         imgEl.className = 'w-full h-full object-cover transition-transform duration-700';
         imgEl.style.objectPosition = `${normalizeCrop(img.galleryLandscapeX, 50)}% ${normalizeCrop(img.galleryLandscapeY, 50)}%`;
         imgEl.style.transformOrigin = `${normalizeCrop(img.galleryLandscapeX, 50)}% ${normalizeCrop(img.galleryLandscapeY, 50)}%`;
@@ -49,7 +51,8 @@ async function initGallery() {
 
         if (img.caption) {
             const captionDiv = document.createElement('div');
-            captionDiv.className = 'absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/80 to-transparent p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300';
+            captionDiv.className =
+                'absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/80 to-transparent p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300';
 
             const captionP = document.createElement('p');
             captionP.className = 'text-white text-sm font-bold text-center';
@@ -69,7 +72,7 @@ async function initGallery() {
     const closeBtn = document.getElementById('close-image-modal');
 
     // Open Modal
-    document.querySelectorAll('.gallery-item').forEach(item => {
+    document.querySelectorAll('.gallery-item').forEach((item) => {
         item.addEventListener('click', (e) => {
             const el = e.currentTarget as HTMLElement;
             const src = el.getAttribute('data-src');

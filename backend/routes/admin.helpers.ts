@@ -4,10 +4,12 @@ import { db } from '../db';
 export const ROOT_ADMIN_EMAIL = (process.env.ROOT_ADMIN_EMAIL || 'committee@sheffieldclimbing.org').toLowerCase();
 
 export function isRootAdmin(user: any): boolean {
-    return !!user
-        && user.role === 'committee'
-        && typeof user.email === 'string'
-        && user.email.toLowerCase() === ROOT_ADMIN_EMAIL;
+    return (
+        !!user &&
+        user.role === 'committee' &&
+        typeof user.email === 'string' &&
+        user.email.toLowerCase() === ROOT_ADMIN_EMAIL
+    );
 }
 
 export function getCurrentAcademicYear(): string {
@@ -45,27 +47,11 @@ export function academicYearFromSubscriptionText(text: string): string | null {
     return null;
 }
 
-export function runDb(sql: string, params: any[] = []): Promise<{ changes: number }> {
-    return new Promise((resolve, reject) => {
-        db.run(sql, params, function (err) {
-            if (err) return reject(err);
-            resolve({ changes: this.changes || 0 });
-        });
-    });
-}
-
-export function getDb(sql: string, params: any[] = []): Promise<any> {
-    return new Promise((resolve, reject) => {
-        db.get(sql, params, (err, row) => {
-            if (err) return reject(err);
-            resolve(row);
-        });
-    });
-}
-
 export function newMembershipRowId(): string {
     return `umem_${randomUUID()}`;
 }
+// NOTE: promisified DB helpers live in backend/utils/db.ts (dbGet/dbAll/dbRun);
+// the former local runDb/getDb duplicates were removed in favour of those.
 
 export function parseSuRoster(raw: string) {
     const lines = raw
@@ -79,8 +65,17 @@ export function parseSuRoster(raw: string) {
     let yearFallbackUsed = 0;
 
     for (const line of lines) {
-        const tabCols = line.split('\t').map((c) => c.trim()).filter(Boolean);
-        const cols = tabCols.length >= 5 ? tabCols : line.split(/\s{2,}/).map((c) => c.trim()).filter(Boolean);
+        const tabCols = line
+            .split('\t')
+            .map((c) => c.trim())
+            .filter(Boolean);
+        const cols =
+            tabCols.length >= 5
+                ? tabCols
+                : line
+                      .split(/\s{2,}/)
+                      .map((c) => c.trim())
+                      .filter(Boolean);
         if (cols.length < 5) {
             skipped.push({ line, reason: 'Expected 5 columns' });
             continue;

@@ -1,4 +1,4 @@
-import FALLBACK_IMAGE from './assets/NUBS_Finals_015.jpg';
+import FALLBACK_IMAGE from './assets/hero-fallback.webp';
 const FALLBACK_ALT = 'Climbing';
 const INTERVAL_MS = 5000;
 import { apiFetch } from './lib/api/http';
@@ -6,7 +6,7 @@ import { apiFetch } from './lib/api/http';
 import { normalizeCrop, normalizeZoom } from './lib/utils/imageMath';
 import { escapeHTML } from './utils';
 
-function getHeroCropStyles(image: any): { objectPosition: string, transformOrigin: string, zoom: number } {
+function getHeroCropStyles(image: any): { objectPosition: string; transformOrigin: string; zoom: number } {
     const isMobile = window.matchMedia('(max-width: 767px)').matches;
     const x = isMobile ? normalizeCrop(image.heroMobileX, 50) : normalizeCrop(image.heroDesktopX, 50);
     const y = isMobile ? normalizeCrop(image.heroMobileY, 50) : normalizeCrop(image.heroDesktopY, 50);
@@ -35,24 +35,30 @@ export async function initHeroCarousel() {
     let autoTimer: ReturnType<typeof setInterval> | null = null;
 
     // Build slides
-    container.innerHTML = images.map((img, i) => {
-        const crop = getHeroCropStyles(img);
-        const altText = escapeHTML(img.caption || FALLBACK_ALT);
-        return `
+    container.innerHTML = images
+        .map((img, i) => {
+            const crop = getHeroCropStyles(img);
+            const altText = escapeHTML(img.caption || FALLBACK_ALT);
+            return `
         <div class="hero-slide absolute inset-0 transition-opacity duration-1000 ${i === 0 ? 'opacity-100' : 'opacity-0'}" aria-hidden="${i !== 0}">
             <img src="${escapeHTML(img.filepath)}" alt="${altText}" class="w-full h-full object-cover" style="object-position: ${crop.objectPosition}; transform-origin: ${crop.transformOrigin}; transform: scale(${crop.zoom});">
         </div>
     `;
-    }).join('');
+        })
+        .join('');
 
     const slides = container.querySelectorAll<HTMLElement>('.hero-slide');
 
     // Dots (only if more than 1 image)
     const dotsContainer = document.getElementById('hero-carousel-dots');
     if (dotsContainer && images.length > 1) {
-        dotsContainer.innerHTML = images.map((_, i) => `
+        dotsContainer.innerHTML = images
+            .map(
+                (_, i) => `
             <button class="carousel-dot w-2 h-2 rounded-full transition-all duration-300 ${i === 0 ? 'bg-brand-gold w-5' : 'bg-white/40'}" data-index="${i}" aria-label="Go to slide ${i + 1}"></button>
-        `).join('');
+        `
+            )
+            .join('');
         dotsContainer.classList.remove('hidden');
         dotsContainer.classList.add('flex');
     }
@@ -98,11 +104,19 @@ export async function initHeroCarousel() {
 
     if (prevBtn && images.length > 1) {
         prevBtn.classList.remove('hidden');
-        prevBtn.addEventListener('click', () => { stopAuto(); goTo(current - 1); startAuto(); });
+        prevBtn.addEventListener('click', () => {
+            stopAuto();
+            goTo(current - 1);
+            startAuto();
+        });
     }
     if (nextBtn && images.length > 1) {
         nextBtn.classList.remove('hidden');
-        nextBtn.addEventListener('click', () => { stopAuto(); goTo(current + 1); startAuto(); });
+        nextBtn.addEventListener('click', () => {
+            stopAuto();
+            goTo(current + 1);
+            startAuto();
+        });
     }
 
     // Dot clicks

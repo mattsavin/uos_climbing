@@ -9,11 +9,14 @@ export async function renderSessionTypes() {
         const types = await adminApi.getSessionTypes();
 
         if (types.length === 0) {
-            listContainer.innerHTML = '<div class="p-8 text-center text-slate-500 text-sm italic">No custom session types defined.</div>';
+            listContainer.innerHTML =
+                '<div class="p-8 text-center text-slate-500 text-sm italic">No custom session types defined.</div>';
             return;
         }
 
-        listContainer.innerHTML = types.map(t => `
+        listContainer.innerHTML = types
+            .map(
+                (t) => `
             <div class="flex items-center justify-between p-4 bg-slate-800/20 hover:bg-slate-800/40 transition-colors border-b border-white/5 last:border-0">
                 <div>
                     <span class="text-sm font-bold text-white">${t.label}</span>
@@ -29,17 +32,21 @@ export async function renderSessionTypes() {
                     </button>
                 </div>
             </div>
-        `).join('');
+        `
+            )
+            .join('');
 
         // Attach listeners
-        listContainer.querySelectorAll('.delete-type-btn').forEach(btn => {
+        listContainer.querySelectorAll('.delete-type-btn').forEach((btn) => {
             btn.addEventListener('click', async (e) => {
                 const target = e.currentTarget as HTMLElement;
                 const id = target.dataset.id!;
                 const label = target.dataset.label!;
 
                 // Uses custom glass confirm modal
-                const confirmed = await showConfirmModal(`Are you sure you want to delete the "${label}" session type? This may affect existing sessions.`);
+                const confirmed = await showConfirmModal(
+                    `Are you sure you want to delete the "${label}" session type? This may affect existing sessions.`
+                );
 
                 if (confirmed) {
                     try {
@@ -53,7 +60,6 @@ export async function renderSessionTypes() {
                 }
             });
         });
-
     } catch (err: any) {
         listContainer.innerHTML = `<div class="p-8 text-center text-red-400 text-sm">Failed to load session types: ${err.message}</div>`;
     }

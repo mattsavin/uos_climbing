@@ -25,9 +25,9 @@ vi.mock('googleapis', () => ({
     google: {
         auth: {
             OAuth2: class {
-                setCredentials() { }
+                setCredentials() {}
                 getAccessToken(cb: any) {
-                    cb(null, 'mock-access-token')
+                    cb(null, 'mock-access-token');
                 }
             }
         }

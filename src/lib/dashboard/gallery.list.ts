@@ -4,12 +4,10 @@ function escapeHTML(text: string): string {
     return div.innerHTML;
 }
 
-export function renderGalleryThumbGrid(
-    listContainer: HTMLElement,
-    images: any[],
-    onOpen: (index: number) => void
-) {
-    listContainer.innerHTML = `<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 lg:gap-4">${images.map((img: any, index: number) => `
+export function renderGalleryThumbGrid(listContainer: HTMLElement, images: any[], onOpen: (index: number) => void) {
+    listContainer.innerHTML = `<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 lg:gap-4">${images
+        .map(
+            (img: any, index: number) => `
         <button class="gallery-thumb-btn group relative aspect-square overflow-hidden rounded-lg border bg-black/50 transition-all duration-200 cursor-pointer ${img.featured ? 'border-brand-gold/50 shadow-[0_0_15px_rgba(251,191,36,0.1)]' : 'border-slate-700/80 hover:border-slate-500'}"
             data-index="${index}"
             data-id="${img.id}"
@@ -24,7 +22,9 @@ export function renderGalleryThumbGrid(
                 <p class="text-white text-xs lg:text-sm truncate font-medium drop-shadow-md">${escapeHTML(img.caption || 'No caption')}</p>
             </div>
         </button>
-    `).join('')}</div>`;
+    `
+        )
+        .join('')}</div>`;
 
     listContainer.querySelectorAll<HTMLElement>('.gallery-thumb-btn').forEach((btn) => {
         btn.addEventListener('click', () => {

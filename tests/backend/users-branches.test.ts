@@ -12,14 +12,16 @@ describe('Users Route Branches', () => {
     beforeAll(async () => {
         await new Promise((resolve) => setTimeout(resolve, 500));
 
-        const userRes = await request(app).post('/api/auth/register').send({
-            firstName: 'Photo',
-            lastName: 'User',
-            email: `users_branches_${Date.now()}@example.com`,
-            password: 'Password123!',
-            passwordConfirm: 'Password123!',
-            registrationNumber: `UB${Date.now()}`
-        });
+        const userRes = await request(app)
+            .post('/api/auth/register')
+            .send({
+                firstName: 'Photo',
+                lastName: 'User',
+                email: `users_branches_${Date.now()}@example.com`,
+                password: 'Password123!',
+                passwordConfirm: 'Password123!',
+                registrationNumber: `UB${Date.now()}`
+            });
         userId = userRes.body.user.id;
         const userCookies = userRes.headers['set-cookie'] as string[] | undefined;
         const userCookie = (userCookies || []).find((c) => c.startsWith('uscc_token='));
@@ -39,9 +41,7 @@ describe('Users Route Branches', () => {
     });
 
     it('returns 400 when uploading profile photo without a file', async () => {
-        const res = await request(app)
-            .post('/api/users/me/photo')
-            .set('Authorization', `Bearer ${userToken}`);
+        const res = await request(app).post('/api/users/me/photo').set('Authorization', `Bearer ${userToken}`);
 
         expect(res.status).toBe(400);
         expect(res.body.error).toBe('No file uploaded');
@@ -62,9 +62,7 @@ describe('Users Route Branches', () => {
             .spyOn(db, 'all')
             .mockImplementationOnce((_sql: string, _params: any[], cb: any) => cb(new Error('DB Error'), null));
 
-        const res = await request(app)
-            .get('/api/users/me/memberships')
-            .set('Authorization', `Bearer ${userToken}`);
+        const res = await request(app).get('/api/users/me/memberships').set('Authorization', `Bearer ${userToken}`);
 
         expect(res.status).toBe(500);
         expect(res.body.error).toBe('Database error');
@@ -76,9 +74,7 @@ describe('Users Route Branches', () => {
             .spyOn(db, 'get')
             .mockImplementationOnce((_sql: string, _params: any[], cb: any) => cb(new Error('DB Error'), null));
 
-        const res = await request(app)
-            .delete(`/api/users/${userId}`)
-            .set('Authorization', `Bearer ${rootToken}`);
+        const res = await request(app).delete(`/api/users/${userId}`).set('Authorization', `Bearer ${rootToken}`);
 
         expect(res.status).toBe(500);
         expect(res.body.error).toBe('User not found or database error');
@@ -136,7 +132,10 @@ describe('Users Route Branches', () => {
             return originalRun(sql, params as any, cb as any);
         });
 
-        const validImage = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+        const validImage = Buffer.from(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+            'base64'
+        );
         const res = await request(app)
             .post('/api/users/me/photo')
             .set('Authorization', `Bearer ${userToken}`)
@@ -151,13 +150,17 @@ describe('Users Route Branches', () => {
         const getSpy = vi
             .spyOn(db, 'get')
             .mockImplementationOnce((_sql: string, _params: any[], cb: any) =>
-                cb(null, { profilePhoto: '/uploads/profile-photos/old-file.png' }));
+                cb(null, { profilePhoto: '/uploads/profile-photos/old-file.png' })
+            );
         const existsSpy = vi.spyOn(fs, 'existsSync').mockReturnValue(true as any);
         const unlinkSpy = vi.spyOn(fs, 'unlinkSync').mockImplementation(() => {
             throw new Error('unlink failed');
         });
 
-        const validImage = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+        const validImage = Buffer.from(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+            'base64'
+        );
         const res = await request(app)
             .post('/api/users/me/photo')
             .set('Authorization', `Bearer ${userToken}`)

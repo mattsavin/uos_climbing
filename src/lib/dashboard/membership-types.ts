@@ -9,11 +9,14 @@ export async function renderMembershipTypes() {
         const types = await adminApi.getMembershipTypes();
 
         if (types.length === 0) {
-            listContainer.innerHTML = '<div class="p-8 text-center text-slate-500 text-sm italic">No membership types configured.</div>';
+            listContainer.innerHTML =
+                '<div class="p-8 text-center text-slate-500 text-sm italic">No membership types configured.</div>';
             return;
         }
 
-        listContainer.innerHTML = types.map(t => `
+        listContainer.innerHTML = types
+            .map(
+                (t) => `
             <div class="flex items-center justify-between p-4 bg-slate-800/20 hover:bg-slate-800/40 transition-colors border-b border-white/5 last:border-0 ${t.deprecated ? 'opacity-70' : ''}">
                 <div>
                     <div class="flex items-center gap-2">
@@ -52,9 +55,11 @@ export async function renderMembershipTypes() {
                     </button>
                 </div>
             </div>
-        `).join('');
+        `
+            )
+            .join('');
 
-        listContainer.querySelectorAll('.deprecate-membership-type-btn').forEach(btn => {
+        listContainer.querySelectorAll('.deprecate-membership-type-btn').forEach((btn) => {
             btn.addEventListener('click', async (e) => {
                 const target = e.currentTarget as HTMLElement;
                 const id = target.dataset.id!;
@@ -62,7 +67,9 @@ export async function renderMembershipTypes() {
                 const isDeprecated = target.dataset.deprecated === 'true';
 
                 const nextAction = isDeprecated ? 'Restore' : 'Deprecate';
-                const confirmed = await showConfirmModal(`${nextAction} the "${label}" membership type? ${isDeprecated ? 'It will be visible again for new sessions.' : 'It will be hidden from new session creation but preserved for existing records.'}`);
+                const confirmed = await showConfirmModal(
+                    `${nextAction} the "${label}" membership type? ${isDeprecated ? 'It will be visible again for new sessions.' : 'It will be hidden from new session creation but preserved for existing records.'}`
+                );
                 if (!confirmed) return;
 
                 try {
@@ -76,7 +83,7 @@ export async function renderMembershipTypes() {
             });
         });
 
-        listContainer.querySelectorAll('.edit-membership-type-btn').forEach(btn => {
+        listContainer.querySelectorAll('.edit-membership-type-btn').forEach((btn) => {
             btn.addEventListener('click', async (e) => {
                 const target = e.currentTarget as HTMLElement;
                 const id = target.dataset.id!;
@@ -95,7 +102,7 @@ export async function renderMembershipTypes() {
             });
         });
 
-        listContainer.querySelectorAll('.delete-membership-type-btn').forEach(btn => {
+        listContainer.querySelectorAll('.delete-membership-type-btn').forEach((btn) => {
             btn.addEventListener('click', async (e) => {
                 const target = e.currentTarget as HTMLElement;
                 const id = target.dataset.id!;
@@ -104,7 +111,9 @@ export async function renderMembershipTypes() {
                     showToast('Basic membership cannot be deleted', 'error');
                     return;
                 }
-                const confirmed = await showConfirmModal(`Delete the "${label}" membership type? Existing records keep their stored type id.`);
+                const confirmed = await showConfirmModal(
+                    `Delete the "${label}" membership type? Existing records keep their stored type id.`
+                );
                 if (!confirmed) return;
                 try {
                     await adminApi.deleteMembershipType(id);

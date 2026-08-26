@@ -13,7 +13,9 @@ function renderWalls() {
     const grid = document.getElementById('walls-grid');
     if (!grid) return;
 
-    grid.innerHTML = config.walls.map(wall => `
+    grid.innerHTML = config.walls
+        .map(
+            (wall) => `
         <div class="glass-card flex flex-col h-full hover:border-cyan-500/30 transition-all duration-300">
             <div class="flex justify-between items-start mb-4">
                 <h3 class="text-2xl font-bold text-white">${wall.name}</h3>
@@ -36,5 +38,7 @@ function renderWalls() {
                 </div>
             </div>
         </div>
-    `).join('');
+    `
+        )
+        .join('');
 }

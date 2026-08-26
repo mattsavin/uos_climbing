@@ -42,17 +42,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Badge Status
         if (statusBadge && statusText) {
             if (data.isActive) {
-                statusBadge.className = 'inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-lg mb-8 shadow-xl bg-emerald-500 text-white shadow-emerald-500/20';
+                statusBadge.className =
+                    'inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-lg mb-8 shadow-xl bg-emerald-500 text-white shadow-emerald-500/20';
                 statusText.textContent = 'ACTIVE MEMBER';
             } else {
-                statusBadge.className = 'inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-lg mb-8 shadow-xl bg-red-500 text-white shadow-red-500/20';
+                statusBadge.className =
+                    'inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-lg mb-8 shadow-xl bg-red-500 text-white shadow-red-500/20';
                 statusText.textContent = data.status.toUpperCase() || 'INACTIVE';
             }
         }
 
         verifyCard?.classList.remove('hidden');
     } catch (err: any) {
-        const message = err?.data?.error || (err?.status === 404 ? 'Member not found.' : 'Network error. Please try again.');
+        const message =
+            err?.data?.error || (err?.status === 404 ? 'Member not found.' : 'Network error. Please try again.');
         showError(message);
     }
 

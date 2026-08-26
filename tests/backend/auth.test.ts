@@ -15,7 +15,7 @@ describe('Authentication API', () => {
 
     beforeAll(async () => {
         // Wait for DB initialization if needed
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
     });
 
     afterAll(async () => {
@@ -24,11 +24,18 @@ describe('Authentication API', () => {
     });
 
     const createAuthUser = async (prefix: string) => {
-        const userRes = await request(app).post('/api/auth/register').send({
-            firstName: prefix, lastName: 'Target User', email: `${prefix}_target@example.com`, password: 'Password123!', passwordConfirm: 'Password123!', registrationNumber: `${prefix}123`
-        });
+        const userRes = await request(app)
+            .post('/api/auth/register')
+            .send({
+                firstName: prefix,
+                lastName: 'Target User',
+                email: `${prefix}_target@example.com`,
+                password: 'Password123!',
+                passwordConfirm: 'Password123!',
+                registrationNumber: `${prefix}123`
+            });
         const cookies = userRes.headers['set-cookie'];
-        const cookieArray = Array.isArray(cookies) ? cookies : (cookies ? [cookies] : []);
+        const cookieArray = Array.isArray(cookies) ? cookies : cookies ? [cookies] : [];
         const tc = cookieArray.find((c: string) => c.startsWith('uscc_token='));
         return { token: tc ? tc.split(';')[0].split('=')[1] : '', id: userRes.body.user.id };
     };
@@ -55,14 +62,14 @@ describe('Authentication API', () => {
 
     it('should login the registered user', async () => {
         // Setup state for this test independently
-        await request(app).post('/api/auth/register').send({ ...testUser, email: 'login_test@example.com' });
+        await request(app)
+            .post('/api/auth/register')
+            .send({ ...testUser, email: 'login_test@example.com' });
 
-        const res = await request(app)
-            .post('/api/auth/login')
-            .send({
-                email: 'login_test@example.com',
-                password: testUser.password
-            });
+        const res = await request(app).post('/api/auth/login').send({
+            email: 'login_test@example.com',
+            password: testUser.password
+        });
 
         expect(res.status).toBe(200);
         expect(res.headers['set-cookie']?.[0]).toContain('uscc_token=');
@@ -74,17 +81,19 @@ describe('Authentication API', () => {
 
         // Delete the user using a verified admin token (we need to be root)
         const adminRes = await request(app).post('/api/auth/login').send({
-            email: 'committee@sheffieldclimbing.org', password: 'SuperSecret123!'
+            email: 'committee@sheffieldclimbing.org',
+            password: 'SuperSecret123!'
         });
         const cookies = adminRes.headers['set-cookie'];
-        const cookieArray = Array.isArray(cookies) ? cookies : (cookies ? [cookies] : []);
+        const cookieArray = Array.isArray(cookies) ? cookies : cookies ? [cookies] : [];
         const tc = cookieArray.find((c: string) => c.startsWith('uscc_token='));
         const adminToken = tc ? tc.split(';')[0].split('=')[1] : '';
         await request(app).delete(`/api/users/${id}`).set('Authorization', `Bearer ${adminToken}`);
 
         // Try to login again
         const loginRes = await request(app).post('/api/auth/login').send({
-            email: 'Deleted@example.com', password: 'Password123!'
+            email: 'Deleted@example.com',
+            password: 'Password123!'
         });
 
         expect(loginRes.status).toBe(401);
@@ -92,14 +101,14 @@ describe('Authentication API', () => {
 
     it('should fail to login with wrong password', async () => {
         // Setup state for this test independently
-        await request(app).post('/api/auth/register').send({ ...testUser, email: 'wrong_pwd_test@example.com' });
+        await request(app)
+            .post('/api/auth/register')
+            .send({ ...testUser, email: 'wrong_pwd_test@example.com' });
 
-        const res = await request(app)
-            .post('/api/auth/login')
-            .send({
-                email: 'wrong_pwd_test@example.com',
-                password: 'WrongPassword'
-            });
+        const res = await request(app).post('/api/auth/login').send({
+            email: 'wrong_pwd_test@example.com',
+            password: 'WrongPassword'
+        });
 
         expect(res.status).toBe(401);
         expect(res.body).toHaveProperty('error', 'Invalid email or password');
@@ -108,36 +117,30 @@ describe('Authentication API', () => {
     it('should return 400 JSON (not empty body) when login fields are missing', async () => {
         // Regression test: missing email/password previously caused the server to return
         // an empty or non-JSON body, making the client throw "JSON.parse: unexpected end of data".
-        const noEmail = await request(app)
-            .post('/api/auth/login')
-            .send({ password: 'Password123!' });
+        const noEmail = await request(app).post('/api/auth/login').send({ password: 'Password123!' });
         expect(noEmail.status).toBe(400);
         expect(noEmail.body).toHaveProperty('error');
 
-        const noPassword = await request(app)
-            .post('/api/auth/login')
-            .send({ email: 'someone@example.com' });
+        const noPassword = await request(app).post('/api/auth/login').send({ email: 'someone@example.com' });
         expect(noPassword.status).toBe(400);
         expect(noPassword.body).toHaveProperty('error');
 
-        const noBody = await request(app)
-            .post('/api/auth/login')
-            .send({});
+        const noBody = await request(app).post('/api/auth/login').send({});
         expect(noBody.status).toBe(400);
         expect(noBody.body).toHaveProperty('error');
     });
 
     it('should get current user profile with token', async () => {
         // Setup state for this test independently
-        const registerRes = await request(app).post('/api/auth/register').send({ ...testUser, email: 'profile_test@example.com' });
+        const registerRes = await request(app)
+            .post('/api/auth/register')
+            .send({ ...testUser, email: 'profile_test@example.com' });
         const cookies = registerRes.headers['set-cookie'];
-        const cookieArray = Array.isArray(cookies) ? cookies : (cookies ? [cookies] : []);
+        const cookieArray = Array.isArray(cookies) ? cookies : cookies ? [cookies] : [];
         const tc = cookieArray.find((c: string) => c.startsWith('uscc_token='));
         const token = tc ? tc.split(';')[0].split('=')[1] : '';
 
-        const res = await request(app)
-            .get('/api/auth/me')
-            .set('Authorization', `Bearer ${token}`);
+        const res = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${token}`);
 
         expect(res.status).toBe(200);
         expect(res.body.user).toHaveProperty('email', 'profile_test@example.com');
@@ -147,11 +150,11 @@ describe('Authentication API', () => {
         const { id, token } = await createAuthUser('roles_err');
 
         const { vi } = await import('vitest');
-        const spyAll = vi.spyOn(db, 'all').mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null));
+        const spyAll = vi
+            .spyOn(db, 'all')
+            .mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null));
 
-        const getRes = await request(app)
-            .get('/api/auth/me')
-            .set('Authorization', `Bearer ${token}`);
+        const getRes = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${token}`);
 
         expect(getRes.status).toBe(200);
         expect(getRes.body.user.committeeRoles).toEqual([]);
@@ -172,7 +175,11 @@ describe('Authentication API', () => {
         const ts = () => Date.now() + Math.floor(Math.random() * 100000);
 
         /** Helper: directly insert an unverified user + OTP into the in-memory DB */
-        const seedUnverifiedUser = async (email: string, otp: string, expiresOffsetMs = 15 * 60 * 1000): Promise<string> => {
+        const seedUnverifiedUser = async (
+            email: string,
+            otp: string,
+            expiresOffsetMs = 15 * 60 * 1000
+        ): Promise<string> => {
             return new Promise((resolve, reject) => {
                 const id = 'user_uv_' + Date.now() + Math.random().toString(36).substr(2, 5);
                 const passwordHash = '$2b$10$AAAAAAAAAAAAAAAAAAAAAA.AAAAAAAAAAAAAAAAAAAAAAAAAA'; // dummy hash
@@ -197,14 +204,16 @@ describe('Authentication API', () => {
         };
 
         it('should return a token immediately in test env (no verification step)', async () => {
-            const res = await request(app).post('/api/auth/register').send({
-                firstName: 'Verify',
-                lastName: 'Bypass Test',
-                email: `verifbypass_${ts()}@example.com`,
-                password: 'Password123!',
-                passwordConfirm: 'Password123!',
-                registrationNumber: `VBP${ts()}`
-            });
+            const res = await request(app)
+                .post('/api/auth/register')
+                .send({
+                    firstName: 'Verify',
+                    lastName: 'Bypass Test',
+                    email: `verifbypass_${ts()}@example.com`,
+                    password: 'Password123!',
+                    passwordConfirm: 'Password123!',
+                    registrationNumber: `VBP${ts()}`
+                });
 
             expect(res.status).toBe(200);
             // Test environment: token issued immediately
@@ -216,9 +225,7 @@ describe('Authentication API', () => {
             const otp = '654321';
             const userId = await seedUnverifiedUser(`otp_correct_${ts()}@example.com`, otp);
 
-            const res = await request(app)
-                .post('/api/auth/verify-email')
-                .send({ userId, code: otp });
+            const res = await request(app).post('/api/auth/verify-email').send({ userId, code: otp });
 
             expect(res.status).toBe(200);
             expect(res.body).toHaveProperty('token');
@@ -229,9 +236,7 @@ describe('Authentication API', () => {
         it('should reject an incorrect OTP', async () => {
             const userId = await seedUnverifiedUser(`otp_wrong_${ts()}@example.com`, '111111');
 
-            const res = await request(app)
-                .post('/api/auth/verify-email')
-                .send({ userId, code: '999999' });
+            const res = await request(app).post('/api/auth/verify-email').send({ userId, code: '999999' });
 
             expect(res.status).toBe(400);
             expect(res.body).toHaveProperty('error', 'Invalid or expired code');
@@ -242,18 +247,14 @@ describe('Authentication API', () => {
             // Set expiry in the past
             const userId = await seedUnverifiedUser(`otp_expired_${ts()}@example.com`, otp, -1000);
 
-            const res = await request(app)
-                .post('/api/auth/verify-email')
-                .send({ userId, code: otp });
+            const res = await request(app).post('/api/auth/verify-email').send({ userId, code: otp });
 
             expect(res.status).toBe(400);
             expect(res.body).toHaveProperty('error', 'Invalid or expired code');
         });
 
         it('should reject verify-email with missing fields', async () => {
-            const res = await request(app)
-                .post('/api/auth/verify-email')
-                .send({ code: '123456' }); // missing userId
+            const res = await request(app).post('/api/auth/verify-email').send({ code: '123456' }); // missing userId
 
             expect(res.status).toBe(400);
             expect(res.body).toHaveProperty('error', 'Missing userId or code');
@@ -271,9 +272,7 @@ describe('Authentication API', () => {
         it('should resend a verification code for an unverified user', async () => {
             const userId = await seedUnverifiedUser(`resend_${ts()}@example.com`, '000000');
 
-            const res = await request(app)
-                .post('/api/auth/request-verification')
-                .send({ userId });
+            const res = await request(app).post('/api/auth/request-verification').send({ userId });
 
             expect(res.status).toBe(200);
             expect(res.body).toHaveProperty('success', true);
@@ -285,14 +284,21 @@ describe('Authentication API', () => {
                 const id = 'user_av_' + Date.now();
                 db.run(
                     'INSERT INTO users (id, firstName, lastName, name, email, passwordHash, registrationNumber, emailVerified) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-                    [id, 'Already', 'Verified', 'Already Verified', `already_verified_${ts()}@example.com`, 'hash', 'AV001', 1],
-                    (err) => err ? reject(err) : resolve(id)
+                    [
+                        id,
+                        'Already',
+                        'Verified',
+                        'Already Verified',
+                        `already_verified_${ts()}@example.com`,
+                        'hash',
+                        'AV001',
+                        1
+                    ],
+                    (err) => (err ? reject(err) : resolve(id))
                 );
             });
 
-            const res = await request(app)
-                .post('/api/auth/request-verification')
-                .send({ userId: verifiedUserId });
+            const res = await request(app).post('/api/auth/request-verification').send({ userId: verifiedUserId });
 
             // 400 is expected; 429 can occur under rate limiting — both correctly reject the request
             expect([400, 429]).toContain(res.status);
@@ -302,9 +308,7 @@ describe('Authentication API', () => {
         });
 
         it('should reject request-verification with missing userId', async () => {
-            const res = await request(app)
-                .post('/api/auth/request-verification')
-                .send({});
+            const res = await request(app).post('/api/auth/request-verification').send({});
 
             // 400 is the expected business error; 429 may fire under rate limiting in dense test runs
             expect([400, 429]).toContain(res.status);
@@ -340,7 +344,7 @@ describe('Authentication API', () => {
                 db.run(
                     'INSERT INTO users (id, firstName, lastName, name, email, passwordHash, registrationNumber, emailVerified) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
                     [id, 'Block', 'Login', 'Block Login', email, passwordHash, 'BL001', 0],
-                    (err) => err ? reject(err) : resolve(id)
+                    (err) => (err ? reject(err) : resolve(id))
                 );
             });
 
@@ -374,15 +378,13 @@ describe('Authentication API', () => {
             });
 
             it('should generate a token and return 200 for forgot-password with valid email', async () => {
-                const res = await request(app)
-                    .post('/api/auth/forgot-password')
-                    .send({ email: resetUserEmail });
+                const res = await request(app).post('/api/auth/forgot-password').send({ email: resetUserEmail });
 
                 expect(res.status).toBe(200);
                 expect(res.body.success).toBe(true);
 
                 // Wait a moment for async DB insertion
-                await new Promise(resolve => setTimeout(resolve, 50));
+                await new Promise((resolve) => setTimeout(resolve, 50));
 
                 const row = await new Promise<any>((resolve) => {
                     db.get('SELECT * FROM password_resets WHERE userId = ?', [resetUserId], (_, r) => resolve(r));
@@ -393,9 +395,7 @@ describe('Authentication API', () => {
             });
 
             it('should reject reset-password with missing token or password', async () => {
-                const res = await request(app)
-                    .post('/api/auth/reset-password')
-                    .send({ token: resetToken }); // missing newPassword
+                const res = await request(app).post('/api/auth/reset-password').send({ token: resetToken }); // missing newPassword
 
                 expect(res.status).toBe(400);
                 expect(res.body.error).toBe('Token and new password are required');

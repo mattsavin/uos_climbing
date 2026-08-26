@@ -9,26 +9,41 @@ describe('Admin Extra API', () => {
 
     beforeAll(async () => {
         // Wait for DB initialization
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
 
         // Login as the root admin
         const adminRes = await request(app).post('/api/auth/login').send({
-            email: 'committee@sheffieldclimbing.org', password: 'SuperSecret123!'
+            email: 'committee@sheffieldclimbing.org',
+            password: 'SuperSecret123!'
         });
         const cookies = adminRes.headers['set-cookie'];
-        rootToken = (cookies || []).find((c: string) => c.startsWith('uscc_token='))?.split(';')[0].split('=')[1] || '';
+        rootToken =
+            (cookies || [])
+                .find((c: string) => c.startsWith('uscc_token='))
+                ?.split(';')[0]
+                .split('=')[1] || '';
 
         // Create a non-root committee member
         const res = await request(app).post('/api/auth/register').send({
-            firstName: 'Non', lastName: 'Root', email: 'nonroot_admin@example.com', password: 'Password12345!', passwordConfirm: 'Password12345!', registrationNumber: 'NRA1'
+            firstName: 'Non',
+            lastName: 'Root',
+            email: 'nonroot_admin@example.com',
+            password: 'Password12345!',
+            passwordConfirm: 'Password12345!',
+            registrationNumber: 'NRA1'
         });
         const nonRootId = res.body.user.id;
         await request(app).post(`/api/admin/users/${nonRootId}/promote`).set('Authorization', `Bearer ${rootToken}`);
 
         const loginRes = await request(app).post('/api/auth/login').send({
-            email: 'nonroot_admin@example.com', password: 'Password12345!'
+            email: 'nonroot_admin@example.com',
+            password: 'Password12345!'
         });
-        committeeToken = (loginRes.headers['set-cookie'] || []).find((c: string) => c.startsWith('uscc_token='))?.split(';')[0].split('=')[1] || '';
+        committeeToken =
+            (loginRes.headers['set-cookie'] || [])
+                .find((c: string) => c.startsWith('uscc_token='))
+                ?.split(';')[0]
+                .split('=')[1] || '';
     });
 
     afterAll(async () => {
@@ -81,9 +96,15 @@ describe('Admin Extra API', () => {
         it('should fail to delete a role if assigned to users', async () => {
             // Assign role to a user
             const userRes = await request(app).post('/api/auth/register').send({
-                firstName: 'Role', lastName: 'Holder', email: 'roleholder@example.com', password: 'Password12345!', passwordConfirm: 'Password12345!', registrationNumber: 'RH1'
+                firstName: 'Role',
+                lastName: 'Holder',
+                email: 'roleholder@example.com',
+                password: 'Password12345!',
+                passwordConfirm: 'Password12345!',
+                registrationNumber: 'RH1'
             });
-            await request(app).post(`/api/admin/users/${userRes.body.user.id}/committee-role`)
+            await request(app)
+                .post(`/api/admin/users/${userRes.body.user.id}/committee-role`)
                 .set('Authorization', `Bearer ${rootToken}`)
                 .send({ committeeRoles: [TEST_ROLE_ID] });
 
@@ -97,7 +118,10 @@ describe('Admin Extra API', () => {
 
         it('should allow root admin to delete an unassigned committee role', async () => {
             const NEW_ROLE = 'temp_role';
-            await request(app).post('/api/admin/committee-roles').set('Authorization', `Bearer ${rootToken}`).send({ id: NEW_ROLE, label: 'Temp' });
+            await request(app)
+                .post('/api/admin/committee-roles')
+                .set('Authorization', `Bearer ${rootToken}`)
+                .send({ id: NEW_ROLE, label: 'Temp' });
 
             const res = await request(app)
                 .delete(`/api/admin/committee-roles/${NEW_ROLE}`)
@@ -112,13 +136,18 @@ describe('Admin Extra API', () => {
         it('should mark user as pending if their only active basic membership is deleted', async () => {
             // Create user and approve basic membership
             const res = await request(app).post('/api/auth/register').send({
-                firstName: 'Pend', lastName: 'Test', email: 'pend@example.com', password: 'Password12345!', passwordConfirm: 'Password12345!', registrationNumber: 'PT1'
+                firstName: 'Pend',
+                lastName: 'Test',
+                email: 'pend@example.com',
+                password: 'Password12345!',
+                passwordConfirm: 'Password12345!',
+                registrationNumber: 'PT1'
             });
             const userId = res.body.user.id;
             await request(app).post(`/api/admin/users/${userId}/approve`).set('Authorization', `Bearer ${rootToken}`);
 
             // Wait for DB
-            await new Promise(r => setTimeout(r, 100));
+            await new Promise((r) => setTimeout(r, 100));
 
             // Verify status is active
             const usersRes = await request(app).get('/api/admin/users').set('Authorization', `Bearer ${rootToken}`);
@@ -130,7 +159,7 @@ describe('Admin Extra API', () => {
             await request(app).delete(`/api/admin/memberships/${membId}`).set('Authorization', `Bearer ${rootToken}`);
 
             // Wait for DB side effects
-            await new Promise(r => setTimeout(r, 100));
+            await new Promise((r) => setTimeout(r, 100));
 
             // Verify status is now pending
             const usersRes2 = await request(app).get('/api/admin/users').set('Authorization', `Bearer ${rootToken}`);

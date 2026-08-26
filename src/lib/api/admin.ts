@@ -13,7 +13,9 @@ export const adminApi = {
 
     async getActiveMembers(): Promise<User[]> {
         const users = await apiFetch('/api/admin/users');
-        return users.filter((u: User) => u.membershipStatus === 'active' && u.email !== 'committee@sheffieldclimbing.org');
+        return users.filter(
+            (u: User) => u.membershipStatus === 'active' && u.email !== 'committee@sheffieldclimbing.org'
+        );
     },
 
     async approveMember(id: string) {

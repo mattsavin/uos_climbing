@@ -57,7 +57,7 @@ export async function initJoinApp() {
                 availableSessionTypes
             );
         } catch (error) {
-            console.error("Error loading sessions:", error);
+            console.error('Error loading sessions:', error);
             sessionsGrid.innerHTML = `
                 <div class="col-span-full py-12 text-center text-slate-500">
                     <p>Unable to load calendar at this time.</p>
@@ -66,15 +66,17 @@ export async function initJoinApp() {
         }
     }
 
-    if (prevMonthBtn) prevMonthBtn.addEventListener('click', async () => {
-        currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
-        await renderSessions();
-    });
+    if (prevMonthBtn)
+        prevMonthBtn.addEventListener('click', async () => {
+            currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+            await renderSessions();
+        });
 
-    if (nextMonthBtn) nextMonthBtn.addEventListener('click', async () => {
-        currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
-        await renderSessions();
-    });
+    if (nextMonthBtn)
+        nextMonthBtn.addEventListener('click', async () => {
+            currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+            await renderSessions();
+        });
 
     // Initial render
     await renderSessions();

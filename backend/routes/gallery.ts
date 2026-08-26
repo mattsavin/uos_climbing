@@ -1,5 +1,5 @@
 import express from 'express';
-import { db } from '../db';
+import { dbAll, dbGet, dbRun } from '../utils/db';
 import { authenticateToken, requireCommittee } from '../middleware/auth';
 import multer from 'multer';
 import path from 'path';
@@ -16,22 +16,21 @@ if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-
 // GET /api/gallery - Fetch all gallery images (or only featured with ?featured=1)
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
     const featuredOnly = req.query.featured === '1';
     const sql = featuredOnly
         ? 'SELECT * FROM gallery WHERE featured = 1 ORDER BY CASE WHEN featuredOrder IS NULL THEN 1 ELSE 0 END, featuredOrder ASC, uploadedAt DESC'
         : 'SELECT * FROM gallery ORDER BY uploadedAt DESC';
-    db.all(sql, [], (err, rows) => {
-        if (err) return res.status(500).json({ error: 'Database error' });
-        res.json(rows || []);
-    });
+    try {
+        res.json(await dbAll(sql));
+    } catch {
+        res.status(500).json({ error: 'Database error' });
+    }
 });
 
 // POST /api/gallery - Upload a new gallery image (Committee Only)
 router.post('/', authenticateToken, requireCommittee, (req: any, res) => {
-
     // Enforce a maximum total batch size for the request to avoid excessive disk/CPU usage.
     // This is in addition to the per-file 50MB limit enforced by Multer above.
     const contentLengthHeader = req.headers['content-length'];
@@ -58,14 +57,14 @@ router.post('/', authenticateToken, requireCommittee, (req: any, res) => {
         try {
             const uploadedImages = [];
             const captionsInput = req.body.caption;
-            const captions = Array.isArray(captionsInput) ? captionsInput : (captionsInput ? [captionsInput] : []);
+            const captions = Array.isArray(captionsInput) ? captionsInput : captionsInput ? [captionsInput] : [];
             const uploaderId = req.user.id;
 
             let fileIndex = 0;
 
             for (const file of files) {
                 const caption = captions[fileIndex] || '';
-                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
                 const filename = 'gallery-' + uniqueSuffix + '.webp';
                 const filepath = `/uploads/gallery/${filename}`;
                 const fullPath = path.join(UPLOAD_BASE_DIR, 'gallery', filename);
@@ -88,16 +87,10 @@ router.post('/', authenticateToken, requireCommittee, (req: any, res) => {
 
                 const id = 'gal_' + crypto.randomUUID();
 
-                await new Promise<void>((resolve, reject) => {
-                    db.run(
-                        'INSERT INTO gallery (id, filename, filepath, caption, uploadedBy) VALUES (?, ?, ?, ?, ?)',
-                        [id, filename, filepath, caption, uploaderId],
-                        function (err) {
-                            if (err) return reject(err);
-                            resolve();
-                        }
-                    );
-                });
+                await dbRun(
+                    'INSERT INTO gallery (id, filename, filepath, caption, uploadedBy) VALUES (?, ?, ?, ?, ?)',
+                    [id, filename, filepath, caption, uploaderId]
+                );
 
                 uploadedImages.push({ id, filename, filepath, caption });
                 fileIndex++;
@@ -110,11 +103,13 @@ router.post('/', authenticateToken, requireCommittee, (req: any, res) => {
                 void Promise.allSettled(
                     files
                         .filter((file): file is Express.Multer.File => !!(file && file.path))
-                        .map(file => fs.promises.unlink(file.path).catch(cleanupErr => {
-                            if ((cleanupErr as NodeJS.ErrnoException).code !== 'ENOENT') {
-                                console.error('Failed to clean up temp upload file:', cleanupErr);
-                            }
-                        }))
+                        .map((file) =>
+                            fs.promises.unlink(file.path).catch((cleanupErr) => {
+                                if ((cleanupErr as NodeJS.ErrnoException).code !== 'ENOENT') {
+                                    console.error('Failed to clean up temp upload file:', cleanupErr);
+                                }
+                            })
+                        )
                 );
             }
             res.status(500).json({ error: 'Failed to process images' });
@@ -123,32 +118,31 @@ router.post('/', authenticateToken, requireCommittee, (req: any, res) => {
 });
 
 // DELETE /api/gallery/:id - Delete an image (Committee Only)
-router.delete('/:id', authenticateToken, requireCommittee, (req: any, res) => {
-
+router.delete('/:id', authenticateToken, requireCommittee, async (req: any, res) => {
     const { id } = req.params;
 
-    db.get('SELECT filepath FROM gallery WHERE id = ?', [id], (err, row: any) => {
-        if (err || !row) return res.status(404).json({ error: 'Image not found' });
+    const row = await dbGet<{ filepath: string }>('SELECT filepath FROM gallery WHERE id = ?', [id]).catch(() => null);
 
-        const fullPath = path.join(UPLOAD_BASE_DIR, row.filepath.replace(/^\/uploads\//, ''));
-        if (fs.existsSync(fullPath)) {
-            try {
-                fs.unlinkSync(fullPath);
-            } catch (e) {
-                console.error('Failed to delete file:', e);
-            }
+    // Original treated both query failure and missing row as 404
+    if (!row) return res.status(404).json({ error: 'Image not found' });
+
+    const fullPath = path.join(UPLOAD_BASE_DIR, row.filepath.replace(/^\/uploads\//, ''));
+    if (fs.existsSync(fullPath)) {
+        try {
+            fs.unlinkSync(fullPath);
+        } catch (e) {
+            console.error('Failed to delete file:', e);
         }
+    }
 
-        db.run('DELETE FROM gallery WHERE id = ?', [id], (deleteErr) => {
-            if (deleteErr) return res.status(500).json({ error: 'Database error' });
-            res.json({ success: true });
-        });
-    });
+    const deleted = await dbRun('DELETE FROM gallery WHERE id = ?', [id]).catch(() => null);
+    if (deleted === null) return res.status(500).json({ error: 'Database error' });
+
+    res.json({ success: true });
 });
 
 // PUT /api/gallery/:id - Update caption and/or featured status (Committee Only)
-router.put('/:id', authenticateToken, requireCommittee, (req: any, res) => {
-
+router.put('/:id', authenticateToken, requireCommittee, async (req: any, res) => {
     const { id } = req.params;
     const {
         caption,
@@ -268,32 +262,33 @@ router.put('/:id', authenticateToken, requireCommittee, (req: any, res) => {
         params.push('');
     }
 
-    const executeUpdate = () => {
+    const executeUpdate = async () => {
         params.push(id);
-        db.run(`UPDATE gallery SET ${updates.join(', ')} WHERE id = ?`, params, function (err) {
-            if (err) {
-                console.error('Gallery PUT db.run error:', err);
-                return res.status(500).json({ error: 'Database error' });
-            }
+        try {
+            await dbRun(`UPDATE gallery SET ${updates.join(', ')} WHERE id = ?`, params);
             res.json({ success: true });
-        });
+        } catch (err) {
+            console.error('Gallery PUT db.run error:', err);
+            res.status(500).json({ error: 'Database error' });
+        }
     };
 
     const shouldAutoAssignFeaturedOrder = featured === true && featuredOrder === undefined;
     if (shouldAutoAssignFeaturedOrder) {
-        db.get('SELECT COALESCE(MAX(featuredOrder), 0) + 1 AS nextOrder FROM gallery WHERE featured = 1 AND id != ?', [id], (orderErr, row: any) => {
-            if (orderErr) {
-                console.error('Gallery PUT featuredOrder query error:', orderErr);
-                return res.status(500).json({ error: 'Database error' });
-            }
-            updates.push('featuredOrder = ?');
-            params.push(row?.nextOrder || 1);
-            executeUpdate();
-        });
-        return;
+        const row = await dbGet<{ nextOrder: number }>(
+            'SELECT COALESCE(MAX(featuredOrder), 0) + 1 AS nextOrder FROM gallery WHERE featured = 1 AND id != ?',
+            [id]
+        ).catch(() => undefined);
+        if (row === undefined) {
+            console.error('Gallery PUT featuredOrder query error');
+            return res.status(500).json({ error: 'Database error' });
+        }
+        updates.push('featuredOrder = ?');
+        params.push(row?.nextOrder || 1);
+        return executeUpdate();
     }
 
-    executeUpdate();
+    return executeUpdate();
 });
 
 export default router;

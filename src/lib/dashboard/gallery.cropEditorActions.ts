@@ -1,10 +1,5 @@
 import { showToast } from '../../utils';
-import {
-    CROP_CONTEXT_CONFIG,
-    clamp,
-    getCropStateKey,
-    normalizeZoom
-} from './gallery.helpers';
+import { CROP_CONTEXT_CONFIG, clamp, getCropStateKey, normalizeZoom } from './gallery.helpers';
 import type { CropContextKey, CropEditorState } from './gallery.helpers';
 import { apiFetch } from '../api/http';
 

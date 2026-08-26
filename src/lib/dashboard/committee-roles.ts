@@ -23,14 +23,17 @@ export async function renderCommitteeRoles() {
     if (!listContainer) return;
 
     try {
-        const roles = await adminApi.getAvailableRoles() as CommitteeRole[];
+        const roles = (await adminApi.getAvailableRoles()) as CommitteeRole[];
 
         if (roles.length === 0) {
-            listContainer.innerHTML = '<div class="p-8 text-center text-slate-500 text-sm italic">No committee roles configured.</div>';
+            listContainer.innerHTML =
+                '<div class="p-8 text-center text-slate-500 text-sm italic">No committee roles configured.</div>';
             return;
         }
 
-        listContainer.innerHTML = roles.map((r: CommitteeRole) => `
+        listContainer.innerHTML = roles
+            .map(
+                (r: CommitteeRole) => `
             <div class="flex items-center justify-between p-4 bg-slate-800/20 hover:bg-slate-800/40 transition-colors border-b border-white/5 last:border-0">
                 <div>
                     <div class="flex items-center gap-2">
@@ -57,9 +60,11 @@ export async function renderCommitteeRoles() {
                     </button>
                 </div>
             </div>
-        `).join('');
+        `
+            )
+            .join('');
 
-        listContainer.querySelectorAll('.edit-committee-role-btn').forEach(btn => {
+        listContainer.querySelectorAll('.edit-committee-role-btn').forEach((btn) => {
             btn.addEventListener('click', async (e) => {
                 const target = e.currentTarget as HTMLElement;
                 const id = target.dataset.id!;
@@ -78,12 +83,14 @@ export async function renderCommitteeRoles() {
             });
         });
 
-        listContainer.querySelectorAll('.delete-committee-role-btn').forEach(btn => {
+        listContainer.querySelectorAll('.delete-committee-role-btn').forEach((btn) => {
             btn.addEventListener('click', async (e) => {
                 const target = e.currentTarget as HTMLElement;
                 const id = target.dataset.id!;
                 const label = target.dataset.label!;
-                const confirmed = await showConfirmModal(`Delete the "${label}" committee role? Remove the role from all users first.`);
+                const confirmed = await showConfirmModal(
+                    `Delete the "${label}" committee role? Remove the role from all users first.`
+                );
                 if (!confirmed) return;
                 try {
                     await adminApi.deleteCommitteeRole(id);

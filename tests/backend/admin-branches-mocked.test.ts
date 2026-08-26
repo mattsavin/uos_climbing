@@ -69,7 +69,9 @@ describe('Admin Mocked Branches', () => {
     it('committee-role assignment returns 500 for available role lookup failure', async () => {
         const { app, db } = await loadAdminApp();
         db.all.mockImplementationOnce((_sql: string, _params: any[], cb: Function) => cb(new Error('DB Error'), null));
-        const res = await request(app).post('/api/admin/users/u1/committee-role').send({ committeeRoles: ['Chair'] });
+        const res = await request(app)
+            .post('/api/admin/users/u1/committee-role')
+            .send({ committeeRoles: ['Chair'] });
         expect(res.status).toBe(500);
         expect(res.body.error).toBe('Database error');
     });
@@ -88,19 +90,27 @@ describe('Admin Mocked Branches', () => {
             if (callback) callback.call({ changes: 1 }, null);
             return db;
         });
-        const res = await request(app).post('/api/admin/users/u1/committee-role').send({ committeeRoles: ['Chair'] });
+        const res = await request(app)
+            .post('/api/admin/users/u1/committee-role')
+            .send({ committeeRoles: ['Chair'] });
         expect(res.status).toBe(500);
         expect(res.body.error).toBe('Database error');
     });
 
-    it('committee-role assignment returns 500 when finalize fails', async () => {
+    it('committee-role assignment returns 500 when role insert fails', async () => {
         const { app, db } = await loadAdminApp();
         db.all.mockImplementationOnce((_sql: string, _params: any[], cb: Function) => cb(null, [{ id: 'Chair' }]));
-        db.prepare.mockReturnValueOnce({
-            run: vi.fn(),
-            finalize: (cb: Function) => cb(new Error('DB Error'))
+        db.run.mockImplementation((sql: string, params: any, cb?: Function) => {
+            if (sql.includes('INSERT OR IGNORE INTO committee_roles')) {
+                throw new Error('DB Error'); // rejected by the promise wrapper -> route returns 500
+            }
+            const callback = typeof params === 'function' ? params : cb;
+            if (callback) callback.call({ changes: 1 }, null);
+            return db;
         });
-        const res = await request(app).post('/api/admin/users/u1/committee-role').send({ committeeRoles: ['Chair'] });
+        const res = await request(app)
+            .post('/api/admin/users/u1/committee-role')
+            .send({ committeeRoles: ['Chair'] });
         expect(res.status).toBe(500);
         expect(res.body.error).toBe('Database error');
     });
@@ -154,13 +164,16 @@ describe('Admin Mocked Branches', () => {
         const { app, db } = await loadAdminApp();
         db.get
             .mockImplementationOnce((_sql: string, _params: any[], cb: Function) =>
-                cb(null, { id: 'm1', userId: 'u1', membershipType: 'comp_team', membershipYear: '2025/2026' }))
+                cb(null, { id: 'm1', userId: 'u1', membershipType: 'comp_team', membershipYear: '2025/2026' })
+            )
             .mockImplementationOnce((_sql: string, _params: any[], cb: Function) => cb(null, null))
             .mockImplementationOnce((_sql: string, _params: any[], cb: Function) =>
-                cb(null, { id: 'm2', userId: 'u1', membershipType: 'comp_team', membershipYear: '2025/2026' }))
+                cb(null, { id: 'm2', userId: 'u1', membershipType: 'comp_team', membershipYear: '2025/2026' })
+            )
             .mockImplementationOnce((_sql: string, _params: any[], cb: Function) => cb(null, null))
             .mockImplementationOnce((_sql: string, _params: any[], cb: Function) =>
-                cb(null, { id: 'm3', userId: 'u1', membershipType: 'comp_team', membershipYear: '2025/2026' }));
+                cb(null, { id: 'm3', userId: 'u1', membershipType: 'comp_team', membershipYear: '2025/2026' })
+            );
 
         const approveRes = await request(app).post('/api/admin/memberships/m1/approve');
         expect(approveRes.status).toBe(200);

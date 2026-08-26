@@ -18,18 +18,18 @@ describe('Admin SU Roster Import API', () => {
         rootToken = tokenCookie ? tokenCookie.split(';')[0].split('=')[1] : '';
 
         const nonRootEmail = `import_non_root_${Date.now()}@example.com`;
-        const createRes = await request(app).post('/api/auth/register').send({
-            firstName: 'Import',
-            lastName: 'Committee',
-            email: nonRootEmail,
-            password: 'Password123!',
-            passwordConfirm: 'Password123!',
-            registrationNumber: `${Date.now()}11`
-        });
+        const createRes = await request(app)
+            .post('/api/auth/register')
+            .send({
+                firstName: 'Import',
+                lastName: 'Committee',
+                email: nonRootEmail,
+                password: 'Password123!',
+                passwordConfirm: 'Password123!',
+                registrationNumber: `${Date.now()}11`
+            });
         const nonRootId = createRes.body.user.id;
-        await request(app)
-            .post(`/api/admin/users/${nonRootId}/promote`)
-            .set('Authorization', `Bearer ${rootToken}`);
+        await request(app).post(`/api/admin/users/${nonRootId}/promote`).set('Authorization', `Bearer ${rootToken}`);
         const loginRes = await request(app).post('/api/auth/login').send({
             email: nonRootEmail,
             password: 'Password123!'
@@ -89,10 +89,7 @@ describe('Admin SU Roster Import API', () => {
     });
 
     it('returns 400 when no valid roster rows can be parsed', async () => {
-        const raw = [
-            `bad_reg\tInvalid User\tx\t2025/2026\tx`,
-            `also\ttoo\tshort`
-        ].join('\n');
+        const raw = [`bad_reg\tInvalid User\tx\t2025/2026\tx`, `also\ttoo\tshort`].join('\n');
 
         const res = await request(app)
             .post('/api/admin/memberships/import-su-roster')
@@ -107,14 +104,16 @@ describe('Admin SU Roster Import API', () => {
 
     it('returns 500 when roster import DB operations fail', async () => {
         const existingReg = '987654321';
-        await request(app).post('/api/auth/register').send({
-            firstName: 'Import',
-            lastName: 'Error',
-            email: `import_error_${Date.now()}@example.com`,
-            password: 'Password123!',
-            passwordConfirm: 'Password123!',
-            registrationNumber: existingReg
-        });
+        await request(app)
+            .post('/api/auth/register')
+            .send({
+                firstName: 'Import',
+                lastName: 'Error',
+                email: `import_error_${Date.now()}@example.com`,
+                password: 'Password123!',
+                passwordConfirm: 'Password123!',
+                registrationNumber: existingReg
+            });
 
         const spy = (await import('vitest')).vi
             .spyOn(db, 'run')
@@ -193,14 +192,16 @@ describe('Admin SU Roster Import API', () => {
     });
 
     it('prevents non-root committee members from demoting users', async () => {
-        const targetRes = await request(app).post('/api/auth/register').send({
-            firstName: 'Demote',
-            lastName: 'Target',
-            email: `demote_target_${Date.now()}@example.com`,
-            password: 'Password123!',
-            passwordConfirm: 'Password123!',
-            registrationNumber: `${Date.now()}99`
-        });
+        const targetRes = await request(app)
+            .post('/api/auth/register')
+            .send({
+                firstName: 'Demote',
+                lastName: 'Target',
+                email: `demote_target_${Date.now()}@example.com`,
+                password: 'Password123!',
+                passwordConfirm: 'Password123!',
+                registrationNumber: `${Date.now()}99`
+            });
         const res = await request(app)
             .post(`/api/admin/users/${targetRes.body.user.id}/demote`)
             .set('Authorization', `Bearer ${committeeToken}`);

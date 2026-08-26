@@ -2,25 +2,36 @@ import { type GearItem, type GearRequest } from '../../auth';
 import { escapeHTML } from '../../utils';
 
 export function getStatusBadge(status: string) {
-    if (status === 'pending') return '<span class="px-2 py-1 bg-amber-500/20 text-amber-500 text-[10px] font-black uppercase tracking-wider rounded">Pending</span>';
-    if (status === 'approved') return '<span class="px-2 py-1 bg-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-wider rounded">Approved - Active</span>';
-    if (status === 'rejected') return '<span class="px-2 py-1 bg-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-wider rounded">Rejected</span>';
-    if (status === 'returned') return '<span class="px-2 py-1 bg-slate-700 text-slate-300 text-[10px] font-black uppercase tracking-wider rounded">Returned</span>';
+    if (status === 'pending')
+        return '<span class="px-2 py-1 bg-amber-500/20 text-amber-500 text-[10px] font-black uppercase tracking-wider rounded">Pending</span>';
+    if (status === 'approved')
+        return '<span class="px-2 py-1 bg-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-wider rounded">Approved - Active</span>';
+    if (status === 'rejected')
+        return '<span class="px-2 py-1 bg-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-wider rounded">Rejected</span>';
+    if (status === 'returned')
+        return '<span class="px-2 py-1 bg-slate-700 text-slate-300 text-[10px] font-black uppercase tracking-wider rounded">Returned</span>';
     return `<span class="px-2 py-1 bg-slate-700 text-slate-400 text-[10px] uppercase rounded">${status}</span>`;
 }
 
-export function renderGearGrid(gearList: GearItem[], isKitSec: boolean, onEdit: (id: string) => void, onDelete: (id: string) => void, onRequest: (id: string, name: string) => void) {
+export function renderGearGrid(
+    gearList: GearItem[],
+    isKitSec: boolean,
+    onEdit: (id: string) => void,
+    onDelete: (id: string) => void,
+    onRequest: (id: string, name: string) => void
+) {
     const grid = document.getElementById('gear-grid');
     if (!grid) return;
 
     grid.innerHTML = '';
 
     if (gearList.length === 0) {
-        grid.innerHTML = '<div class="col-span-1 md:col-span-2 text-center text-slate-500 py-8">No gear available in the inventory.</div>';
+        grid.innerHTML =
+            '<div class="col-span-1 md:col-span-2 text-center text-slate-500 py-8">No gear available in the inventory.</div>';
         return;
     }
 
-    gearList.forEach(gear => {
+    gearList.forEach((gear) => {
         const outOfStock = gear.availableQuantity <= 0;
         const safeName = escapeHTML(gear.name);
         const safeDesc = escapeHTML(gear.description);
@@ -36,11 +47,12 @@ export function renderGearGrid(gearList: GearItem[], isKitSec: boolean, onEdit: 
         }
 
         const btnClass = outOfStock
-            ? "w-full py-2 bg-slate-700 text-slate-400 cursor-not-allowed text-sm font-bold rounded-lg uppercase tracking-wider"
-            : "w-full btn-primary !bg-emerald-500 hover:!bg-emerald-400 !border-emerald-500 !py-2 !text-sm request-gear-btn shadow-[0_0_15px_rgba(16,185,129,0.2)]";
+            ? 'w-full py-2 bg-slate-700 text-slate-400 cursor-not-allowed text-sm font-bold rounded-lg uppercase tracking-wider'
+            : 'w-full btn-primary !bg-emerald-500 hover:!bg-emerald-400 !border-emerald-500 !py-2 !text-sm request-gear-btn shadow-[0_0_15px_rgba(16,185,129,0.2)]';
 
         const card = document.createElement('div');
-        card.className = "bg-slate-800/80 border border-white/5 rounded-xl p-5 hover:border-emerald-500/30 transition-colors flex flex-col";
+        card.className =
+            'bg-slate-800/80 border border-white/5 rounded-xl p-5 hover:border-emerald-500/30 transition-colors flex flex-col';
         card.innerHTML = `
             <div class="flex justify-between items-start mb-2">
                 <h4 class="font-bold text-white text-lg">${safeName}</h4>
@@ -58,21 +70,21 @@ export function renderGearGrid(gearList: GearItem[], isKitSec: boolean, onEdit: 
     });
 
     // Attach listeners
-    grid.querySelectorAll('.request-gear-btn').forEach(btn => {
+    grid.querySelectorAll('.request-gear-btn').forEach((btn) => {
         btn.addEventListener('click', (e) => {
             const target = e.currentTarget as HTMLButtonElement;
             onRequest(target.dataset.id!, target.dataset.name!);
         });
     });
 
-    grid.querySelectorAll('.edit-gear-btn').forEach(btn => {
+    grid.querySelectorAll('.edit-gear-btn').forEach((btn) => {
         btn.addEventListener('click', (e) => {
             const target = e.currentTarget as HTMLButtonElement;
             onEdit(target.dataset.id!);
         });
     });
 
-    grid.querySelectorAll('.delete-gear-btn').forEach(btn => {
+    grid.querySelectorAll('.delete-gear-btn').forEach((btn) => {
         btn.addEventListener('click', (e) => {
             const target = e.currentTarget as HTMLButtonElement;
             onDelete(target.dataset.id!);
@@ -91,12 +103,16 @@ export function renderMyRequestsList(requests: GearRequest[]) {
         return;
     }
 
-    requests.forEach(req => {
-        const dateStr = new Date(req.requestDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    requests.forEach((req) => {
+        const dateStr = new Date(req.requestDate).toLocaleDateString('en-GB', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+        });
         const safeGearName = escapeHTML(req.gearName);
 
         const el = document.createElement('div');
-        el.className = "py-3 flex justify-between items-center";
+        el.className = 'py-3 flex justify-between items-center';
         el.innerHTML = `
             <div>
                 <p class="text-sm font-bold text-white">${safeGearName}</p>
@@ -110,18 +126,22 @@ export function renderMyRequestsList(requests: GearRequest[]) {
     });
 }
 
-export function renderAllRequestsTable(requests: GearRequest[], onAction: (reqId: string, action: 'approve' | 'reject' | 'return') => void) {
+export function renderAllRequestsTable(
+    requests: GearRequest[],
+    onAction: (reqId: string, action: 'approve' | 'reject' | 'return') => void
+) {
     const list = document.getElementById('all-requests-list');
     if (!list) return;
 
     list.innerHTML = '';
 
     if (requests.length === 0) {
-        list.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-slate-500">No requests found.</td></tr>';
+        list.innerHTML =
+            '<tr><td colspan="5" class="px-4 py-8 text-center text-slate-500">No requests found.</td></tr>';
         return;
     }
 
-    requests.forEach(req => {
+    requests.forEach((req) => {
         const dateStr = new Date(req.requestDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
         const safeUserName = escapeHTML(req.userName);
         const safeUserEmail = escapeHTML(req.userEmail);
@@ -157,14 +177,13 @@ export function renderAllRequestsTable(requests: GearRequest[], onAction: (reqId
         list.appendChild(tr);
     });
 
-    list.querySelectorAll('.approve-req-btn').forEach(btn => {
+    list.querySelectorAll('.approve-req-btn').forEach((btn) => {
         btn.addEventListener('click', () => onAction((btn as HTMLElement).dataset.id!, 'approve'));
     });
-    list.querySelectorAll('.reject-req-btn').forEach(btn => {
+    list.querySelectorAll('.reject-req-btn').forEach((btn) => {
         btn.addEventListener('click', () => onAction((btn as HTMLElement).dataset.id!, 'reject'));
     });
-    list.querySelectorAll('.return-req-btn').forEach(btn => {
+    list.querySelectorAll('.return-req-btn').forEach((btn) => {
         btn.addEventListener('click', () => onAction((btn as HTMLElement).dataset.id!, 'return'));
     });
 }
-

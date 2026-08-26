@@ -17,32 +17,29 @@ describe('Gear API', () => {
 
     beforeAll(async () => {
         // Wait for DB initialization
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
 
         // Create a regular user
-        const userRes = await request(app)
-            .post('/api/auth/register')
-            .send({
-                firstName: 'Gear',
-                lastName: 'User',
-                email: 'gear_user@example.com',
-                password: 'Password123!', passwordConfirm: 'Password123!',
-                registrationNumber: 'GEAR123'
-            });
+        const userRes = await request(app).post('/api/auth/register').send({
+            firstName: 'Gear',
+            lastName: 'User',
+            email: 'gear_user@example.com',
+            password: 'Password123!',
+            passwordConfirm: 'Password123!',
+            registrationNumber: 'GEAR123'
+        });
         const tokenCookie1 = (userRes.headers['set-cookie'] as any)?.find((c: string) => c.startsWith('uscc_token='));
-        userToken = tokenCookie1 ? tokenCookie1.split(';')[0].split('=')[1] : (userRes.body.token || '');
+        userToken = tokenCookie1 ? tokenCookie1.split(';')[0].split('=')[1] : userRes.body.token || '';
 
         // Login as the root admin (pre-seeded in db.ts)
-        const adminRes = await request(app)
-            .post('/api/auth/login')
-            .send({
-                email: 'committee@sheffieldclimbing.org',
-                password: 'SuperSecret123!'
-            });
+        const adminRes = await request(app).post('/api/auth/login').send({
+            email: 'committee@sheffieldclimbing.org',
+            password: 'SuperSecret123!'
+        });
         const cookies = adminRes.headers['set-cookie'];
-        const cookieArray = Array.isArray(cookies) ? cookies : (cookies ? [cookies] : []);
+        const cookieArray = Array.isArray(cookies) ? cookies : cookies ? [cookies] : [];
         const adminCookie = cookieArray.find((c: string) => c.startsWith('uscc_token='));
-        adminToken = adminCookie ? adminCookie.split(';')[0].split('=')[1] : (adminRes.body.token || '');
+        adminToken = adminCookie ? adminCookie.split(';')[0].split('=')[1] : adminRes.body.token || '';
     });
 
     afterAll(async () => {
@@ -52,20 +49,19 @@ describe('Gear API', () => {
     // Helper to create a gear item
     const createGear = async (token: string, name: string) => {
         const res = await request(app).post('/api/gear').set('Authorization', `Bearer ${token}`).send({
-            name, description: 'Desc', totalQuantity: 2
+            name,
+            description: 'Desc',
+            totalQuantity: 2
         });
         return res.body.id;
     };
 
     it('should allow admin to create gear', async () => {
-        const res = await request(app)
-            .post('/api/gear')
-            .set('Authorization', `Bearer ${adminToken}`)
-            .send({
-                name: 'Test Rope',
-                description: '60m Lead Rope',
-                totalQuantity: 2
-            });
+        const res = await request(app).post('/api/gear').set('Authorization', `Bearer ${adminToken}`).send({
+            name: 'Test Rope',
+            description: '60m Lead Rope',
+            totalQuantity: 2
+        });
 
         expect(res.status).toBe(200);
         expect(res.body).toHaveProperty('id');
@@ -73,9 +69,7 @@ describe('Gear API', () => {
 
     it('should list gear', async () => {
         const gearId = await createGear(adminToken, 'Listable Gear');
-        const res = await request(app)
-            .get('/api/gear')
-            .set('Authorization', `Bearer ${userToken}`);
+        const res = await request(app).get('/api/gear').set('Authorization', `Bearer ${userToken}`);
 
         expect(res.status).toBe(200);
         expect(Array.isArray(res.body)).toBe(true);
@@ -84,9 +78,7 @@ describe('Gear API', () => {
 
     it('should allow user to request gear', async () => {
         const gearId = await createGear(adminToken, 'Requestable Gear');
-        const res = await request(app)
-            .post(`/api/gear/${gearId}/request`)
-            .set('Authorization', `Bearer ${userToken}`);
+        const res = await request(app).post(`/api/gear/${gearId}/request`).set('Authorization', `Bearer ${userToken}`);
 
         expect(res.status).toBe(200);
         expect(res.body).toHaveProperty('success', true);
@@ -120,13 +112,9 @@ describe('Gear API', () => {
         const requestId = reqRes.body.requestId;
 
         // Setup admin approval
-        await request(app)
-            .post(`/api/gear/requests/${requestId}/approve`)
-            .set('Authorization', `Bearer ${adminToken}`);
+        await request(app).post(`/api/gear/requests/${requestId}/approve`).set('Authorization', `Bearer ${adminToken}`);
 
-        const res = await request(app)
-            .get('/api/gear/me/requests')
-            .set('Authorization', `Bearer ${userToken}`);
+        const res = await request(app).get('/api/gear/me/requests').set('Authorization', `Bearer ${userToken}`);
 
         expect(res.status).toBe(200);
         expect(res.body.some((r: any) => r.id === requestId)).toBe(true);
@@ -135,15 +123,12 @@ describe('Gear API', () => {
 
     it('should allow admin to update gear', async () => {
         const gearId = await createGear(adminToken, 'Updateable Gear');
-        const res = await request(app)
-            .put(`/api/gear/${gearId}`)
-            .set('Authorization', `Bearer ${adminToken}`)
-            .send({
-                name: 'Updated Gear',
-                description: 'Updated Desc',
-                totalQuantity: 5,
-                availableQuantity: 5
-            });
+        const res = await request(app).put(`/api/gear/${gearId}`).set('Authorization', `Bearer ${adminToken}`).send({
+            name: 'Updated Gear',
+            description: 'Updated Desc',
+            totalQuantity: 5,
+            availableQuantity: 5
+        });
 
         expect(res.status).toBe(200);
         expect(res.body).toHaveProperty('success', true);
@@ -151,9 +136,7 @@ describe('Gear API', () => {
 
     it('should allow admin to delete gear', async () => {
         const gearId = await createGear(adminToken, 'Deletable Gear');
-        const res = await request(app)
-            .delete(`/api/gear/${gearId}`)
-            .set('Authorization', `Bearer ${adminToken}`);
+        const res = await request(app).delete(`/api/gear/${gearId}`).set('Authorization', `Bearer ${adminToken}`);
 
         expect(res.status).toBe(200);
         expect(res.body).toHaveProperty('success', true);
@@ -164,13 +147,14 @@ describe('Gear API', () => {
 
         // Admin updates it to 0 available
         await request(app).put(`/api/gear/${gearId}`).set('Authorization', `Bearer ${adminToken}`).send({
-            name: 'Out of Stock Gear', description: 'Desc', totalQuantity: 2, availableQuantity: 0
+            name: 'Out of Stock Gear',
+            description: 'Desc',
+            totalQuantity: 2,
+            availableQuantity: 0
         });
 
         // User tries to request
-        const res = await request(app)
-            .post(`/api/gear/${gearId}/request`)
-            .set('Authorization', `Bearer ${userToken}`);
+        const res = await request(app).post(`/api/gear/${gearId}/request`).set('Authorization', `Bearer ${userToken}`);
 
         expect(res.status).toBe(400);
         expect(res.body).toHaveProperty('error', 'Gear out of stock');
@@ -200,9 +184,7 @@ describe('Gear API', () => {
             .set('Authorization', `Bearer ${userToken}`);
         const requestId = reqRes.body.requestId;
 
-        await request(app)
-            .post(`/api/gear/requests/${requestId}/approve`)
-            .set('Authorization', `Bearer ${adminToken}`);
+        await request(app).post(`/api/gear/requests/${requestId}/approve`).set('Authorization', `Bearer ${adminToken}`);
 
         const res = await request(app)
             .post(`/api/gear/requests/${requestId}/return`)
@@ -227,7 +209,9 @@ describe('Gear API', () => {
     describe('Database Errors', () => {
         it('should handle list gear DB errors', async () => {
             const { vi } = await import('vitest');
-            const spy = vi.spyOn(db, 'all').mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null));
+            const spy = vi
+                .spyOn(db, 'all')
+                .mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null));
             const res = await request(app).get('/api/gear').set('Authorization', `Bearer ${userToken}`);
             expect(res.status).toBe(500);
             spy.mockRestore();
@@ -235,7 +219,9 @@ describe('Gear API', () => {
 
         it('should handle list all requests DB errors', async () => {
             const { vi } = await import('vitest');
-            const spy = vi.spyOn(db, 'all').mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null));
+            const spy = vi
+                .spyOn(db, 'all')
+                .mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null));
             const res = await request(app).get('/api/gear/requests').set('Authorization', `Bearer ${adminToken}`);
             expect(res.status).toBe(500);
             spy.mockRestore();
@@ -243,7 +229,9 @@ describe('Gear API', () => {
 
         it('should handle list my requests DB errors', async () => {
             const { vi } = await import('vitest');
-            const spy = vi.spyOn(db, 'all').mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null));
+            const spy = vi
+                .spyOn(db, 'all')
+                .mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null));
             const res = await request(app).get('/api/gear/me/requests').set('Authorization', `Bearer ${userToken}`);
             expect(res.status).toBe(500);
             spy.mockRestore();
@@ -251,23 +239,35 @@ describe('Gear API', () => {
 
         it('should handle create gear DB errors', async () => {
             const { vi } = await import('vitest');
-            const spy = vi.spyOn(db, 'run').mockImplementationOnce((query, params, cb) => cb.call({}, new Error('DB Error')));
-            const res = await request(app).post('/api/gear').set('Authorization', `Bearer ${adminToken}`).send({ name: 'E' });
+            const spy = vi
+                .spyOn(db, 'run')
+                .mockImplementationOnce((query, params, cb) => cb.call({}, new Error('DB Error')));
+            const res = await request(app)
+                .post('/api/gear')
+                .set('Authorization', `Bearer ${adminToken}`)
+                .send({ name: 'E' });
             expect(res.status).toBe(500);
             spy.mockRestore();
         });
 
         it('should handle update gear DB errors', async () => {
             const { vi } = await import('vitest');
-            const spy = vi.spyOn(db, 'run').mockImplementationOnce((query, params, cb) => cb.call({}, new Error('DB Error')));
-            const res = await request(app).put('/api/gear/1').set('Authorization', `Bearer ${adminToken}`).send({ name: 'E' });
+            const spy = vi
+                .spyOn(db, 'run')
+                .mockImplementationOnce((query, params, cb) => cb.call({}, new Error('DB Error')));
+            const res = await request(app)
+                .put('/api/gear/1')
+                .set('Authorization', `Bearer ${adminToken}`)
+                .send({ name: 'E' });
             expect(res.status).toBe(500);
             spy.mockRestore();
         });
 
         it('should handle delete gear DB errors', async () => {
             const { vi } = await import('vitest');
-            const spy = vi.spyOn(db, 'run').mockImplementationOnce((query, params, cb) => cb.call({}, new Error('DB Error')));
+            const spy = vi
+                .spyOn(db, 'run')
+                .mockImplementationOnce((query, params, cb) => cb.call({}, new Error('DB Error')));
             const res = await request(app).delete('/api/gear/1').set('Authorization', `Bearer ${adminToken}`);
             expect(res.status).toBe(500);
             spy.mockRestore();
@@ -275,7 +275,9 @@ describe('Gear API', () => {
 
         it('should handle create request DB errors (GET)', async () => {
             const { vi } = await import('vitest');
-            const spy = vi.spyOn(db, 'get').mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null));
+            const spy = vi
+                .spyOn(db, 'get')
+                .mockImplementationOnce((query, params, cb) => cb(new Error('DB Error'), null));
             const res = await request(app).post('/api/gear/1/request').set('Authorization', `Bearer ${userToken}`);
             expect(res.status).toBe(404);
             spy.mockRestore();
@@ -297,7 +299,9 @@ describe('Gear API', () => {
                     return originalRun(query, params as any, cb as any);
                 }
             });
-            const res = await request(app).post('/api/gear/requests/1/reject').set('Authorization', `Bearer ${adminToken}`);
+            const res = await request(app)
+                .post('/api/gear/requests/1/reject')
+                .set('Authorization', `Bearer ${adminToken}`);
             // Wait, if I mockImplementationOnce, it might catch a background run?
             // Let's use mockImplementation and check query, then restore.
             spyRun.mockRestore();
@@ -314,7 +318,9 @@ describe('Gear API', () => {
                 return db;
             });
 
-            const res2 = await request(app).post('/api/gear/requests/1/reject').set('Authorization', `Bearer ${adminToken}`);
+            const res2 = await request(app)
+                .post('/api/gear/requests/1/reject')
+                .set('Authorization', `Bearer ${adminToken}`);
             expect(res2.status).toBe(500);
 
             spy.mockRestore();

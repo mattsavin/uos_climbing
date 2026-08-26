@@ -6,7 +6,7 @@ export function renderMembershipCard(user: User, displayName: string, currentYea
     const membershipCardContainer = document.getElementById('membership-card-container');
     if (!membershipCardContainer) return;
 
-    const hasActiveMembership = (user.membershipStatus === 'active' || user.role === 'committee');
+    const hasActiveMembership = user.membershipStatus === 'active' || user.role === 'committee';
     if (!hasActiveMembership) {
         membershipCardContainer.classList.add('hidden');
         return;
@@ -59,21 +59,25 @@ export function renderMembershipCard(user: User, displayName: string, currentYea
     if (qrContainer) {
         const verifyUrl = `${window.location.origin}/verify/${user.calendarToken || user.id}`;
 
-        QRCode.toString(verifyUrl, {
-            type: 'svg',
-            margin: 0,
-            color: {
-                dark: '#000000',
-                light: '#ffffff'
+        QRCode.toString(
+            verifyUrl,
+            {
+                type: 'svg',
+                margin: 0,
+                color: {
+                    dark: '#000000',
+                    light: '#ffffff'
+                }
+            },
+            (err, svg) => {
+                if (!err) {
+                    const styledSvg = svg.replace('<svg ', '<svg class="w-full h-full" ');
+                    qrContainer.innerHTML = styledSvg;
+                    const modalQrContainer = document.getElementById('enlarged-qr-container');
+                    if (modalQrContainer) modalQrContainer.innerHTML = styledSvg;
+                }
             }
-        }, (err, svg) => {
-            if (!err) {
-                const styledSvg = svg.replace('<svg ', '<svg class="w-full h-full" ');
-                qrContainer.innerHTML = styledSvg;
-                const modalQrContainer = document.getElementById('enlarged-qr-container');
-                if (modalQrContainer) modalQrContainer.innerHTML = styledSvg;
-            }
-        });
+        );
     }
 
     const expiryContainer = document.getElementById('card-expiry-container');
