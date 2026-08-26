@@ -12,7 +12,8 @@ const primaryNavLinks = [
     { href: '/about', label: 'About' },
     { href: '/competitions', label: 'Indoor & Competitions', mobileLabel: 'Indoor & Comps' },
     { href: '/gallery', label: 'Gallery' },
-    { href: '/schedule', label: 'Schedule' }
+    { href: '/schedule', label: 'Schedule' },
+    { href: '/trips', label: 'Trips' }
 ] as const satisfies readonly NavLink[];
 
 const resourceNavLinks = [
@@ -76,6 +77,7 @@ const createNavbar = () => `
               </div>
             </div>
             <a href="/schedule" class="nav-link">Schedule</a>
+            <a href="/trips" class="nav-link">Trips</a>
             <div class="flex items-center gap-4">
               <a href="/login" id="nav-auth-btn" class="text-sm font-bold text-slate-400 hover:text-brand-gold transition-colors uppercase tracking-wider px-4 py-2 border border-slate-700 hover:border-brand-gold/50 rounded-lg">
                 Sign In

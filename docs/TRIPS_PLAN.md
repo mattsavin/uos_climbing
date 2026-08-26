@@ -134,15 +134,15 @@ Each phase ships independently behind the normal dev→beta→main flow.
 
 Decisions taken 2026-08-26 (Matt):
 
-1. **Refund policy wording for late cancels** — *no decision yet; leave templated.*
+1. **Refund policy wording for late cancels** — _no decision yet; leave templated._
    Late-cancel email/portal copy must use an explicit `[REFUND POLICY — TBC BY COMMITTEE]`
    placeholder, never invented policy.
-2. **Guests on trips** — *members only for now.* Schema's nullable-userId escape hatch stays
+2. **Guests on trips** — _members only for now._ Schema's nullable-userId escape hatch stays
    unused; signup validation requires a real member.
-3. **Payment records authority** — *treasurer or president only.* Payment-status mutations
+3. **Payment records authority** — _treasurer or president only._ Payment-status mutations
    (phase 3) must be restricted beyond `requireCommittee` to these roles. NOTE: seeded role
    labels use "Chair" not "President" — confirm exact role-string match at implementation.
-4. **Minimum trip numbers** — *manual.* No at-risk flag or auto-cancel logic; committee
+4. **Minimum trip numbers** — _manual._ No at-risk flag or auto-cancel logic; committee
    watches the roster themselves.
 
 ## Risks

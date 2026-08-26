@@ -42,6 +42,13 @@ const PAGES = [
         description: 'Upcoming USMC climbing sessions, training and socials — browse the calendar and book your place.'
     },
     {
+        file: 'trips.html',
+        path: '/trips',
+        title: 'Trips | USMC',
+        description: 'USMC outdoor meets — sign up for weekend trips, see costs and payment status.',
+        memberOnly: true
+    },
+    {
         file: 'competitions.html',
         path: '/competitions',
         title: 'Indoor & Competitions | USMC',

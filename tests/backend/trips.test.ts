@@ -248,4 +248,195 @@ describe('Trips API', () => {
             .set('Authorization', `Bearer ${userToken}`);
         expect(memberRoster.status).toBe(403);
     });
+
+    // --- phase 2: member signup flow ---------------------------------------
+
+    const registerAndLogin = async (label: string) => {
+        const email = `tripsignup_${label}_${Date.now()}@example.com`;
+        await request(app)
+            .post('/api/auth/register')
+            .send({
+                firstName: 'Trip',
+                lastName: 'Signee',
+                email,
+                password: 'Password123!',
+                passwordConfirm: 'Password123!',
+                registrationNumber: 'TS' + Math.floor(Math.random() * 1000000)
+            });
+        const res = await request(app).post('/api/auth/login').send({ email, password: 'Password123!' });
+        return res.body.token as string;
+    };
+
+    it('member signs up, sees own signup embedded, double-signup rejected', async () => {
+        const tripId = (await createTrip()).body.id;
+
+        const signup = await request(app)
+            .post(`/api/trips/${tripId}/signup`)
+            .set('Authorization', `Bearer ${userToken}`);
+        expect(signup.status).toBe(200);
+
+        const dupe = await request(app).post(`/api/trips/${tripId}/signup`).set('Authorization', `Bearer ${userToken}`);
+        expect(dupe.status).toBe(400);
+        expect(dupe.body.error).toBe('You are already signed up to this trip');
+
+        const detail = await request(app).get(`/api/trips/${tripId}`).set('Authorization', `Bearer ${userToken}`);
+        expect(detail.body.mySignup).toBeTruthy();
+        expect(detail.body.mySignup.cancelledAt).toBeNull();
+
+        const committeeDetail = await request(app)
+            .get(`/api/trips/${tripId}`)
+            .set('Authorization', `Bearer ${committeeToken}`);
+        expect(committeeDetail.body.spotsTaken).toBe(1);
+
+        // Roster now shows the member
+        const roster = await request(app)
+            .get(`/api/trips/${tripId}/signups`)
+            .set('Authorization', `Bearer ${committeeToken}`);
+        expect(roster.body.length).toBe(1);
+    });
+
+    it('rejects signups on closed, non-open and full trips', async () => {
+        const closedTrip = (await createTrip({ signupClosesAt: futureIso(-1) })).body.id;
+        const closed = await request(app)
+            .post(`/api/trips/${closedTrip}/signup`)
+            .set('Authorization', `Bearer ${userToken}`);
+        expect(closed.status).toBe(400);
+        expect(closed.body.error).toContain('closed');
+
+        const cancelledTrip = (await createTrip()).body.id;
+        await request(app).delete(`/api/trips/${cancelledTrip}`).set('Authorization', `Bearer ${committeeToken}`);
+        const cancelled = await request(app)
+            .post(`/api/trips/${cancelledTrip}/signup`)
+            .set('Authorization', `Bearer ${userToken}`);
+        expect(cancelled.status).toBe(400);
+        expect(cancelled.body.error).toContain('not open');
+
+        const tinyTrip = (await createTrip({ capacity: 1 })).body.id;
+        const first = await request(app)
+            .post(`/api/trips/${tinyTrip}/signup`)
+            .set('Authorization', `Bearer ${userToken}`);
+        expect(first.status).toBe(200);
+        const secondToken = await registerAndLogin('full');
+        const second = await request(app)
+            .post(`/api/trips/${tinyTrip}/signup`)
+            .set('Authorization', `Bearer ${secondToken}`);
+        expect(second.status).toBe(400);
+        expect(second.body.error).toBe('Trip is full');
+    });
+
+    it('enforces membership requirements on signup', async () => {
+        const squadTrip = (await createTrip({ requiredMembership: 'comp_team' })).body.id;
+        const denied = await request(app)
+            .post(`/api/trips/${squadTrip}/signup`)
+            .set('Authorization', `Bearer ${userToken}`);
+        expect(denied.status).toBe(403);
+        expect(denied.body.error).toContain('membership');
+    });
+
+    it('racing members cannot oversell capacity', async () => {
+        const CAP = 5;
+        const raceTrip = (await createTrip({ capacity: CAP })).body.id;
+        const tokens = await Promise.all(Array.from({ length: 12 }, (_, i) => registerAndLogin(`race${i}`)));
+
+        const results = await Promise.all(
+            tokens.map((t) => request(app).post(`/api/trips/${raceTrip}/signup`).set('Authorization', `Bearer ${t}`))
+        );
+        const ok = results.filter((r) => r.status === 200).length;
+        const full = results.filter((r) => r.status === 400 && r.body.error === 'Trip is full').length;
+        expect(ok).toBe(CAP);
+        expect(full).toBe(12 - CAP);
+
+        const committeeDetail = await request(app)
+            .get(`/api/trips/${raceTrip}`)
+            .set('Authorization', `Bearer ${committeeToken}`);
+        expect(committeeDetail.body.spotsTaken).toBe(CAP);
+    }, 30000);
+
+    it('cancel-signup releases the spot; late cancels are audited; revival works', async () => {
+        // Before deadline: clean cancel, no audit flag
+        const openTrip = (await createTrip({ capacity: 2 })).body.id;
+        await request(app).post(`/api/trips/${openTrip}/signup`).set('Authorization', `Bearer ${userToken}`);
+        const cancel = await request(app)
+            .post(`/api/trips/${openTrip}/cancel-signup`)
+            .set('Authorization', `Bearer ${userToken}`);
+        expect(cancel.status).toBe(200);
+        expect(cancel.body.lateCancel).toBe(false);
+
+        const notSignedUp = await request(app)
+            .post(`/api/trips/${openTrip}/cancel-signup`)
+            .set('Authorization', `Bearer ${userToken}`);
+        expect(notSignedUp.status).toBe(400);
+
+        // Spot released — on a capacity-1 trip someone else takes the last
+        // place, so the original member's revival must hit the capacity guard.
+        const onePlace = (await createTrip({ title: 'One Place', capacity: 1 })).body.id;
+        await request(app).post(`/api/trips/${onePlace}/signup`).set('Authorization', `Bearer ${userToken}`);
+        await request(app).post(`/api/trips/${onePlace}/cancel-signup`).set('Authorization', `Bearer ${userToken}`);
+        const otherToken = await registerAndLogin('release');
+        const tookSpot = await request(app)
+            .post(`/api/trips/${onePlace}/signup`)
+            .set('Authorization', `Bearer ${otherToken}`);
+        expect(tookSpot.status).toBe(200);
+        const blockedRevive = await request(app)
+            .post(`/api/trips/${onePlace}/signup`)
+            .set('Authorization', `Bearer ${userToken}`);
+        expect(blockedRevive.status).toBe(400);
+        expect(blockedRevive.body.error).toBe('Trip is full');
+
+        // When space remains, revival restores the original row (the UNIQUE
+        // constraint would block a fresh INSERT) without duplicating history.
+        const roomyTrip = (await createTrip({ title: 'Roomy', capacity: 5 })).body.id;
+        await request(app).post(`/api/trips/${roomyTrip}/signup`).set('Authorization', `Bearer ${userToken}`);
+        await request(app).post(`/api/trips/${roomyTrip}/cancel-signup`).set('Authorization', `Bearer ${userToken}`);
+        const revived = await request(app)
+            .post(`/api/trips/${roomyTrip}/signup`)
+            .set('Authorization', `Bearer ${userToken}`);
+        expect(revived.status).toBe(200);
+        const rosterAfterRevive = await request(app)
+            .get(`/api/trips/${roomyTrip}/signups`)
+            .set('Authorization', `Bearer ${committeeToken}`);
+        expect(rosterAfterRevive.body.length).toBe(1);
+        expect(rosterAfterRevive.body[0].cancelledAt).toBeNull();
+
+        const fullTrip = (await createTrip({ capacity: 5 })).body.id;
+        await request(app).post(`/api/trips/${fullTrip}/signup`).set('Authorization', `Bearer ${userToken}`);
+        // After deadline: lateCancel flagged in response + audit log
+        const lateTripId = (await createTrip({ title: 'Late Trip' })).body.id;
+        await request(app).post(`/api/trips/${lateTripId}/signup`).set('Authorization', `Bearer ${userToken}`);
+        // Force the deadline into the past
+        await new Promise((resolve) =>
+            db.run('UPDATE trips SET signupClosesAt = ? WHERE id = ?', [futureIso(-1), lateTripId], () => resolve(null))
+        );
+        const late = await request(app)
+            .post(`/api/trips/${lateTripId}/cancel-signup`)
+            .set('Authorization', `Bearer ${userToken}`);
+        expect(late.status).toBe(200);
+        expect(late.body.lateCancel).toBe(true);
+
+        const audit = await new Promise<any>((resolve) =>
+            db.get(
+                "SELECT id FROM audit_log WHERE action = 'trip.cancel-late' AND entityId = ?",
+                [lateTripId],
+                (e, r) => resolve(r)
+            )
+        );
+        expect(audit).toBeTruthy();
+    });
+
+    it('cancelled signups do not count toward capacity or roster presence', async () => {
+        const tripId = (await createTrip({ capacity: 3 })).body.id;
+        const tokenA = await registerAndLogin('cancelsA');
+        await request(app).post(`/api/trips/${tripId}/signup`).set('Authorization', `Bearer ${tokenA}`);
+        await request(app).post(`/api/trips/${tripId}/cancel-signup`).set('Authorization', `Bearer ${tokenA}`);
+
+        const detail = await request(app).get(`/api/trips/${tripId}`).set('Authorization', `Bearer ${committeeToken}`);
+        expect(detail.body.spotsTaken).toBe(0);
+
+        // Roster still shows the row for bookkeeping, with cancelledAt set
+        const roster = await request(app)
+            .get(`/api/trips/${tripId}/signups`)
+            .set('Authorization', `Bearer ${committeeToken}`);
+        expect(roster.body.length).toBe(1);
+        expect(roster.body[0].cancelledAt).toBeTruthy();
+    });
 });

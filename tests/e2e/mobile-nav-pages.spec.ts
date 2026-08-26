@@ -10,6 +10,7 @@ const pagesToCheck = [
     '/walls.html',
     '/faq.html',
     '/gear.html',
+    '/trips.html',
     '/login.html'
 ];
 
