@@ -75,6 +75,9 @@ no behavior change on happy path; explicit statement of what was/wasn't reproduc
 
 ## P1 — Fast-fail scanner paths (protects rate-limit budget from FR probing swarm)
 
+Status: **implemented** 2026-08-26 (`backend/middleware/scanner-fast-fail.ts`, wired ahead
+of `globalLimiter` in `backend/server.ts`; tests in `tests/backend/scanner-fast-fail.test.ts`).
+
 **Evidence:** FR = 35.8% of traffic (7.7k), mostly hammering `.env*/wp-admin/config/yaml`
 paths that 404 properly but each count against the in-memory global rate limiter (1000/15min/IP)
 and burn origin cycles. CF already rate-limits some (4.1k 429s), but leak-through continues.
